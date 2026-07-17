@@ -26,16 +26,31 @@ import urllib.request
 
 DEFAULT_MODEL = "qwen2.5:7b"
 
-# Each provider: the API base URL and which wire format it speaks.
+# Each provider: the API base URL and which wire format it speaks. Local servers use the explicit
+# IPv4 loopback 127.0.0.1 rather than "localhost" — see `_prefer_ipv4` below for why.
 PROVIDERS: dict[str, dict[str, str]] = {
-    "local": {"base_url": "http://localhost:11434/v1", "kind": "openai"},
-    "ollama": {"base_url": "http://localhost:11434/v1", "kind": "openai"},
+    "local": {"base_url": "http://127.0.0.1:11434/v1", "kind": "openai"},
+    "ollama": {"base_url": "http://127.0.0.1:11434/v1", "kind": "openai"},
     "openai": {"base_url": "https://api.openai.com/v1", "kind": "openai"},
     "openrouter": {"base_url": "https://openrouter.ai/api/v1", "kind": "openai"},
     "groq": {"base_url": "https://api.groq.com/openai/v1", "kind": "openai"},
     "together": {"base_url": "https://api.together.xyz/v1", "kind": "openai"},
     "anthropic": {"base_url": "https://api.anthropic.com", "kind": "anthropic"},
 }
+
+
+def _prefer_ipv4(base_url: str) -> str:
+    """Rewrite a `localhost` loopback host to `127.0.0.1`.
+
+    On Windows, `localhost` often resolves to IPv6 `::1` first. Python's `urllib` connects to that
+    address and blocks — it does NOT fall back to IPv4 the way `curl` and browsers do — so a request
+    to a server bound only to IPv4 `127.0.0.1` (Ollama's default) hangs until the socket times out.
+    Forcing the IPv4 loopback makes local LLM calls return instantly. Only the loopback name is
+    rewritten; real hostnames are left untouched.
+    """
+    return base_url.replace("//localhost:", "//127.0.0.1:").replace(
+        "//localhost/", "//127.0.0.1/"
+    )
 
 
 class LLMError(Exception):
@@ -74,8 +89,8 @@ class LLM:
         preset = PROVIDERS.get(name, PROVIDERS["local"])
         self.provider_name = name if name in PROVIDERS else "local"
         self.kind = preset["kind"]
-        self.base_url = (base_url or os.environ.get("LLM_BASE_URL") or preset["base_url"]).rstrip(
-            "/"
+        self.base_url = _prefer_ipv4(
+            (base_url or os.environ.get("LLM_BASE_URL") or preset["base_url"]).rstrip("/")
         )
         self.models = _resolve_models(model, models)
         # BYOK — a key you supply. "ollama" is a harmless dummy for local servers that ignore it.
