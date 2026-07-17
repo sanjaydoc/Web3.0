@@ -1,3 +1,4 @@
+import dns from 'node:dns';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,5 +18,22 @@ for (const path of candidates) {
   if (existsSync(path)) {
     config({ path });
     break;
+  }
+}
+
+/**
+ * Force specific DNS resolvers for this process. Fixes `querySrv ECONNREFUSED` when connecting to
+ * MongoDB Atlas (`mongodb+srv://`) on networks where Node can't do the SRV lookup with the system
+ * resolver. Set ACP_DNS_SERVERS=8.8.8.8,1.1.1.1 in .env.
+ */
+const dnsServers = (process.env.ACP_DNS_SERVERS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (dnsServers.length > 0) {
+  try {
+    dns.setServers(dnsServers);
+  } catch (err) {
+    console.warn(`ACP_DNS_SERVERS is invalid (${dnsServers.join(', ')}):`, err);
   }
 }
