@@ -1,0 +1,91 @@
+# ACP Architecture
+
+ACP is a **module-first** system: a thin kernel owns a few shared services, and every capability
+is a module bolted on through a single, stable context. This document explains how the pieces fit.
+
+## Layers
+
+```
+                         ┌──────────────────────────────┐
+   Python / TS agents ──▶│  acp-node kernel             │
+   (acp-sdk-py)          │  ┌────────────────────────┐  │
+                         │  │ modules (pluggable)     │  │
+   Dashboard (React) ───▶│  │  naming   registry      │  │
+                         │  │  messaging  payments    │  │
+                         │  │  guardrails observability│ │
+                         │  └────────────────────────┘  │
+                         │  shared services:            │
+                         │   Ledger · Registry · Bus ·  │
+                         │   Guardrails · Connections   │
+                         └──────────────┬───────────────┘
+                                        │
+                       ┌────────────────┴────────────────┐
+                       │ @acp/core   @acp/ledger  @acp/crypto │
+                       │ (types)     (PQC ledger) (ML-DSA/KEM) │
+                       └──────────────────────────────────────┘
+```
+
+## Packages
+
+| Package | Role |
+| --- | --- |
+| **@acp/crypto** | Post-quantum primitives. `generateKeypair`/`sign`/`verify` (ML-DSA-65), `seal`/`open` (ML-KEM-768 hybrid box), `deriveDid`, and a canonical-JSON hasher used everywhere signatures are computed. |
+| **@acp/core** | The shared vocabulary: Web3.0 IDs, agent cards (A2A-aligned), wallets, **signed envelopes** (`seal`/`open`), the A2A task lifecycle, and observability events. Dependency-light so every module and the Python SDK can mirror it. |
+| **@acp/ledger** | The quantum-resistant ledger — an append-only, hash-linked log whose every entry is ML-DSA-signed by the node. Derives wallet balances from the log; `verifyChain()`/`verifySnapshot()` prove integrity. |
+| **@acp/node** | The kernel + modules (below). |
+| **acp-sdk-py** | The Python agent SDK — a byte-compatible reimplementation of the crypto/envelope layer plus an `Agent` class. |
+
+## The kernel
+
+`Kernel` (in `services/acp-node/src/kernel.ts`) constructs the shared services and loads the
+modules named in `config.modules`, handing each a `ModuleContext`:
+
+```ts
+interface ModuleContext {
+  http: FastifyInstance;    // register routes / websockets here
+  ledger: Ledger;           // append-only PQC ledger + wallets
+  registry: Registry;       // who exists on the network
+  bus: EventBus;            // publish observable events
+  guardrails: Guardrails;   // ALLOW/DENY policy engine
+  connections: ConnectionHub; // live agent sockets + offline queues
+  config: AcpConfig;
+  clock: () => string;
+  log: FastifyBaseLogger;
+}
+```
+
+A module is just `{ name, version, register(ctx) }`. It registers its own surface and uses the
+shared services — but never reaches into another module's internals. That decoupling is what makes
+ACP an "agentic OS": the core is small and stable; features come and go as modules.
+
+## Modules
+
+- **naming** — resolves `alice@web3.0` → DID + public keys (like DNS for agents).
+- **registry** — `POST /agents` claims a Web3.0 ID, derives a DID from the agent's ML-DSA public
+  key, and opens a wallet with a faucet grant; `GET /agents` for discovery.
+- **messaging** — a WebSocket relay. Agents authenticate with a **signed hello** (proving key
+  possession), then exchange signed A2A messages. The node verifies every signature, runs
+  guardrails, records message provenance (hash only) on the ledger, and routes or queues delivery.
+- **payments** — a `GET /x402/quote` endpoint returning **HTTP 402** with payment requirements, and
+  a signed `POST /pay` rail that settles a transfer on the ledger after a spend-cap check.
+- **guardrails** — exposes the active policy set; enforcement lives in the shared engine
+  (capability, rate-limit, spend-cap), and every verdict is emitted as an event.
+- **observability** — the read side: `/events` (+ SSE `/events/stream`), `/ledger` (with live
+  verification), `/stats`. This powers the dashboard.
+
+## Data flow: a paid task
+
+1. Alice `POST /agents`, Bob `POST /agents` → both get a Web3.0 ID, DID, wallet.
+2. Alice `GET /x402/quote/bob@web3.0/summarise` → **402** with Bob's price.
+3. Alice `POST /pay` a **signed** instruction → spend-cap guardrail → ledger transfer → receipt.
+4. Alice opens the relay, signs a hello, then sends a signed `task.submit` to Bob.
+5. The node verifies the signature, runs rate-limit + capability guardrails, records provenance,
+   and routes the message to Bob.
+6. Bob replies with a signed `task.result`; optionally shares an ML-KEM-sealed dataset.
+7. Every step emits an event; the dashboard shows it live, and the ledger stays `verifyChain()`-clean.
+
+## State & persistence
+
+The MVP keeps the ledger, registry, and event buffer in memory — deliberately simple. The ledger
+is the source of truth and is fully serialisable (`toJSON()` / `verifySnapshot()`), which is the
+seam where durable storage or a real chain slots in later (see [QUANTUM.md](QUANTUM.md)).
