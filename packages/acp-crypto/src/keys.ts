@@ -49,7 +49,11 @@ export function signString(secretKey: Uint8Array, message: string): string {
 }
 
 /** Convenience: verify a base64url signature over a UTF-8 string. */
-export function verifyString(publicKey: Uint8Array, message: string, signatureB64u: string): boolean {
+export function verifyString(
+  publicKey: Uint8Array,
+  message: string,
+  signatureB64u: string,
+): boolean {
   return verify(publicKey, utf8ToBytes(message), fromB64u(signatureB64u));
 }
 

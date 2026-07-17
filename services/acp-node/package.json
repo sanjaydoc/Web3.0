@@ -1,0 +1,26 @@
+{
+  "name": "@acp/node",
+  "version": "0.1.0",
+  "description": "The ACP node: a thin kernel that loads pluggable modules (naming, registry, messaging, payments, guardrails, observability).",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acp/core": "workspace:*",
+    "@acp/crypto": "workspace:*",
+    "@acp/ledger": "workspace:*",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/websocket": "^11.0.1",
+    "fastify": "^5.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "ws": "^8.18.0",
+    "@types/ws": "^8.5.13"
+  }
+}

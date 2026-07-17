@@ -1,0 +1,49 @@
+import { seal, web3Id } from '@acp/core';
+import type { AcpMessage, SignedEnvelope, Web3Id } from '@acp/core';
+import { generateKemKeypair, generateKeypair, toB64u } from '@acp/crypto';
+import type { Keypair } from '@acp/crypto';
+
+/** A minimal in-test agent identity: the key material and helpers to sign ACP payloads. */
+export interface TestAgent {
+  web3Id: Web3Id;
+  keys: Keypair;
+  signPublicKey: string;
+  kemPublicKey: string;
+  registration: Record<string, unknown>;
+}
+
+/** Build a test agent with a fresh post-quantum identity and a registration body. */
+export function makeAgent(local: string, opts: Partial<Record<string, unknown>> = {}): TestAgent {
+  const keys = generateKeypair();
+  const kem = generateKemKeypair();
+  const signPublicKey = toB64u(keys.publicKey);
+  const kemPublicKey = toB64u(kem.publicKey);
+  return {
+    web3Id: web3Id(local),
+    keys,
+    signPublicKey,
+    kemPublicKey,
+    registration: { local, signPublicKey, kemPublicKey, kind: 'agent', ...opts },
+  };
+}
+
+/** Seal any payload as this agent (for /pay envelopes, hello frames, etc.). */
+export function sealAs<T>(
+  agent: TestAgent,
+  payload: T,
+  now = new Date().toISOString(),
+): SignedEnvelope<T> {
+  return seal(agent.keys, agent.web3Id, payload, agent.signPublicKey, now);
+}
+
+/** Build a signed A2A message envelope from `agent` to `to`. */
+export function message(
+  agent: TestAgent,
+  to: Web3Id,
+  body: AcpMessage['body'],
+  id = 'msg1',
+): SignedEnvelope<AcpMessage> {
+  const now = new Date().toISOString();
+  const msg: AcpMessage = { id, from: agent.web3Id, to, ts: now, body };
+  return sealAs(agent, msg, now);
+}

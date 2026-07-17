@@ -20,12 +20,7 @@ export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set<TaskState>([
 ]);
 
 /** The kinds of messages agents exchange over the ACP relay. */
-export type AcpMessageType =
-  | 'task.submit'
-  | 'task.update'
-  | 'task.result'
-  | 'data.share'
-  | 'ping';
+export type AcpMessageType = 'task.submit' | 'task.update' | 'task.result' | 'data.share' | 'ping';
 
 /** A request from one agent to another to perform a unit of work. */
 export interface TaskRequest {

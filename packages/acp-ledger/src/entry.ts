@@ -1,5 +1,5 @@
-import { hashJson } from '@acp/crypto';
 import type { Amount, Currency, Web3Id } from '@acp/core';
+import { hashJson } from '@acp/crypto';
 
 /** The hash a genesis entry links back to. */
 export const GENESIS_HASH = '0'.repeat(64);
@@ -61,5 +61,11 @@ export interface LedgerEntry<T extends EntryType = EntryType> extends EntryCore<
 
 /** Compute the canonical hash of an entry's core fields. */
 export function hashEntry(core: EntryCore): string {
-  return hashJson({ seq: core.seq, ts: core.ts, prevHash: core.prevHash, type: core.type, data: core.data });
+  return hashJson({
+    seq: core.seq,
+    ts: core.ts,
+    prevHash: core.prevHash,
+    type: core.type,
+    data: core.data,
+  });
 }

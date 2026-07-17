@@ -1,5 +1,5 @@
-import { generateKeypair, toB64u } from '@acp/crypto';
 import { web3Id } from '@acp/core';
+import { generateKeypair, toB64u } from '@acp/crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { InsufficientFundsError, Ledger, verifySnapshot } from '../src/index.js';
 
@@ -10,7 +10,9 @@ function newLedger(): Ledger {
   const keys = generateKeypair();
   let t = 0;
   // Deterministic, monotonic timestamps for reproducible hashes in tests.
-  return new Ledger(keys, toB64u(keys.publicKey), () => new Date(1_700_000_000_000 + t++).toISOString());
+  return new Ledger(keys, toB64u(keys.publicKey), () =>
+    new Date(1_700_000_000_000 + t++).toISOString(),
+  );
 }
 
 describe('Ledger', () => {

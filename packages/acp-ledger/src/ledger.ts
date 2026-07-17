@@ -1,11 +1,11 @@
-import { fromB64u, signString, verifyString } from '@acp/crypto';
-import type { Keypair } from '@acp/crypto';
 import { DEFAULT_CURRENCY } from '@acp/core';
 import type { Amount, Currency, Wallet, Web3Id } from '@acp/core';
+import { fromB64u, signString, verifyString } from '@acp/crypto';
+import type { Keypair } from '@acp/crypto';
 import {
-  GENESIS_HASH,
   type EntryData,
   type EntryType,
+  GENESIS_HASH,
   type LedgerEntry,
   type MessageData,
   hashEntry,
@@ -77,7 +77,14 @@ export class Ledger {
     const currency = opts.currency ?? DEFAULT_CURRENCY;
     const balance = this.balanceOf(from);
     if (balance < amount) throw new InsufficientFundsError(from, balance, amount);
-    const entry = this.append('payment', { from, to, amount, currency, memo: opts.memo, taskId: opts.taskId });
+    const entry = this.append('payment', {
+      from,
+      to,
+      amount,
+      currency,
+      memo: opts.memo,
+      taskId: opts.taskId,
+    });
     this.debit(from, amount, currency);
     this.credit(to, amount, currency);
     return entry;
@@ -135,7 +142,11 @@ export class Ledger {
   private append<T extends EntryType>(type: T, data: EntryData[T]): LedgerEntry<T> {
     const core = { seq: this.entries.length, ts: this.now(), prevHash: this.head(), type, data };
     const hash = hashEntry(core);
-    const entry: LedgerEntry<T> = { ...core, hash, signature: signString(this.keys.secretKey, hash) };
+    const entry: LedgerEntry<T> = {
+      ...core,
+      hash,
+      signature: signString(this.keys.secretKey, hash),
+    };
     this.entries.push(entry);
     return entry;
   }
@@ -158,7 +169,10 @@ export class Ledger {
  * `Ledger.verifyChain()` and `verifySnapshot()`. Checks hash links, content integrity, and the
  * post-quantum signature on every entry.
  */
-export function verifyEntries(publicKey: Uint8Array, entries: readonly LedgerEntry[]): VerifyReport {
+export function verifyEntries(
+  publicKey: Uint8Array,
+  entries: readonly LedgerEntry[],
+): VerifyReport {
   let prevHash = GENESIS_HASH;
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]!;
@@ -166,7 +180,12 @@ export function verifyEntries(publicKey: Uint8Array, entries: readonly LedgerEnt
       return { ok: false, entries: entries.length, brokenAt: i, reason: 'broken hash link' };
     }
     if (hashEntry(entry) !== entry.hash) {
-      return { ok: false, entries: entries.length, brokenAt: i, reason: 'entry hash mismatch (tampered content)' };
+      return {
+        ok: false,
+        entries: entries.length,
+        brokenAt: i,
+        reason: 'entry hash mismatch (tampered content)',
+      };
     }
     if (!verifyString(publicKey, entry.hash, entry.signature)) {
       return { ok: false, entries: entries.length, brokenAt: i, reason: 'invalid node signature' };

@@ -1,0 +1,18 @@
+import type { ModuleName } from '../config.js';
+import type { AcpModule } from '../context.js';
+import { guardrailsModule } from './guardrails.js';
+import { messagingModule } from './messaging.js';
+import { namingModule } from './naming.js';
+import { observabilityModule } from './observability.js';
+import { paymentsModule } from './payments.js';
+import { registryModule } from './registry.js';
+
+/** The built-in module catalogue. The kernel instantiates only the ones listed in config. */
+export const MODULE_FACTORIES: Record<ModuleName, () => AcpModule> = {
+  naming: namingModule,
+  registry: registryModule,
+  messaging: messagingModule,
+  payments: paymentsModule,
+  guardrails: guardrailsModule,
+  observability: observabilityModule,
+};

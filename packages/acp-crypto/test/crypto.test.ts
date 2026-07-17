@@ -4,8 +4,8 @@ import {
   decodeKeypair,
   deriveDid,
   encodeKeypair,
-  generateKeypair,
   generateKemKeypair,
+  generateKeypair,
   hashJson,
   open,
   seal,
@@ -61,9 +61,7 @@ describe('DIDs', () => {
   });
 
   it('gives different DIDs to different keys', () => {
-    expect(deriveDid(generateKeypair().publicKey)).not.toBe(
-      deriveDid(generateKeypair().publicKey),
-    );
+    expect(deriveDid(generateKeypair().publicKey)).not.toBe(deriveDid(generateKeypair().publicKey));
   });
 });
 
