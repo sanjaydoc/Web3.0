@@ -22,7 +22,9 @@ export class MongoStore implements Store {
     uri: string,
     private readonly dbName = 'acp',
   ) {
-    this.client = new MongoClient(uri);
+    // `ignoreUndefined` keeps the driver from persisting `undefined` fields as `null`, which would
+    // otherwise alter a ledger entry's canonical hash on reload (see Ledger.append's pruneUndefined).
+    this.client = new MongoClient(uri, { ignoreUndefined: true });
   }
 
   async init(): Promise<void> {

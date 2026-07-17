@@ -90,6 +90,34 @@ describe('Ledger', () => {
     expect(report.reason).toMatch(/tampered|hash/);
   });
 
+  it('persists payments without optional fields as absent, not null (MongoDB round-trip)', () => {
+    ledger.register(alice, 'did:acp:za', 1000);
+    ledger.register(bob, 'did:acp:zb', 0);
+    // A payment with NO memo/taskId — the case that broke hydrate() after a MongoDB restart,
+    // because the driver stored the `undefined` fields as `null` and the reloaded entry no longer
+    // hashed to its stored hash.
+    ledger.transfer(alice, bob, 100);
+
+    const payment = ledger.all()[2] as unknown as { data: Record<string, unknown> };
+    // Unset optionals must be absent keys, so no store can materialise them as `null`.
+    expect('memo' in payment.data).toBe(false);
+    expect('taskId' in payment.data).toBe(false);
+
+    // No entry may hold an `undefined` value anywhere — that's what diverges hashed vs stored form.
+    const hasUndefined = (v: unknown): boolean =>
+      Array.isArray(v)
+        ? v.some(hasUndefined)
+        : v && typeof v === 'object'
+          ? Object.values(v).some((x) => x === undefined || hasUndefined(x))
+          : false;
+    expect(ledger.all().some((e) => hasUndefined(e))).toBe(false);
+
+    // Simulate the exact persistence path: serialise and reload the whole snapshot. It must verify.
+    const reloaded = JSON.parse(JSON.stringify(ledger.toJSON()));
+    expect(verifySnapshot(reloaded).ok).toBe(true);
+    expect(verifySnapshot(reloaded).entries).toBe(3);
+  });
+
   it('links every entry to its predecessor', () => {
     ledger.register(alice, 'did:acp:za', 0);
     ledger.mint(alice, 10);

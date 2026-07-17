@@ -181,7 +181,17 @@ export class Ledger {
   }
 
   private append<T extends EntryType>(type: T, data: EntryData[T]): LedgerEntry<T> {
-    const core = { seq: this.entries.length, ts: this.now(), prevHash: this.head(), type, data };
+    // Drop `undefined`-valued fields (e.g. an unset payment memo) so the entry's in-memory,
+    // hashed, and persisted forms are byte-identical. Without this a store that serialises
+    // `undefined` as `null` (MongoDB does) would round-trip an entry into one whose recomputed
+    // hash no longer matches — breaking `verifyChain()`/`hydrate()` on the next restart.
+    const core = {
+      seq: this.entries.length,
+      ts: this.now(),
+      prevHash: this.head(),
+      type,
+      data: pruneUndefined(data),
+    };
     const hash = hashEntry(core);
     const entry: LedgerEntry<T> = {
       ...core,
@@ -204,6 +214,15 @@ export class Ledger {
     wallet.balance -= amount;
     this.balances.set(web3Id, wallet);
   }
+}
+
+/**
+ * Return a copy of `value` with every `undefined`-valued key removed, matching exactly what
+ * `JSON.stringify` (and therefore `canonicalize`) keeps. This is the shape we hash, store, and
+ * hold in memory, so all three agree regardless of how a store serialises `undefined`.
+ */
+function pruneUndefined<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 /**
