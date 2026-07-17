@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Genesis } from './Genesis.js';
 import {
   type AcpEvent,
   type AgentCard,
@@ -11,7 +12,7 @@ import {
   formatAmount,
 } from './api.js';
 
-type View = 'overview' | 'agents' | 'traffic' | 'ledger' | 'guardrails';
+type View = 'overview' | 'agents' | 'traffic' | 'ledger' | 'guardrails' | 'genesis';
 
 interface Snapshot {
   stats?: Stats;
@@ -108,6 +109,7 @@ export function App() {
           count={snap.entries.length}
         />
         <NavItem id="guardrails" label="Guardrails" view={view} set={setView} />
+        <NavItem id="genesis" label="Genesis · new agent" view={view} set={setView} />
         <div className="foot">
           <span className={`pill-live ${snap.online ? '' : 'pill-off'}`}>
             <span className="dot" /> {snap.online ? 'node online' : 'node offline'}
@@ -121,6 +123,7 @@ export function App() {
         {view === 'traffic' && <Traffic events={snap.events} />}
         {view === 'ledger' && <LedgerView snap={snap} />}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
+        {view === 'genesis' && <Genesis />}
       </main>
     </div>
   );
