@@ -23,8 +23,26 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
+from urllib.parse import urlparse
 
 DEFAULT_MODEL = "qwen2.5:7b"
+
+# Hosts that must never be reached through an HTTP proxy.
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+
+
+def _opener_for(url: str) -> urllib.request.OpenerDirector:
+    """Build a urllib opener, bypassing any configured proxy for loopback URLs.
+
+    On Windows a system/corporate proxy (HTTP_PROXY/HTTPS_PROXY) otherwise intercepts even
+    127.0.0.1 requests and the call hangs — while `curl` bypasses the proxy for localhost
+    automatically. This is the usual reason a local Ollama call "hangs" when `curl` to the same URL
+    returns instantly. Hosted providers still honour the proxy env vars (needed behind a firewall).
+    """
+    host = (urlparse(url).hostname or "").lower()
+    if host in _LOOPBACK_HOSTS:
+        return urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    return urllib.request.build_opener()
 
 # Each provider: the API base URL and which wire format it speaks. Local servers use the explicit
 # IPv4 loopback 127.0.0.1 rather than "localhost" — see `_prefer_ipv4` below for why.
@@ -134,8 +152,9 @@ class LLM:
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
         for key, value in headers.items():
             req.add_header(key, value)
+        opener = _opener_for(url)
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with opener.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception as exc:  # noqa: BLE001 - surface any transport/HTTP error uniformly
             raise LLMError(str(exc)) from exc

@@ -9,8 +9,15 @@ def test_llm_defaults(monkeypatch) -> None:
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
     llm = LLM()
-    assert llm.base_url == "http://localhost:11434/v1"
+    # IPv4 loopback, not "localhost": on Windows "localhost" can resolve to IPv6 ::1 where a
+    # local Ollama isn't listening, and urllib hangs on it.
+    assert llm.base_url == "http://127.0.0.1:11434/v1"
     assert llm.model == "qwen2.5:7b"
+
+
+def test_localhost_is_rewritten_to_ipv4(monkeypatch) -> None:
+    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1")
+    assert LLM().base_url == "http://127.0.0.1:11434/v1"
 
 
 def test_llm_reads_env_and_strips_trailing_slash(monkeypatch) -> None:
@@ -51,7 +58,7 @@ def test_provider_presets(monkeypatch) -> None:
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     assert LLM.provider("openrouter").base_url == "https://openrouter.ai/api/v1"
     assert LLM.provider("openai").base_url == "https://api.openai.com/v1"
-    assert LLM.provider("local").base_url == "http://localhost:11434/v1"
+    assert LLM.provider("local").base_url == "http://127.0.0.1:11434/v1"
     anthropic = LLM.provider("anthropic")
     assert anthropic.base_url == "https://api.anthropic.com"
     assert anthropic.kind == "anthropic"
@@ -73,6 +80,29 @@ def test_unknown_provider_falls_back_to_local(monkeypatch) -> None:
 def test_explicit_base_url_overrides_preset() -> None:
     llm = LLM(provider="openai", base_url="http://127.0.0.1:9/v1")
     assert llm.base_url == "http://127.0.0.1:9/v1"
+
+
+def test_loopback_calls_bypass_proxy(monkeypatch) -> None:
+    """A loopback URL must not be routed through a configured HTTP proxy (else it hangs on Windows);
+    hosted providers must still honour the proxy so firewalled users can reach them."""
+    import urllib.request
+
+    from acp_sdk.llm import _opener_for
+
+    monkeypatch.setenv("HTTP_PROXY", "http://proxy.local:8080")
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.local:8080")
+
+    def proxies(url: str) -> dict:
+        opener = _opener_for(url)
+        for handler in opener.handlers:
+            if isinstance(handler, urllib.request.ProxyHandler):
+                return handler.proxies
+        return {}
+
+    assert proxies("http://127.0.0.1:11434/v1/chat/completions") == {}
+    assert proxies("http://localhost:11434/v1/chat/completions") == {}
+    hosted = proxies("https://api.openai.com/v1/chat/completions")
+    assert hosted.get("http") == "http://proxy.local:8080"
 
 
 def test_load_env(tmp_path, monkeypatch) -> None:
