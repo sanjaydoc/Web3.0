@@ -96,11 +96,16 @@ pnpm --filter @acp/node dev        # ACP node on http://127.0.0.1:8787
 # Dashboard (in another shell)
 pnpm --filter @acp/dashboard dev   # console on http://127.0.0.1:5173
 
-# Python agents (in another shell)
+# Python agents (in another shell) — in an isolated virtualenv
+python3 -m venv .venv
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -e "packages/acp-sdk-py[dev]"
 python examples/two-agents-demo/demo.py
 python examples/two-agents-demo/verify_ledger.py
 ```
+
+> Requires **Node 20+**, **pnpm 10+**, and **Python 3.10+**. The `venv` keeps the SDK and its
+> post-quantum dependencies isolated from your system Python. Deactivate later with `deactivate`.
 
 ## The demo
 

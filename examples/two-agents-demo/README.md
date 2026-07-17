@@ -10,7 +10,9 @@ data — every step post-quantum-signed and recorded on the ledger.
 pnpm install
 pnpm --filter @acp/node dev
 
-# 2. Install the SDK and run the demo (in another shell)
+# 2. Install the SDK in a virtualenv and run the demo (in another shell)
+python3 -m venv .venv
+source .venv/bin/activate             # Windows: .venv\Scripts\activate
 pip install -e "packages/acp-sdk-py[dev]"
 python examples/two-agents-demo/demo.py
 

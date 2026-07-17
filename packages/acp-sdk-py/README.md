@@ -8,6 +8,9 @@ with the TypeScript `@acp/node`.
 ## Install
 
 ```bash
+# From the repo root, in an isolated virtualenv:
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -e "packages/acp-sdk-py[dev]"
 ```
 

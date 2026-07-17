@@ -12,7 +12,9 @@ pnpm install
 pnpm typecheck
 pnpm test
 
-# Python agent SDK
+# Python agent SDK (in an isolated virtualenv)
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -e "packages/acp-sdk-py[dev]"
 pytest packages/acp-sdk-py -q
 ruff check packages/acp-sdk-py examples
