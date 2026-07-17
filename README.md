@@ -117,10 +117,16 @@ npm install -g pnpm
 ```
 
 **Configuration** lives in a `.env` file at the repo root — copy the template and fill in what you
-need (MongoDB, node seed, Claude key, …). All settings are optional; without a `.env` the node runs
-in-memory on the defaults.
+need. All settings are optional; without a `.env` the node runs in-memory on the defaults.
 ```bash
 cp .env.example .env        # Windows: copy .env.example .env
+pnpm --filter @acp/node keygen   # prints ACP_NODE_SEED=… — paste it into .env
+```
+For **persistence (survives restarts)** set these in `.env` — otherwise the node is in-memory:
+```ini
+ACP_NODE_SEED=<value from keygen>                                   # stable signing identity
+ACP_MONGODB_URI=mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ # your MongoDB Atlas string
+ACP_MONGODB_DB=acp
 ```
 
 Then run each block in its own terminal (start Terminal 1 first and leave it running).
@@ -128,8 +134,7 @@ Then run each block in its own terminal (start Terminal 1 first and leave it run
 **Terminal 1 — the ACP node**
 ```bash
 pnpm install
-pnpm --filter @acp/node keygen     # → prints ACP_NODE_SEED=… (paste into .env for durable identity)
-pnpm --filter @acp/node dev        # → listening on http://127.0.0.1:8787
+pnpm --filter @acp/node dev        # reads .env → listening on http://127.0.0.1:8787
 ```
 
 **Terminal 2 — the dashboard** (optional)
@@ -139,12 +144,16 @@ pnpm --filter @acp/dashboard dev   # → console on http://127.0.0.1:5173
 
 **Terminal 3 — Python agents** (in an isolated virtualenv)
 ```bash
+# First time only — create the venv and install the SDK:
 # macOS / Linux:
 python3 -m venv .venv && source .venv/bin/activate
 # Windows (CMD):         py -3.12 -m venv .venv   then   .venv\Scripts\activate
 # Windows (PowerShell):  py -3.12 -m venv .venv ;  .venv\Scripts\Activate.ps1
-
 pip install -e "packages/acp-sdk-py[dev]"
+
+# Every run after that — just activate and go:
+#   macOS/Linux:  source .venv/bin/activate
+#   Windows:      .venv\Scripts\activate
 python examples/two-agents-demo/demo.py
 python examples/two-agents-demo/verify_ledger.py
 ```
