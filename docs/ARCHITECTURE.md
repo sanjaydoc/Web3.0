@@ -86,9 +86,32 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
 
 ## State & persistence
 
-The MVP keeps the ledger, registry, and event buffer in memory — deliberately simple. The ledger
-is the source of truth and is fully serialisable (`toJSON()` / `verifySnapshot()`), which is the
-seam where durable storage or a real chain slots in later (see [QUANTUM.md](QUANTUM.md)).
+The node keeps fast in-memory structures (registry, ledger, wallet balances) but persists through a
+pluggable **`Store`**:
+
+- **`MemoryStore`** (default) — for local dev and tests; state lives for the process lifetime.
+- **`MongoStore`** — set `ACP_MONGODB_URI` (e.g. a MongoDB Atlas cluster) and state survives
+  restarts. Agent cards go to the `agents` collection; ledger entries to `ledger_entries`.
+
+Only two things are persisted: **agent cards** and **ledger entries**. Wallet balances are *derived*
+from the ledger, so on startup `Ledger.hydrate()` replays the entries to rebuild them — and refuses
+to boot if the persisted chain fails verification. Writes are **write-through**: agent registration
+awaits the card write, and each new ledger entry is persisted via the ledger's `onAppend` hook
+(drained on graceful shutdown).
+
+Because the ledger is signed by the node's key, the **node identity must be stable across restarts**
+or the persisted log won't verify. Set `ACP_NODE_SEED` to a 32-byte base64url seed
+(`generateKeypair(seed)` is deterministic); generate one with `pnpm --filter @acp/node keygen`.
+Without it the node uses an ephemeral key and warns that state won't survive a restart.
+
+```
+ACP_MONGODB_URI=mongodb+srv://user:pass@cluster.xxxx.mongodb.net   # persistence on
+ACP_MONGODB_DB=acp                                                 # database name (default: acp)
+ACP_NODE_SEED=<32-byte base64url>                                  # stable signing identity
+```
+
+This is durable single-node storage — still not a distributed L1 with consensus (see
+[QUANTUM.md](QUANTUM.md) for that part of the roadmap).
 
 ## Bridging the existing web
 

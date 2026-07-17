@@ -27,6 +27,10 @@ export interface AcpConfig {
   /** Opening balance minted to every new account (a testnet faucet). */
   faucetGrant: number;
   guardrails: GuardrailConfig;
+  /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
+  mongodbUri?: string;
+  /** Database name to use within the MongoDB cluster. */
+  mongodbDb: string;
 }
 
 export const DEFAULT_CONFIG: AcpConfig = {
@@ -39,4 +43,6 @@ export const DEFAULT_CONFIG: AcpConfig = {
     rateLimitPerWindow: Number(process.env.ACP_RATE_LIMIT ?? 120),
     windowMs: Number(process.env.ACP_WINDOW_MS ?? 60_000),
   },
+  mongodbUri: process.env.ACP_MONGODB_URI,
+  mongodbDb: process.env.ACP_MONGODB_DB ?? 'acp',
 };

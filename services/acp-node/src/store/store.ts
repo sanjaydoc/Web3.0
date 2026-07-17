@@ -1,0 +1,23 @@
+import type { AgentCard } from '@acp/core';
+import type { LedgerEntry } from '@acp/ledger';
+
+/**
+ * Durable state for an ACP node. The node keeps fast in-memory structures (registry, ledger,
+ * wallet balances) but write-throughs every mutation here and reloads on startup — so restarting
+ * the node no longer wipes state.
+ *
+ * Only two things need persisting: agent cards and ledger entries. Wallet balances are *derived*
+ * from the ledger (replayed on startup by `Ledger.hydrate`), so they never need their own storage.
+ */
+export interface Store {
+  readonly kind: 'memory' | 'mongodb';
+  /** Connect / create indexes. Called once before load. */
+  init(): Promise<void>;
+  loadAgents(): Promise<AgentCard[]>;
+  saveAgent(card: AgentCard): Promise<void>;
+  /** Ledger entries in append order (ascending `seq`). */
+  loadLedger(): Promise<LedgerEntry[]>;
+  appendEntry(entry: LedgerEntry): Promise<void>;
+  /** Flush any pending writes and release resources. */
+  close(): Promise<void>;
+}

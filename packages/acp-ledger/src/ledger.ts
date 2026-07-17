@@ -46,11 +46,52 @@ export class Ledger {
   private readonly entries: LedgerEntry[] = [];
   private readonly balances = new Map<Web3Id, Wallet>();
 
+  /** Called after every newly-appended entry — the write-through hook for persistence. */
+  onAppend?: (entry: LedgerEntry) => void;
+
   constructor(
     private readonly keys: Keypair,
     private readonly publicKeyB64u: string,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {}
+
+  /**
+   * Load previously-persisted entries on startup, rebuilding wallet balances by replaying them.
+   * Entries keep their original signatures (they are not re-signed). Verifies the chain and
+   * throws if the persisted log is inconsistent, so a corrupted store can't silently boot.
+   */
+  hydrate(entries: LedgerEntry[]): void {
+    if (this.entries.length > 0) throw new Error('hydrate() must run before any writes');
+    const report = verifyEntries(this.keys.publicKey, entries);
+    if (!report.ok) {
+      throw new Error(
+        `refusing to hydrate a broken ledger: ${report.reason} at #${report.brokenAt}`,
+      );
+    }
+    for (const entry of entries) {
+      this.entries.push(entry);
+      this.replayBalances(entry);
+    }
+  }
+
+  private replayBalances(entry: LedgerEntry): void {
+    if (entry.type === 'register') {
+      const d = entry.data as { web3Id: Web3Id; openingBalance: Amount; currency: Currency };
+      if (!this.balances.has(d.web3Id)) {
+        this.balances.set(d.web3Id, { owner: d.web3Id, currency: d.currency, balance: 0 });
+      }
+      this.credit(d.web3Id, d.openingBalance, d.currency);
+    } else if (entry.type === 'payment') {
+      const d = entry.data as {
+        from: Web3Id | null;
+        to: Web3Id;
+        amount: Amount;
+        currency: Currency;
+      };
+      if (d.from) this.debit(d.from, d.amount, d.currency);
+      this.credit(d.to, d.amount, d.currency);
+    }
+  }
 
   /** Register an account, optionally crediting an opening balance (a faucet grant). */
   register(
@@ -148,6 +189,7 @@ export class Ledger {
       signature: signString(this.keys.secretKey, hash),
     };
     this.entries.push(entry);
+    this.onAppend?.(entry);
     return entry;
   }
 

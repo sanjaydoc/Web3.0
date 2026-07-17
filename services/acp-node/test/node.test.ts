@@ -1,9 +1,11 @@
 import { toMinorUnits } from '@acp/core';
+import { generateKeypair } from '@acp/crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 process.env.ACP_LOG_LEVEL = 'silent';
 import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
+import { MemoryStore } from '../src/store/index.js';
 import { makeAgent, message, sealAs } from '../src/testkit.js';
 
 describe('ACP node (in-process integration)', () => {
@@ -160,6 +162,55 @@ describe('ACP node (in-process integration)', () => {
 
     workerSocket.close();
     senderSocket.close();
+  });
+});
+
+describe('persistence (state survives a restart)', () => {
+  it('restores agents, balances and a verified ledger from the store', async () => {
+    // A shared store + stable node keys stand in for a real MongoDB + ACP_NODE_SEED across reboots.
+    const store = new MemoryStore();
+    const nodeKeys = generateKeypair();
+
+    // --- first boot: register two agents and settle a payment ---
+    const k1 = new Kernel({ port: 0 }, nodeKeys, store);
+    await k1.init();
+    const alice = makeAgent('palice');
+    const bob = makeAgent('pbob');
+    await k1.http.inject({ method: 'POST', url: '/agents', payload: alice.registration });
+    await k1.http.inject({ method: 'POST', url: '/agents', payload: bob.registration });
+    await k1.http.inject({
+      method: 'POST',
+      url: '/pay',
+      payload: sealAs(alice, { from: alice.web3Id, to: bob.web3Id, amount: 700 }),
+    });
+    await k1.close(); // drains write-behind persistence
+
+    // --- reboot: a fresh kernel over the same store + keys ---
+    const k2 = new Kernel({ port: 0 }, nodeKeys, store);
+    await k2.init();
+
+    expect(k2.registry.size).toBe(2);
+    expect(k2.registry.has(alice.web3Id)).toBe(true);
+    expect(k2.ledger.balanceOf(alice.web3Id)).toBe(k2.config.faucetGrant - 700);
+    expect(k2.ledger.balanceOf(bob.web3Id)).toBe(k2.config.faucetGrant + 700);
+    expect(k2.ledger.verifyChain().ok).toBe(true);
+    await k2.close();
+  });
+
+  it('refuses to hydrate a ledger signed by a different node key', async () => {
+    const store = new MemoryStore();
+    const k1 = new Kernel({ port: 0 }, generateKeypair(), store);
+    await k1.init();
+    await k1.http.inject({
+      method: 'POST',
+      url: '/agents',
+      payload: makeAgent('pcarol').registration,
+    });
+    await k1.close();
+
+    // Different node key → the persisted ledger's signatures won't verify.
+    const k2 = new Kernel({ port: 0 }, generateKeypair(), store);
+    await expect(k2.init()).rejects.toThrow(/hydrate a broken ledger|signature/);
   });
 });
 

@@ -12,8 +12,8 @@ export function registryModule(): AcpModule {
   return {
     name: 'registry',
     version: '0.1.0',
-    register({ http, registry, ledger, bus, config, clock }: ModuleContext) {
-      http.post('/agents', (request, reply) => {
+    register({ http, registry, ledger, bus, store, config, clock }: ModuleContext) {
+      http.post('/agents', async (request, reply) => {
         const body = request.body as Partial<RegistrationRequest> | undefined;
         if (!body || typeof body.local !== 'string' || !body.signPublicKey || !body.kemPublicKey) {
           return reply
@@ -51,6 +51,7 @@ export function registryModule(): AcpModule {
         };
 
         registry.add(card);
+        await store.saveAgent(card);
         ledger.register(id, did, config.faucetGrant);
         bus.emit({
           kind: 'agent.registered',

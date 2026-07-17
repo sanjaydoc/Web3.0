@@ -12,6 +12,7 @@ import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
 import { Guardrails } from './services/guardrails.js';
 import { Registry } from './services/registry.js';
+import { type Store, createStore } from './store/index.js';
 
 /**
  * The ACP kernel — a thin core that owns the shared services (ledger, registry, event bus,
@@ -27,9 +28,16 @@ export class Kernel {
   readonly guardrails: Guardrails;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
+  readonly store: Store;
   readonly loaded: string[] = [];
+  /** In-flight write-behind persistence, drained on close(). */
+  private readonly inflight = new Set<Promise<void>>();
 
-  constructor(config: Partial<AcpConfig> = {}, nodeKeys: Keypair = generateKeypair()) {
+  constructor(
+    config: Partial<AcpConfig> = {},
+    nodeKeys: Keypair = generateKeypair(),
+    store?: Store,
+  ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     const clock = () => new Date().toISOString();
     this.nodeKeys = nodeKeys;
@@ -38,12 +46,30 @@ export class Kernel {
     this.bus = new EventBus(clock);
     this.guardrails = new Guardrails(this.config.guardrails, () => Date.now());
     this.connections = new ConnectionHub();
+    this.store = store ?? createStore(this.config);
     const level = process.env.ACP_LOG_LEVEL ?? 'info';
     this.http = Fastify({ logger: level === 'silent' ? false : { level } });
   }
 
   /** Register base plugins and every configured module. Call once before `listen`. */
   async init(): Promise<this> {
+    // Restore persisted state, then wire write-through so future mutations are durable.
+    await this.store.init();
+    for (const card of await this.store.loadAgents()) this.registry.add(card);
+    this.ledger.hydrate(await this.store.loadLedger());
+    this.ledger.onAppend = (entry) => {
+      const p = this.store
+        .appendEntry(entry)
+        .catch((err) => this.http.log.error({ err }, 'ledger persistence failed'));
+      this.inflight.add(p);
+      void p.finally(() => this.inflight.delete(p));
+    };
+    if (this.registry.size > 0 || this.ledger.size > 0) {
+      this.http.log.info(
+        `restored ${this.registry.size} agents and ${this.ledger.size} ledger entries from ${this.store.kind} store`,
+      );
+    }
+
     await this.http.register(cors, { origin: true });
     await this.http.register(websocket);
 
@@ -63,6 +89,7 @@ export class Kernel {
       bus: this.bus,
       guardrails: this.guardrails,
       connections: this.connections,
+      store: this.store,
       config: this.config,
       clock: () => new Date().toISOString(),
       log: this.http.log,
@@ -90,5 +117,8 @@ export class Kernel {
 
   async close(): Promise<void> {
     await this.http.close();
+    // Drain write-behind persistence before releasing the store.
+    await Promise.allSettled([...this.inflight]);
+    await this.store.close();
   }
 }

@@ -5,6 +5,7 @@ import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
 import type { Guardrails } from './services/guardrails.js';
 import type { Registry } from './services/registry.js';
+import type { Store } from './store/index.js';
 
 /**
  * The surface every module is handed at load time. A module registers routes/handlers on `http`
@@ -19,6 +20,7 @@ export interface ModuleContext {
   bus: EventBus;
   guardrails: Guardrails;
   connections: ConnectionHub;
+  store: Store;
   config: AcpConfig;
   clock: () => string;
   log: FastifyBaseLogger;
