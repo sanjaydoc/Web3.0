@@ -10,7 +10,9 @@ alice.submit_task("bob@web3.0", "summarise", {"text": "..."})
 
 from . import crypto
 from .agent import Agent
+from .config import load_env
 from .http import HttpError
+from .llm import LLM, LLMError
 
-__all__ = ["Agent", "HttpError", "crypto"]
+__all__ = ["LLM", "Agent", "HttpError", "LLMError", "crypto", "load_env"]
 __version__ = "0.1.0"
