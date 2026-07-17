@@ -102,7 +102,7 @@ body {
 /* --- stat tiles --------------------------------------------------------- */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   margin-bottom: 24px;
 }
@@ -121,9 +121,18 @@ body {
 }
 .stat .n {
   font-family: var(--serif);
-  font-size: 1.95rem;
+  font-size: 1.85rem;
   line-height: 1.1;
   margin-top: 6px;
+  white-space: nowrap;
+}
+.stat .n .unit {
+  font-family: var(--sans);
+  font-size: 0.58em;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 0.3rem;
+  letter-spacing: 0.02em;
 }
 
 /* --- feed --------------------------------------------------------------- */

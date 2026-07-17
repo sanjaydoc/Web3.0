@@ -158,7 +158,18 @@ function Overview({ snap }: { snap: Snapshot }) {
       <div className="stats">
         <Stat k="Agents" n={s ? String(s.agents) : '—'} />
         <Stat k="Online now" n={s ? String(s.online) : '—'} />
-        <Stat k="Value in network" n={s ? s.totalValueFormatted : '—'} />
+        <Stat
+          k="Value in network"
+          n={
+            s
+              ? (s.totalValue / 100).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
+              : '—'
+          }
+          unit={s ? 'aUSD' : undefined}
+        />
         <Stat k="Ledger entries" n={s ? String(s.ledgerEntries) : '—'} />
         <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />
       </div>
@@ -170,11 +181,14 @@ function Overview({ snap }: { snap: Snapshot }) {
   );
 }
 
-function Stat({ k, n }: { k: string; n: string }) {
+function Stat({ k, n, unit }: { k: string; n: string; unit?: string }) {
   return (
     <div className="stat">
       <div className="k">{k}</div>
-      <div className="n">{n}</div>
+      <div className="n">
+        {n}
+        {unit && <span className="unit">{unit}</span>}
+      </div>
     </div>
   );
 }
