@@ -2,3 +2,9 @@ packages:
   - "packages/*"
   - "services/*"
   - "apps/*"
+
+# Dependencies allowed to run install/postinstall build scripts (moved here from
+# package.json's "pnpm" field, which newer pnpm no longer reads).
+onlyBuiltDependencies:
+  - "@biomejs/biome"
+  - esbuild

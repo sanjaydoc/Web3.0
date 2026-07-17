@@ -87,29 +87,48 @@ verifies the node's ledger from Python.
 
 ## Quickstart
 
+**Prerequisites:** **Node 20+**, **pnpm 10+**, and **Python 3.10–3.12**.
+
+If you don't have pnpm yet:
+
 ```bash
-# TypeScript workspace
+corepack enable pnpm        # ships with Node (run as Administrator on Windows if it errors)
+# or, without admin:
+npm install -g pnpm
+```
+
+Then run each block in its own terminal (start Terminal 1 first and leave it running).
+
+**Terminal 1 — the ACP node**
+```bash
 pnpm install
-pnpm typecheck && pnpm test        # 4 packages, 36 tests
-pnpm --filter @acp/node dev        # ACP node on http://127.0.0.1:8787
+pnpm --filter @acp/node dev        # → listening on http://127.0.0.1:8787
+```
 
-# Dashboard (in another shell)
-pnpm --filter @acp/dashboard dev   # console on http://127.0.0.1:5173
+**Terminal 2 — the dashboard** (optional)
+```bash
+pnpm --filter @acp/dashboard dev   # → console on http://127.0.0.1:5173
+```
 
-# Python agents (in another shell) — in an isolated virtualenv
+**Terminal 3 — Python agents** (in an isolated virtualenv)
+```bash
 # macOS / Linux:
 python3 -m venv .venv && source .venv/bin/activate
-# Windows (PowerShell):  py -m venv .venv ; .venv\Scripts\Activate.ps1
-# Windows (CMD):         py -m venv .venv &  .venv\Scripts\activate
+# Windows (CMD):         py -3.12 -m venv .venv   then   .venv\Scripts\activate
+# Windows (PowerShell):  py -3.12 -m venv .venv ;  .venv\Scripts\Activate.ps1
 
 pip install -e "packages/acp-sdk-py[dev]"
 python examples/two-agents-demo/demo.py
 python examples/two-agents-demo/verify_ledger.py
 ```
 
-> Requires **Node 20+**, **pnpm 10+**, and **Python 3.10+**. On Windows use `py` (the Python
-> launcher), not `python3`. The `venv` keeps the SDK and its post-quantum dependencies isolated
-> from your system Python; leave it later with `deactivate`.
+> On Windows use `py` (the Python launcher), not `python3`; `py -3.12` picks Python 3.12
+> specifically. On Windows the demo commands use backslashes (`examples\two-agents-demo\demo.py`).
+> The `venv` keeps the SDK's post-quantum dependencies isolated from your system Python; leave it
+> later with `deactivate`. Re-running `demo.py` reuses the `bob`/`alice` handles — set
+> `ACP_DEMO_SUFFIX` (e.g. `set ACP_DEMO_SUFFIX=2` on Windows) for a fresh pair, or restart the node.
+
+Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/acp-sdk-py` (8 Python tests).
 
 ## The demo
 

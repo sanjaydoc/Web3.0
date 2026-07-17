@@ -18,12 +18,6 @@
     "node": "pnpm --filter @acp/node dev",
     "dashboard": "pnpm --filter @acp/dashboard dev"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "esbuild"
-    ]
-  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.10.2",
