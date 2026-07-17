@@ -55,6 +55,11 @@ export class Kernel {
   async init(): Promise<this> {
     // Restore persisted state, then wire write-through so future mutations are durable.
     await this.store.init();
+    this.http.log.info(
+      this.store.kind === 'mongodb'
+        ? 'persistence: MongoDB connected (state survives restarts)'
+        : 'persistence: in-memory (state is lost on restart — set ACP_MONGODB_URI to persist)',
+    );
     for (const card of await this.store.loadAgents()) this.registry.add(card);
     this.ledger.hydrate(await this.store.loadLedger());
     this.ledger.onAppend = (entry) => {
