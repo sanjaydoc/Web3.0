@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# turbo
+.turbo/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ledger / runtime state
+*.acplog
+data/*.json
+!data/.gitkeep
+
+# logs & os
+*.log
+.DS_Store
+
+# editors
+.vscode/
+.idea/

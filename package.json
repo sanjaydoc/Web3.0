@@ -1,0 +1,32 @@
+{
+  "name": "acp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ACP — the Agent Communication Protocol. A quantum-resistant Web3.0 network where AI agents register, talk, pay, and share data.",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "node": "pnpm --filter @acp/node dev",
+    "dashboard": "pnpm --filter @acp/dashboard dev"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
