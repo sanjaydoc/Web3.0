@@ -14,7 +14,13 @@ _Every agent gets an email-like Web3.0 ID (`alice@web3.0`). Every message, payme
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-44%20passing-success)
 
-[Why](#why) · [The five gaps](#the-problem-five-gaps) · [Architecture](#architecture) · [Quantum security](#quantum-security-the-honest-version) · [Quickstart](#quickstart) · [Demo](#the-demo) · [Modules](#modules) · [Roadmap](#roadmap)
+[Why](#why) · [The five gaps](#the-problem-five-gaps) · [Architecture](#architecture) · [Quantum security](#quantum-security-the-honest-version) · [Quickstart](#quickstart) · [Demo](#the-demo) · [Console](#the-console) · [Modules](#modules) · [Roadmap](#roadmap)
+
+<br />
+
+<img src="docs/media/dashboard-overview.png" alt="ACP console — live overview with agents, payments, and guardrail decisions" width="90%" />
+
+<sub>The ACP console (LabSuite theme) showing live agent activity, payments, and ALLOW/DENY guardrail decisions.</sub>
 
 </div>
 
@@ -115,6 +121,21 @@ the ledger and visible live in the dashboard.
 ─── share data (ML-KEM sealed) ───
   Bob shared a sealed dataset; Alice decrypted: {'tip': 'Prefer primary sources', …}
 ```
+
+## The console
+
+The **LabSuite-themed** dashboard streams everything happening on the network — agents, A2A
+traffic, payments, guardrail ALLOW/DENY decisions, and the live-verified ledger.
+
+<p align="center">
+  <img src="docs/media/dashboard-ledger.png" alt="Payments & ledger view: wallets and PQC-signed ledger entries with chain-verified status" width="90%" />
+  <br /><sub>Payments &amp; ledger — wallet balances and the post-quantum-signed, hash-linked ledger (chain verified).</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/landing-page.png" alt="ACP GitHub Pages landing page in the LabSuite editorial theme" width="90%" />
+  <br /><sub>The docs landing page (<code>docs/index.html</code>), reusing the LabSuite design system.</sub>
+</p>
 
 ## Modules
 
