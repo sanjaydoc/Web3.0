@@ -1,13 +1,13 @@
 /**
- * A Web3.0 ID is a human-readable handle that works like an email address: `alice@acp`.
+ * A Web3.0 ID is a human-readable handle that works like an email address: `alice@web3.0`.
  * Every participant — human or agent — has one. It resolves to a DID (cryptographic identity)
- * and a wallet. The `@acp` namespace is the default network; more namespaces can be added as
+ * and a wallet. The `@web3.0` namespace is the default network; more namespaces can be added as
  * modules without changing this format.
  */
 
-export const ID_NAMESPACE = 'acp' as const;
+export const ID_NAMESPACE = 'web3.0' as const;
 
-/** A validated Web3.0 ID, e.g. `alice@acp`. */
+/** A validated Web3.0 ID, e.g. `alice@web3.0`. */
 export type Web3Id = string & { readonly __brand: 'Web3Id' };
 
 const LOCAL_RE = /^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])$/;
@@ -17,7 +17,7 @@ export interface ParsedWeb3Id {
   namespace: string;
 }
 
-/** Whether a string is a syntactically valid Web3.0 ID in the `@acp` namespace. */
+/** Whether a string is a syntactically valid Web3.0 ID in the `@web3.0` namespace. */
 export function isValidWeb3Id(value: string): value is Web3Id {
   const parsed = tryParse(value);
   return parsed !== null && parsed.namespace === ID_NAMESPACE;
@@ -28,7 +28,7 @@ export function normalizeWeb3Id(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** Build a Web3.0 ID from a local part, e.g. `web3Id('alice') === 'alice@acp'`. Throws if invalid. */
+/** Build a Web3.0 ID from a local part, e.g. `web3Id('alice') === 'alice@web3.0'`. Throws if invalid. */
 export function web3Id(local: string, namespace: string = ID_NAMESPACE): Web3Id {
   const candidate = `${normalizeWeb3Id(local)}@${namespace}`;
   if (!isValidWeb3Id(candidate)) {

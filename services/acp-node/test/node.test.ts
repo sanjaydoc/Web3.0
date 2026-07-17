@@ -35,7 +35,7 @@ describe('ACP node (in-process integration)', () => {
     const wallet = (res.json.wallet as { balance: number }).balance;
     expect(wallet).toBe(kernel.config.faucetGrant);
 
-    const resolved = await get('/resolve/alice@acp');
+    const resolved = await get('/resolve/alice@web3.0');
     expect(resolved.status).toBe(200);
     expect(resolved.json.did).toBe((res.json.card as { did: string }).did);
   });

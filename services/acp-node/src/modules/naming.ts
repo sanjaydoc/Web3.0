@@ -3,7 +3,7 @@ import type { Web3Id } from '@acp/core';
 import type { AcpModule, ModuleContext } from '../context.js';
 
 /**
- * naming — resolves an email-like Web3.0 ID (`alice@acp`) to its DID and public keys, the way
+ * naming — resolves an email-like Web3.0 ID (`alice@web3.0`) to its DID and public keys, the way
  * DNS resolves a hostname. Uniqueness of handles is enforced at registration time.
  */
 export function namingModule(): AcpModule {

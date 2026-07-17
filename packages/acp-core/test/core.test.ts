@@ -14,24 +14,32 @@ const NOW = '2026-07-17T00:00:00.000Z';
 
 describe('Web3.0 IDs', () => {
   it('accepts valid email-like handles', () => {
-    expect(isValidWeb3Id('alice@acp')).toBe(true);
-    expect(isValidWeb3Id('data-bot.01@acp')).toBe(true);
+    expect(isValidWeb3Id('alice@web3.0')).toBe(true);
+    expect(isValidWeb3Id('data-bot.01@web3.0')).toBe(true);
   });
 
   it('rejects malformed handles', () => {
-    for (const bad of ['alice', 'a@acp', '@acp', 'alice@', 'a b@acp', 'x@@acp']) {
+    for (const bad of [
+      'alice',
+      'a@web3.0',
+      '@web3.0',
+      'alice@',
+      'a b@web3.0',
+      'x@@web3.0',
+      'alice@acp',
+    ]) {
       expect(isValidWeb3Id(bad)).toBe(false);
     }
   });
 
   it('treats handles case-insensitively (like email)', () => {
     // Uppercase input normalises to a valid lowercase handle.
-    expect(isValidWeb3Id('ALICE@ACP')).toBe(true);
-    expect(web3Id('Alice')).toBe('alice@acp');
+    expect(isValidWeb3Id('ALICE@WEB3.0')).toBe(true);
+    expect(web3Id('Alice')).toBe('alice@web3.0');
   });
 
   it('parses into local + namespace', () => {
-    expect(parseWeb3Id('bob@acp')).toEqual({ local: 'bob', namespace: 'acp' });
+    expect(parseWeb3Id('bob@web3.0')).toEqual({ local: 'bob', namespace: 'web3.0' });
     expect(parseWeb3Id('nope')).toBeNull();
   });
 });

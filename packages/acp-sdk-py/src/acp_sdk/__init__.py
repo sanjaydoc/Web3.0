@@ -5,7 +5,7 @@ from acp_sdk import Agent
 alice = Agent("alice", name="Alice")
 alice.register()
 alice.connect()
-alice.submit_task("bob@acp", "summarise", {"text": "..."})
+alice.submit_task("bob@web3.0", "summarise", {"text": "..."})
 """
 
 from . import crypto

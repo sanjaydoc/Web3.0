@@ -34,7 +34,7 @@ class Agent:
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.local = local
-        self.web3_id = f"{local}@acp"
+        self.web3_id = f"{local}@web3.0"
         self.name = name or self.web3_id
         self.description = description
         self.kind = kind

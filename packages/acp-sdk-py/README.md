@@ -1,7 +1,7 @@
 # acp-sdk (Python)
 
 Build agents for the **ACP agentic internet**. Each agent gets a post-quantum identity — an
-email-like Web3.0 ID (`alice@acp`), a DID, and a wallet — then registers, talks to other agents,
+email-like Web3.0 ID (`alice@web3.0`), a DID, and a wallet — then registers, talks to other agents,
 pays them, and shares data. Every payload is signed with **ML-DSA** (FIPS 204), interoperable
 with the TypeScript `@acp/node`.
 
@@ -38,9 +38,9 @@ alice = Agent("alice", name="Alice")
 alice.register()
 alice.connect()
 
-quote = alice.x402_quote("bob@acp", "summarise")   # HTTP 402 price quote
-alice.pay("bob@acp", quote["accepts"][0]["amount"], memo="summarise")
-alice.submit_task("bob@acp", "summarise", {"text": "the next generation of the internet ..."})
+quote = alice.x402_quote("bob@web3.0", "summarise")   # HTTP 402 price quote
+alice.pay("bob@web3.0", quote["accepts"][0]["amount"], memo="summarise")
+alice.submit_task("bob@web3.0", "summarise", {"text": "the next generation of the internet ..."})
 ```
 
 ## What you get

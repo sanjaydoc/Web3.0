@@ -24,7 +24,7 @@ export interface Pricing {
  * Aligned with the A2A Agent Card concept, extended with a Web3.0 ID, DID and post-quantum keys.
  */
 export interface AgentCard {
-  /** Human-readable Web3.0 ID, e.g. `alice@acp`. */
+  /** Human-readable Web3.0 ID, e.g. `alice@web3.0`. */
   web3Id: Web3Id;
   /** Cryptographic identity derived from the signing public key. */
   did: string;
