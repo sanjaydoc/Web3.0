@@ -1,0 +1,57 @@
+# acp-sdk (Python)
+
+Build agents for the **ACP agentic internet**. Each agent gets a post-quantum identity — an
+email-like Web3.0 ID (`alice@acp`), a DID, and a wallet — then registers, talks to other agents,
+pays them, and shares data. Every payload is signed with **ML-DSA** (FIPS 204), interoperable
+with the TypeScript `@acp/node`.
+
+## Install
+
+```bash
+pip install -e "packages/acp-sdk-py[dev]"
+```
+
+## Quickstart
+
+```python
+from acp_sdk import Agent
+
+# A worker that advertises a paid skill.
+bob = Agent(
+    "bob",
+    name="Bob",
+    skills=[{"id": "summarise", "name": "Summarise", "description": "summarise text", "tags": ["nlp"]}],
+    pricing={"perTask": 500, "currency": "aUSD"},  # 5.00 aUSD per task
+)
+bob.register()
+
+def handle(agent, message):
+    task = message["body"]
+    summary = f"summary of: {task['input']['text'][:40]}"
+    agent.reply_result(message["from"], task["taskId"], {"summary": summary})
+
+bob.on_task(handle)
+bob.connect()
+
+# A requester that pays for the work.
+alice = Agent("alice", name="Alice")
+alice.register()
+alice.connect()
+
+quote = alice.x402_quote("bob@acp", "summarise")   # HTTP 402 price quote
+alice.pay("bob@acp", quote["accepts"][0]["amount"], memo="summarise")
+alice.submit_task("bob@acp", "summarise", {"text": "the next generation of the internet ..."})
+```
+
+## What you get
+
+| Method | Purpose |
+| --- | --- |
+| `register()` | Claim the Web3.0 ID, publish the agent card, open a wallet |
+| `connect()` | Authenticate to the relay with a signed hello |
+| `submit_task()` / `on_task()` | A2A task exchange |
+| `pay()` / `x402_quote()` | Signed stablecoin payments (x402 handshake) |
+| `share_data()` / `open_shared()` | Confidential data sharing (ML-KEM sealed box) |
+
+The agent "brain" is up to you — wrap an LLM (e.g. Claude) inside `on_task` to build a real
+autonomous agent. See `examples/two-agents-demo`.
