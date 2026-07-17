@@ -12,7 +12,7 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from websocket import WebSocket, create_connection
+from websocket import WebSocket, WebSocketTimeoutException, create_connection
 
 from . import crypto
 from .http import get_json, post_json
@@ -160,6 +160,11 @@ class Agent:
         if ready.get("kind") != "ready":
             ws.close()
             raise RuntimeError(f"relay handshake failed: {ready}")
+        # The connect timeout guards the handshake only. Clear it so the read loop blocks waiting
+        # for frames instead of raising every `timeout` seconds — otherwise an agent that stays
+        # idle longer than the timeout (e.g. while a peer's LLM is thinking) would have its reader
+        # thread die on a routine read-timeout and silently miss the eventual reply.
+        ws.settimeout(None)
         self._ws = ws
         self._running = True
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
@@ -169,6 +174,9 @@ class Agent:
         while self._running and self._ws is not None:
             try:
                 frame = _loads(self._ws.recv())
+            except WebSocketTimeoutException:
+                # A read-timeout is not fatal — the socket is still open, just idle. Keep waiting.
+                continue
             except Exception:
                 break
             if not frame:
