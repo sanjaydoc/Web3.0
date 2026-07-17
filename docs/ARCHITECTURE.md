@@ -89,3 +89,47 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
 The MVP keeps the ledger, registry, and event buffer in memory — deliberately simple. The ledger
 is the source of truth and is fully serialisable (`toJSON()` / `verifySnapshot()`), which is the
 seam where durable storage or a real chain slots in later (see [QUANTUM.md](QUANTUM.md)).
+
+## Bridging the existing web
+
+ACP is an **overlay network**, not a replacement for the internet. It runs over ordinary TCP/IP,
+HTTP, and WebSockets, and an ACP agent is a normal internet client that *also* holds a Web3.0 ID
+and wallet. So the existing web isn't something ACP tears down — it's the toolbox ACP agents draw
+on, and the source of services that get **wrapped in**, not rewritten.
+
+There are two directions of bridging:
+
+**1. ACP agent → existing web (outbound).** An agent's "brain" (its `on_task` handler in the SDK)
+can call any REST API, scrape a page, or invoke a cloud service, then return the result over ACP.
+Nothing special is required — it's just normal HTTP from inside the handler.
+
+**2. Existing service → ACP (inbound, an "adapter").** Wrap a legacy API or agent as an ACP agent
+so the rest of the network can discover, pay, and task it — without touching the original service:
+
+```python
+from acp_sdk import Agent
+import urllib.request, json
+
+# Expose an existing weather REST API as a paid ACP agent.
+weather = Agent(
+    "weather",
+    name="Weather Oracle",
+    skills=[{"id": "forecast", "name": "Forecast", "description": "current forecast", "tags": []}],
+    pricing={"perTask": 100, "currency": "aUSD"},  # 1.00 aUSD/call
+)
+weather.register()
+
+def on_task(agent, message):
+    city = message["body"]["input"]["city"]
+    # Call the *existing* Web2 API — unchanged, unaware of ACP:
+    data = json.load(urllib.request.urlopen(f"https://api.example.com/weather?q={city}"))
+    agent.reply_result(message["from"], message["body"]["taskId"], {"forecast": data})
+
+weather.on_task(on_task)
+weather.connect()
+```
+
+The legacy API stays exactly as it is; the adapter gives it an identity, a wallet, discoverability,
+guardrails, and payments on ACP. This is the mechanism behind the roadmap item "import existing
+agents (OpenClaw, Hermes, nanobot, …) onto ACP" — adoption is progressive and opt-in, and Web2 and
+Web3 interoperate indefinitely.

@@ -85,6 +85,25 @@ Signatures are **interoperable across languages**: a message signed by the Pytho
 verifies in the TypeScript node (@noble/post-quantum), and `examples/two-agents-demo/verify_ledger.py`
 verifies the node's ledger from Python.
 
+## Relationship to the existing web
+
+ACP does **not** replace or delete the existing internet — it's an **additive, interoperable
+layer**, the same way Web 2.0 added interactivity on top of Web 1.0 rather than demolishing it.
+
+- **Websites and apps keep running** exactly as-is over HTTP. They can *progressively* adopt Web3
+  features (wallet login, agent endpoints, on-chain payments) if and when they choose.
+- **Your existing data stays where it is.** Web3 changes who controls *new* data going forward
+  (self-sovereign identity); it does not retroactively seize or migrate anything. Migration is opt-in.
+- **ACP is an overlay network.** It runs *over* ordinary TCP/IP, HTTP and WebSockets — an ACP
+  agent is a normal internet citizen that *also* has a Web3.0 ID and wallet. Agents can still call
+  any REST API, read any website, or use any cloud service as a tool.
+- **The old world bridges in through adapters**, not rewrites: an existing REST API or agent can be
+  wrapped as an ACP agent (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#bridging-the-existing-web)).
+
+In short: "Web3 replaces the internet" is marketing. Realistically it's a complementary layer that
+interoperates with today's web for the foreseeable future — ACP just makes *agents* first-class
+citizens on top of it.
+
 ## Quickstart
 
 **Prerequisites:** **Node 20+**, **pnpm 10+**, and **Python 3.10–3.12**.
