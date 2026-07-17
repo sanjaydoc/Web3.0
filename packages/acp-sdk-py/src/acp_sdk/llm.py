@@ -1,16 +1,21 @@
-"""A tiny LLM client so an agent's brain can be "built using a prompt".
+"""A tiny multi-provider LLM client so an agent's brain can be "built using a prompt".
 
-Talks to any OpenAI-compatible chat endpoint — which includes **Ollama** (local Qwen, Llama, …),
-LM Studio, vLLM, and the OpenAI/Anthropic-compatible gateways. Defaults to a local Ollama server,
-so a locally-running `qwen2.5:7b` works out of the box with no API key and no cloud.
+Bring your own key (BYOK): you pick a provider and supply your own key. The key lives with your
+agent — it is **never** sent to the ACP node or the network. Supported providers:
 
+    local / ollama   → your machine (Ollama), no key, free   e.g. qwen2.5:7b
+    openai           → https://api.openai.com/v1             e.g. gpt-4o-mini
+    openrouter       → one key → many providers              e.g. anthropic/claude-3.5-sonnet
+    groq / together  → other OpenAI-compatible gateways
+    anthropic        → native Anthropic API                  e.g. claude-sonnet-5
+
+Usage:
     from acp_sdk import LLM
-    brain = LLM(system="You are a concise research assistant.")
+    brain = LLM.provider("openrouter", model="anthropic/claude-3.5-sonnet", api_key="sk-or-...")
     answer = brain.chat("Summarise Web 3.0 in one sentence.")
 
-It tries a list of models in order and falls back to the next if one errors or isn't installed —
-so you can run whatever local model you have. Configure via environment (or a .env):
-LLM_BASE_URL, LLM_MODEL, LLM_FALLBACK_MODELS (comma-separated), LLM_API_KEY.
+Or configure via env / .env: LLM_PROVIDER, LLM_MODEL, LLM_API_KEY, LLM_BASE_URL,
+LLM_FALLBACK_MODELS (comma-separated).
 """
 
 from __future__ import annotations
@@ -19,8 +24,18 @@ import json
 import os
 import urllib.request
 
-DEFAULT_BASE_URL = "http://localhost:11434/v1"  # Ollama's OpenAI-compatible endpoint
 DEFAULT_MODEL = "qwen2.5:7b"
+
+# Each provider: the API base URL and which wire format it speaks.
+PROVIDERS: dict[str, dict[str, str]] = {
+    "local": {"base_url": "http://localhost:11434/v1", "kind": "openai"},
+    "ollama": {"base_url": "http://localhost:11434/v1", "kind": "openai"},
+    "openai": {"base_url": "https://api.openai.com/v1", "kind": "openai"},
+    "openrouter": {"base_url": "https://openrouter.ai/api/v1", "kind": "openai"},
+    "groq": {"base_url": "https://api.groq.com/openai/v1", "kind": "openai"},
+    "together": {"base_url": "https://api.together.xyz/v1", "kind": "openai"},
+    "anthropic": {"base_url": "https://api.anthropic.com", "kind": "anthropic"},
+}
 
 
 class LLMError(Exception):
@@ -33,11 +48,9 @@ def _resolve_models(model: str | None, models: list[str] | None) -> list[str]:
         chosen = list(models)
     else:
         primary = model or os.environ.get("LLM_MODEL") or DEFAULT_MODEL
-        fallbacks = [
-            m.strip() for m in os.environ.get("LLM_FALLBACK_MODELS", "").split(",") if m.strip()
-        ]
+        raw = os.environ.get("LLM_FALLBACK_MODELS", "")
+        fallbacks = [m.strip() for m in raw.split(",") if m.strip()]
         chosen = [primary, *fallbacks]
-    # De-duplicate while preserving order.
     seen: set[str] = set()
     ordered = [m for m in chosen if not (m in seen or seen.add(m))]
     return ordered or [DEFAULT_MODEL]
@@ -47,27 +60,39 @@ class LLM:
     def __init__(
         self,
         *,
+        provider: str | None = None,
         base_url: str | None = None,
         model: str | None = None,
         models: list[str] | None = None,
         api_key: str | None = None,
         system: str | None = None,
         temperature: float = 0.4,
+        max_tokens: int = 1024,
         timeout: float = 120.0,
     ) -> None:
-        self.base_url = (base_url or os.environ.get("LLM_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+        name = (provider or os.environ.get("LLM_PROVIDER") or "local").lower()
+        preset = PROVIDERS.get(name, PROVIDERS["local"])
+        self.provider_name = name if name in PROVIDERS else "local"
+        self.kind = preset["kind"]
+        self.base_url = (base_url or os.environ.get("LLM_BASE_URL") or preset["base_url"]).rstrip(
+            "/"
+        )
         self.models = _resolve_models(model, models)
-        # Ollama ignores the key but the OpenAI wire format wants one; "ollama" is a fine dummy.
+        # BYOK — a key you supply. "ollama" is a harmless dummy for local servers that ignore it.
         self.api_key = api_key or os.environ.get("LLM_API_KEY") or "ollama"
         self.system = system
         self.temperature = temperature
+        self.max_tokens = max_tokens
         self.timeout = timeout
-        # The model that last answered successfully (useful for logging/UX).
         self.used_model: str | None = None
+
+    @classmethod
+    def provider(cls, name: str, **kwargs: object) -> LLM:
+        """Convenience: `LLM.provider("openrouter", model=..., api_key=...)`."""
+        return cls(provider=name, **kwargs)  # type: ignore[arg-type]
 
     @property
     def model(self) -> str:
-        """The primary (first) model — what's tried before any fallback."""
         return self.models[0]
 
     def chat(self, prompt: str) -> str:
@@ -81,34 +106,64 @@ class LLM:
             except LLMError as exc:
                 errors.append(f"  - {model}: {exc}")
         raise LLMError(
-            f"all models failed at {self.base_url}. Is your local LLM server running and are the "
-            f"models installed (e.g. `ollama pull {self.models[0]}`)?\n" + "\n".join(errors)
+            f"all models failed via '{self.provider_name}' at {self.base_url}. Is the server "
+            f"reachable and are the models available?\n" + "\n".join(errors)
         )
 
     def _chat_once(self, model: str, prompt: str) -> str:
+        if self.kind == "anthropic":
+            return self._chat_anthropic(model, prompt)
+        return self._chat_openai(model, prompt)
+
+    def _post(self, url: str, headers: dict[str, str], payload: dict[str, object]) -> dict:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
+        for key, value in headers.items():
+            req.add_header(key, value)
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001 - surface any transport/HTTP error uniformly
+            raise LLMError(str(exc)) from exc
+
+    def _chat_openai(self, model: str, prompt: str) -> str:
         messages: list[dict[str, str]] = []
         if self.system:
             messages.append({"role": "system", "content": self.system})
         messages.append({"role": "user", "content": prompt})
-        body = json.dumps(
+        data = self._post(
+            f"{self.base_url}/chat/completions",
+            {"content-type": "application/json", "authorization": f"Bearer {self.api_key}"},
             {
                 "model": model,
                 "messages": messages,
                 "temperature": self.temperature,
                 "stream": False,
-            }
-        ).encode("utf-8")
-
-        req = urllib.request.Request(f"{self.base_url}/chat/completions", data=body, method="POST")
-        req.add_header("content-type", "application/json")
-        req.add_header("authorization", f"Bearer {self.api_key}")
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-        except Exception as exc:  # noqa: BLE001 - surface any transport/HTTP error uniformly
-            raise LLMError(str(exc)) from exc
-
+            },
+        )
         try:
             return data["choices"][0]["message"]["content"].strip()
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMError(f"unexpected response shape: {data!r}") from exc
+
+    def _chat_anthropic(self, model: str, prompt: str) -> str:
+        payload: dict[str, object] = {
+            "model": model,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if self.system:
+            payload["system"] = self.system
+        data = self._post(
+            f"{self.base_url}/v1/messages",
+            {
+                "content-type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            payload,
+        )
+        try:
+            return data["content"][0]["text"].strip()
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"unexpected response shape: {data!r}") from exc

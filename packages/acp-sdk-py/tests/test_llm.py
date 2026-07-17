@@ -46,6 +46,35 @@ def test_explicit_models_list_wins(monkeypatch) -> None:
     assert LLM(models=["x", "y"]).models == ["x", "y"]
 
 
+def test_provider_presets(monkeypatch) -> None:
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    assert LLM.provider("openrouter").base_url == "https://openrouter.ai/api/v1"
+    assert LLM.provider("openai").base_url == "https://api.openai.com/v1"
+    assert LLM.provider("local").base_url == "http://localhost:11434/v1"
+    anthropic = LLM.provider("anthropic")
+    assert anthropic.base_url == "https://api.anthropic.com"
+    assert anthropic.kind == "anthropic"
+
+
+def test_provider_from_env(monkeypatch) -> None:
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.setenv("LLM_PROVIDER", "groq")
+    assert LLM().base_url == "https://api.groq.com/openai/v1"
+
+
+def test_unknown_provider_falls_back_to_local(monkeypatch) -> None:
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    llm = LLM(provider="nope")
+    assert llm.provider_name == "local"
+    assert llm.kind == "openai"
+
+
+def test_explicit_base_url_overrides_preset() -> None:
+    llm = LLM(provider="openai", base_url="http://127.0.0.1:9/v1")
+    assert llm.base_url == "http://127.0.0.1:9/v1"
+
+
 def test_load_env(tmp_path, monkeypatch) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text('FOO_TEST=bar\n# a comment\nBAZ_TEST="q u x"\n\n', encoding="utf-8")
