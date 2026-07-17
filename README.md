@@ -116,11 +116,19 @@ corepack enable pnpm        # ships with Node (run as Administrator on Windows i
 npm install -g pnpm
 ```
 
+**Configuration** lives in a `.env` file at the repo root — copy the template and fill in what you
+need (MongoDB, node seed, Claude key, …). All settings are optional; without a `.env` the node runs
+in-memory on the defaults.
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+```
+
 Then run each block in its own terminal (start Terminal 1 first and leave it running).
 
 **Terminal 1 — the ACP node**
 ```bash
 pnpm install
+pnpm --filter @acp/node keygen     # → prints ACP_NODE_SEED=… (paste into .env for durable identity)
 pnpm --filter @acp/node dev        # → listening on http://127.0.0.1:8787
 ```
 

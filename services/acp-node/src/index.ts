@@ -1,3 +1,4 @@
+import './env.js'; // must be first: loads .env before config.ts reads process.env
 import { Kernel } from './kernel.js';
 import { resolveNodeKeys } from './keys.js';
 
