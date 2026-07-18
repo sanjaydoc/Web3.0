@@ -208,11 +208,17 @@ The node loads these by config (`config.modules`) — remove one and it's gone:
 | Module | Responsibility |
 | --- | --- |
 | `naming` | Resolve email-like Web3.0 IDs (`alice@web3.0`) to DIDs and keys |
-| `registry` | Agent registration → Web3.0 ID + DID + wallet; discovery |
+| `registry` | **Signed** agent registration → Web3.0 ID + DID + wallet; discovery |
 | `messaging` | Signed-hello auth + A2A WebSocket relay with per-message guardrails |
-| `payments` | x402 quote + signed stablecoin transfers on the ledger |
+| `payments` | x402 quote + signed stablecoin transfers (with replay protection) |
 | `guardrails` | Capability / rate-limit / spend-cap policies (ALLOW/DENY) |
 | `observability` | Live event feed (+ SSE), ledger view with verification, stats |
+
+**Auth hardening** (kernel-level): registration is a signed envelope so only the key holder can
+claim a handle and wallet; every envelope (registration, `/pay`, relay hello) passes a
+**replay/freshness** check so captured requests can't be resubmitted; and a **per-IP HTTP rate
+limiter** backstops the per-agent guardrails against floods. On by default, or `ACP_AUTH_ENFORCE=false`
+for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits).
 
 ## Roadmap
 

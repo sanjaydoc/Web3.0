@@ -46,7 +46,24 @@ Python, which is why cross-language verification works).
 ```
 
 `open()` checks that the embedded public key derives the claimed DID, that the signer matches (when
-pinned), and that the signature verifies.
+pinned), and that the signature verifies. The node additionally enforces **freshness and replay
+protection** on every envelope it accepts: the `ts` must be recent (within `ACP_AUTH_FRESHNESS_MS`,
+default 2 min) and the `nonce` must not have been seen before — so a captured envelope can't be
+resubmitted. See [Auth & rate limits](#auth--rate-limits).
+
+## Registration
+
+`POST /agents` takes a **signed envelope** whose payload is the registration request
+(`{ local, name, description, kind, skills, pricing, signPublicKey, kemPublicKey }`). The registrant
+signs it with the very key being registered, and the node verifies that:
+
+- the signature is valid and the public key derives the DID (`open()`),
+- `meta.signer` equals the handle being claimed (`local@web3.0`), and
+- `payload.signPublicKey` equals the envelope's `publicKey`.
+
+This proves possession of the private key, so a handle **and its wallet** can only be claimed by
+whoever holds the key. On success the account gets a DID, a wallet with a faucet grant, and a
+published agent card.
 
 ## Messaging (A2A relay)
 
@@ -83,10 +100,29 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
 
 2. **Pay** — `POST /pay` with a signed envelope whose payload is
    `{ from, to, amount, currency?, memo?, taskId? }`. The node verifies the signature, confirms the
-   payer key matches the account, runs the spend-cap guardrail, and settles a ledger transfer,
+   payer key matches the account, applies the replay/freshness check (so a captured `/pay` can't be
+   resubmitted to re-drain the payer), runs the spend-cap guardrail, and settles a ledger transfer,
    returning a receipt with the ledger sequence and hash.
 
 Amounts are integer **minor units** (e.g. `500` = 5.00 aUSD) to avoid floating-point drift.
+
+## Auth & rate limits
+
+The node ships with auth hardening on by default (`ACP_AUTH_ENFORCE=true`). Set it to `false` for
+**warn-only** mode — violations are logged to the event feed but still allowed, useful while
+migrating clients. Either way the decision is recorded, and every rejection surfaces as an
+`auth.rejected` event on the observability feed (visible in the dashboard).
+
+| Control | What it does | Config |
+| --- | --- | --- |
+| Signed registration | Only the key holder can claim a handle + wallet | always on when enforcing |
+| Replay / freshness | Rejects stale or reused envelopes (registration, `/pay`, relay hello) | `ACP_AUTH_FRESHNESS_MS`, `ACP_AUTH_CLOCK_SKEW_MS` |
+| Signature + key binding | `/pay` and hello must be signed by the account's key | always on |
+| Per-agent guardrails | Rate-limit + spend-cap + capability, per Web3.0 ID | `ACP_RATE_LIMIT`, `ACP_SPEND_CAP`, `ACP_WINDOW_MS` |
+| Per-IP HTTP rate limit | Coarse DoS backstop before an agent is identified (429); `/health` exempt | `ACP_HTTP_RATE_LIMIT`, `ACP_HTTP_RATE_WINDOW_MS` |
+
+Replay state is in-memory for the MVP: nonces are forgotten on restart, but the freshness window
+bounds how long a captured envelope could be replayed after a restart anyway.
 
 ## Ledger
 

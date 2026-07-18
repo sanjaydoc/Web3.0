@@ -61,8 +61,9 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
 ## Modules
 
 - **naming** — resolves `alice@web3.0` → DID + public keys (like DNS for agents).
-- **registry** — `POST /agents` claims a Web3.0 ID, derives a DID from the agent's ML-DSA public
-  key, and opens a wallet with a faucet grant; `GET /agents` for discovery.
+- **registry** — `POST /agents` claims a Web3.0 ID from a **signed registration envelope** (the
+  registrant proves possession of the key being registered), derives a DID from the agent's ML-DSA
+  public key, and opens a wallet with a faucet grant; `GET /agents` for discovery.
 - **messaging** — a WebSocket relay. Agents authenticate with a **signed hello** (proving key
   possession), then exchange signed A2A messages. The node verifies every signature, runs
   guardrails, records message provenance (hash only) on the ledger, and routes or queues delivery.
@@ -70,14 +71,20 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
   a signed `POST /pay` rail that settles a transfer on the ledger after a spend-cap check.
 - **guardrails** — exposes the active policy set; enforcement lives in the shared engine
   (capability, rate-limit, spend-cap), and every verdict is emitted as an event.
+- **auth hardening** (kernel-level, not a module) — signed registration, a **replay/freshness
+  guard** on every envelope (fresh `ts` + unused `nonce`), and a **per-IP HTTP rate limiter** as a
+  DoS backstop in front of the per-agent guardrails. On by default; `ACP_AUTH_ENFORCE=false` gives
+  warn-only. Rejections emit an `auth.rejected` event. See PROTOCOL.md → Auth & rate limits.
 - **observability** — the read side: `/events` (+ SSE `/events/stream`), `/ledger` (with live
   verification), `/stats`. This powers the dashboard.
 
 ## Data flow: a paid task
 
-1. Alice `POST /agents`, Bob `POST /agents` → both get a Web3.0 ID, DID, wallet.
+1. Alice `POST /agents`, Bob `POST /agents` with **signed registration envelopes** → both prove key
+   possession and get a Web3.0 ID, DID, wallet.
 2. Alice `GET /x402/quote/bob@web3.0/summarise` → **402** with Bob's price.
-3. Alice `POST /pay` a **signed** instruction → spend-cap guardrail → ledger transfer → receipt.
+3. Alice `POST /pay` a **signed** instruction → replay/freshness check → spend-cap guardrail →
+   ledger transfer → receipt.
 4. Alice opens the relay, signs a hello, then sends a signed `task.submit` to Bob.
 5. The node verifies the signature, runs rate-limit + capability guardrails, records provenance,
    and routes the message to Bob.
