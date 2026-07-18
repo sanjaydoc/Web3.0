@@ -17,6 +17,7 @@ export class MongoStore implements Store {
   private readonly client: MongoClient;
   private agents!: Collection<AgentCard>;
   private entries!: Collection<LedgerEntry>;
+  private settings!: Collection<{ key: string; value: unknown }>;
 
   constructor(
     uri: string,
@@ -32,8 +33,19 @@ export class MongoStore implements Store {
     const db = this.client.db(this.dbName);
     this.agents = db.collection<AgentCard>('agents');
     this.entries = db.collection<LedgerEntry>('ledger_entries');
+    this.settings = db.collection<{ key: string; value: unknown }>('settings');
     await this.agents.createIndex({ web3Id: 1 }, { unique: true });
     await this.entries.createIndex({ seq: 1 }, { unique: true });
+    await this.settings.createIndex({ key: 1 }, { unique: true });
+  }
+
+  async loadSetting<T = unknown>(key: string): Promise<T | null> {
+    const doc = await this.settings.findOne({ key }, { projection: { _id: 0 } });
+    return doc ? (doc.value as T) : null;
+  }
+
+  async saveSetting(key: string, value: unknown): Promise<void> {
+    await this.settings.updateOne({ key }, { $set: { key, value } }, { upsert: true });
   }
 
   async loadAgents(): Promise<AgentCard[]> {

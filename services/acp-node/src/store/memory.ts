@@ -11,8 +11,17 @@ export class MemoryStore implements Store {
   readonly kind = 'memory' as const;
   private readonly agents = new Map<string, AgentCard>();
   private readonly entries: LedgerEntry[] = [];
+  private readonly settings = new Map<string, unknown>();
 
   async init(): Promise<void> {}
+
+  async loadSetting<T = unknown>(key: string): Promise<T | null> {
+    return (this.settings.get(key) as T) ?? null;
+  }
+
+  async saveSetting(key: string, value: unknown): Promise<void> {
+    this.settings.set(key, value);
+  }
 
   async loadAgents(): Promise<AgentCard[]> {
     return [...this.agents.values()];

@@ -18,6 +18,10 @@ export interface Store {
   /** Ledger entries in append order (ascending `seq`). */
   loadLedger(): Promise<LedgerEntry[]>;
   appendEntry(entry: LedgerEntry): Promise<void>;
+  /** Load a named settings blob (e.g. Telegram config), or null if unset. */
+  loadSetting<T = unknown>(key: string): Promise<T | null>;
+  /** Persist a named settings blob. Used for GUI-managed config that must survive restarts. */
+  saveSetting(key: string, value: unknown): Promise<void>;
   /** Flush any pending writes and release resources. */
   close(): Promise<void>;
 }

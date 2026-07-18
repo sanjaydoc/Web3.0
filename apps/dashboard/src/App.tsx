@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Connectors } from './Connectors.js';
 import { Genesis } from './Genesis.js';
+import { Skills } from './Skills.js';
+import { Telegram } from './Telegram.js';
 import {
   type AcpEvent,
   type AgentCard,
@@ -12,7 +15,16 @@ import {
   formatAmount,
 } from './api.js';
 
-type View = 'overview' | 'agents' | 'traffic' | 'ledger' | 'guardrails' | 'genesis';
+type View =
+  | 'overview'
+  | 'agents'
+  | 'skills'
+  | 'connectors'
+  | 'traffic'
+  | 'ledger'
+  | 'guardrails'
+  | 'genesis'
+  | 'telegram';
 
 interface Snapshot {
   stats?: Stats;
@@ -94,6 +106,8 @@ export function App() {
         <p className="tagline">the agentic internet · console</p>
         <NavItem id="overview" label="Overview" view={view} set={setView} />
         <NavItem id="agents" label="Agents" view={view} set={setView} count={snap.agents.length} />
+        <NavItem id="skills" label="Skills" view={view} set={setView} />
+        <NavItem id="connectors" label="Connectors" view={view} set={setView} />
         <NavItem
           id="traffic"
           label="Live traffic"
@@ -110,6 +124,7 @@ export function App() {
         />
         <NavItem id="guardrails" label="Guardrails" view={view} set={setView} />
         <NavItem id="genesis" label="Genesis · new agent" view={view} set={setView} />
+        <NavItem id="telegram" label="Telegram bot" view={view} set={setView} />
         <div className="foot">
           <span className={`pill-live ${snap.online ? '' : 'pill-off'}`}>
             <span className="dot" /> {snap.online ? 'node online' : 'node offline'}
@@ -120,10 +135,13 @@ export function App() {
       <main className="main">
         {view === 'overview' && <Overview snap={snap} />}
         {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
+        {view === 'skills' && <Skills agents={snap.agents} />}
+        {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
         {view === 'ledger' && <LedgerView snap={snap} />}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
+        {view === 'telegram' && <Telegram />}
       </main>
     </div>
   );

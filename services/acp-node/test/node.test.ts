@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 process.env.ACP_LOG_LEVEL = 'silent';
 import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
+import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
 import { makeAgent, message, sealAs } from '../src/testkit.js';
 
@@ -341,6 +342,105 @@ describe('consensus (PoA)', () => {
     const status = k.consensus.status();
     expect(status).toMatchObject({ mode: 'poa', enabled: true, height: 1 });
     expect(status.authorities).toContain(status.authority);
+    await k.close();
+  });
+});
+
+describe('telegram bridge (GUI-managed, in-node)', () => {
+  function ctxOf(k: Kernel) {
+    return {
+      http: k.http,
+      ledger: k.ledger,
+      registry: k.registry,
+      bus: k.bus,
+      guardrails: k.guardrails,
+      replay: k.replay,
+      settlement: k.settlement,
+      consensus: k.consensus,
+      connections: k.connections,
+      store: k.store,
+      config: k.config,
+      clock: () => new Date().toISOString(),
+      log: k.http.log,
+    };
+  }
+
+  it('config masks the token, never returning it, and persists to the store', async () => {
+    const store = new MemoryStore();
+    const k = new Kernel({ port: 0 }, generateKeypair(), store);
+    await k.init();
+    const svc = new TelegramService(ctxOf(k) as never);
+    const status = await svc.setConfig({ token: '123456789', enabled: false, botLocal: 'tgx' });
+    expect(status.tokenSet).toBe(true);
+    expect(status.tokenHint).toBe('…6789');
+    expect(JSON.stringify(status)).not.toContain('123456789'); // secret never surfaced
+
+    // Persisted: a fresh service over the same store recovers the (masked) config.
+    const svc2 = new TelegramService(ctxOf(k) as never);
+    await svc2.load();
+    expect(svc2.status().tokenSet).toBe(true);
+    expect(svc2.status().botLocal).toBe('tgx');
+    await k.close();
+  });
+
+  it('/telegram/config is admin-gated when ACP_ADMIN_TOKEN is set', async () => {
+    process.env.ACP_ADMIN_TOKEN = 'secret';
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const noAuth = await k.http.inject({ method: 'POST', url: '/telegram/config', payload: {} });
+    expect(noAuth.statusCode).toBe(401);
+    const withAuth = await k.http.inject({
+      method: 'POST',
+      url: '/telegram/config',
+      headers: { 'x-admin-token': 'secret' },
+      payload: { botLocal: 'okbot' },
+    });
+    expect(withAuth.statusCode).toBe(200);
+    await k.close();
+    process.env.ACP_ADMIN_TOKEN = undefined;
+  });
+
+  it('bridges /ask to an agent: pays it and returns its answer', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const svc = new TelegramService(ctxOf(k) as never);
+
+    // Register an "echo" agent with an ask skill + price, and a virtual connection that replies.
+    const echo = makeAgent('echobot', {
+      skills: [{ id: 'ask', name: 'Ask', description: 'echoes', tags: [] }],
+      pricing: { perTask: 200, currency: 'aUSD' },
+    });
+    await k.http.inject({ method: 'POST', url: '/agents', payload: echo.registration });
+    const echoConn = {
+      readyState: 1,
+      OPEN: 1,
+      send: (raw: string) => {
+        const f = JSON.parse(raw);
+        if (f.kind === 'deliver' && f.message.body.type === 'task.submit') {
+          k.connections.sendTo(f.message.from, {
+            kind: 'deliver',
+            message: {
+              id: 'r',
+              from: echo.web3Id,
+              to: f.message.from,
+              ts: '',
+              body: {
+                type: 'task.result',
+                taskId: f.message.body.taskId,
+                state: 'completed',
+                output: { answer: `echo: ${f.message.body.input.question}` },
+              },
+            },
+          });
+        }
+      },
+    };
+    k.connections.bind(echo.web3Id, echoConn as never);
+
+    const answer = await svc.ask('echobot', 'hello acp', 3000);
+    expect(answer).toBe('echo: hello acp');
+    // The bridge paid the agent from its faucet-funded wallet.
+    expect(k.ledger.balanceOf(echo.web3Id)).toBe(k.config.faucetGrant + 200);
     await k.close();
   });
 });

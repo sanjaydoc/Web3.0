@@ -52,9 +52,54 @@ export interface Guardrails {
   config: { spendCapPerWindow: number; rateLimitPerWindow: number; windowMs: number };
 }
 
+export interface TelegramStatus {
+  enabled: boolean;
+  running: boolean;
+  tokenSet: boolean;
+  tokenHint: string | null;
+  botUsername: string | null;
+  botLocal: string;
+  skill: string;
+  bridgeId: string;
+  lastError: string | null;
+  adminRequired: boolean;
+}
+
+export interface SettlementInfo {
+  mode: string;
+  network: string;
+  description: string;
+}
+
+export interface ConsensusInfo {
+  mode: string;
+  enabled: boolean;
+  authorities: string[];
+  height: number;
+  head: string;
+  proposerNow: string | null;
+  isMyTurn: boolean;
+  peers: string[];
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${NODE_URL}${path}`);
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+async function post<T>(path: string, body: unknown, adminToken?: string): Promise<T> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (adminToken) headers['x-admin-token'] = adminToken;
+  const res = await fetch(`${NODE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error((detail as { error?: string }).error ?? `${path} → ${res.status}`);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -71,6 +116,15 @@ export const api = {
       entries: LedgerEntry[];
     }>('/ledger?limit=40'),
   guardrails: () => get<Guardrails>('/guardrails'),
+  settlement: () => get<SettlementInfo>('/settlement'),
+  consensus: () => get<ConsensusInfo>('/consensus'),
+  telegram: () => get<TelegramStatus>('/telegram'),
+  telegramConfig: (
+    patch: { enabled?: boolean; token?: string; botLocal?: string; skill?: string },
+    adminToken?: string,
+  ) => post<TelegramStatus>('/telegram/config', patch, adminToken),
+  telegramStart: (adminToken?: string) => post<TelegramStatus>('/telegram/start', {}, adminToken),
+  telegramStop: (adminToken?: string) => post<TelegramStatus>('/telegram/stop', {}, adminToken),
 };
 
 export function formatAmount(minor: number, currency = 'aUSD'): string {
