@@ -40,6 +40,7 @@ export class Kernel {
   readonly nodeKeys: Keypair;
   readonly treasuryId: string;
   readonly store: Store;
+  readonly startedAt = Date.now();
   readonly loaded: string[] = [];
   /** In-flight write-behind persistence, drained on close(). */
   private readonly inflight = new Set<Promise<void>>();
@@ -153,6 +154,7 @@ export class Kernel {
       store: this.store,
       config: this.config,
       treasuryId: this.treasuryId,
+      startedAt: this.startedAt,
       clock: () => new Date().toISOString(),
       log: this.http.log,
     };

@@ -402,7 +402,7 @@ describe('telegram bridge (GUI-managed, in-node)', () => {
     });
     expect(withAuth.statusCode).toBe(200);
     await k.close();
-    process.env.ACP_ADMIN_TOKEN = undefined;
+    process.env.ACP_ADMIN_TOKEN = ''; // falsy → admin no longer required (avoid `delete`)
   });
 
   it('bridges /ask to an agent: pays it and returns its answer', async () => {
@@ -597,6 +597,48 @@ describe('hosted agents (Genesis launch on node)', () => {
         model: 'x',
       }),
     ).rejects.toThrow();
+    await k.close();
+  });
+});
+
+describe('operator console (my node)', () => {
+  it('reports earnings, resources, and persists contribution limits', async () => {
+    const k = new Kernel(
+      { port: 0, fees: { protocolBps: 250, blockReward: 0, treasuryLocal: 'treasury' } },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const inject = (url: string, payload?: unknown) =>
+      k.http.inject({ method: 'POST', url, payload: payload as object });
+
+    // one payment → a 2.5% fee accrues to the treasury
+    const payer = makeAgent('opayer');
+    const payee = makeAgent('opayee');
+    await inject('/agents', payer.registration);
+    await inject('/agents', payee.registration);
+    await inject('/pay', sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 1000 }));
+
+    const node = (await k.http.inject({ method: 'GET', url: '/node' })).json() as {
+      earnings: { fees: number; balance: number };
+      resources: { processRssMb: number; uptimeSec: number };
+      limits: { maxAgents: number };
+    };
+    expect(node.earnings.fees).toBe(25);
+    expect(node.earnings.balance).toBe(25);
+    expect(node.resources.processRssMb).toBeGreaterThan(0);
+    expect(node.resources.uptimeSec).toBeGreaterThanOrEqual(0);
+
+    // set a contribution limit and read it back
+    const saved = (await inject('/node/limits', { maxAgents: 5, maxRamMb: 2048 })).json() as {
+      maxAgents: number;
+      maxRamMb: number;
+    };
+    expect(saved).toMatchObject({ maxAgents: 5, maxRamMb: 2048 });
+    const again = (await k.http.inject({ method: 'GET', url: '/node' })).json() as {
+      limits: { maxAgents: number };
+    };
+    expect(again.limits.maxAgents).toBe(5);
     await k.close();
   });
 });

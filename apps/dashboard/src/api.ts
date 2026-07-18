@@ -107,6 +107,38 @@ export interface NodeInfo {
   nodePublicKey: string;
 }
 
+export interface NodeLimits {
+  contribute: boolean;
+  maxRamMb: number;
+  maxAgents: number;
+}
+
+export interface NodeOperator {
+  nodePublicKey?: string;
+  treasuryId: string;
+  uptimeSec: number;
+  earnings: { balance: number; fees: number; rewards: number; formatted: string };
+  traffic: { agents: number; online: number; ledgerEntries: number };
+  consensus: {
+    mode: string;
+    authorities: number;
+    height: number;
+    peers: number;
+    isMyTurn: boolean;
+  };
+  settlement: { mode: string; network: string };
+  resources: {
+    uptimeSec: number;
+    processRssMb: number;
+    heapUsedMb: number;
+    systemTotalMb: number;
+    systemFreeMb: number;
+    cpus: number;
+    loadAvg1: number;
+  };
+  limits: NodeLimits;
+}
+
 export interface ConsensusInfo {
   mode: string;
   enabled: boolean;
@@ -167,6 +199,9 @@ export const api = {
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
+  node: () => get<NodeOperator>('/node'),
+  nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
+    post<NodeLimits>('/node/limits', patch, adminToken),
 };
 
 export function formatAmount(minor: number, currency = 'aUSD'): string {

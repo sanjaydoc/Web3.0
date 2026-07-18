@@ -4,6 +4,7 @@ import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
 import { Network } from './Network.js';
+import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
 import {
@@ -20,6 +21,7 @@ import {
 
 type View =
   | 'overview'
+  | 'mynode'
   | 'agents'
   | 'skills'
   | 'network'
@@ -111,6 +113,7 @@ export function App() {
         </div>
         <p className="tagline">the agentic internet · console</p>
         <NavItem id="overview" label="Overview" view={view} set={setView} />
+        <NavItem id="mynode" label="My node · earnings" view={view} set={setView} />
         <NavItem id="agents" label="Agents" view={view} set={setView} count={snap.agents.length} />
         <NavItem id="skills" label="Skills" view={view} set={setView} />
         <NavItem id="network" label="Network" view={view} set={setView} />
@@ -143,6 +146,7 @@ export function App() {
 
       <main className="main">
         {view === 'overview' && <Overview snap={snap} />}
+        {view === 'mynode' && <Operator />}
         {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
         {view === 'skills' && <Skills agents={snap.agents} />}
         {view === 'network' && <Network />}

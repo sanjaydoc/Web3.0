@@ -6,6 +6,7 @@ import { hostedModule } from './hosted.js';
 import { messagingModule } from './messaging.js';
 import { namingModule } from './naming.js';
 import { observabilityModule } from './observability.js';
+import { operatorModule } from './operator.js';
 import { paymentsModule } from './payments.js';
 import { registryModule } from './registry.js';
 import { telegramModule } from './telegram.js';
@@ -21,4 +22,5 @@ export const MODULE_FACTORIES: Record<ModuleName, () => AcpModule> = {
   consensus: consensusModule,
   telegram: telegramModule,
   hosted: hostedModule,
+  operator: operatorModule,
 };

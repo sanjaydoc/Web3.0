@@ -93,6 +93,12 @@ export class HostedAgentService {
     if (this.ctx.registry.has(id) && !this.agents.has(id)) {
       throw new Error(`${id} is already taken by another agent`);
     }
+    // Respect the operator's contributed-capacity limit (set in the "my node" console).
+    const limits = await this.ctx.store.loadSetting<{ maxAgents?: number }>('node-limits');
+    const running = [...this.agents.values()].filter((a) => a.running).length;
+    if (limits?.maxAgents && running >= limits.maxAgents && !this.agents.has(id)) {
+      throw new Error(`node is at its hosting capacity (${limits.maxAgents} agents)`);
+    }
     this.ensureRegistered(id, config);
     this.agents.set(id, { config, running: true });
     this.bindHandler(id, config);

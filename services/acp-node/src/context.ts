@@ -30,6 +30,8 @@ export interface ModuleContext {
   config: AcpConfig;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;
+  /** Epoch-ms the node process started (for uptime). */
+  startedAt: number;
   clock: () => string;
   log: FastifyBaseLogger;
 }
