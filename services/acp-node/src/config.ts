@@ -33,6 +33,25 @@ export interface AuthConfig {
   httpRateWindowMs: number;
 }
 
+/** How payments settle value. `internal` = the ACP ledger is the source of truth (default).
+ * `simulated` = mimic an on-chain stablecoin transfer (fake tx refs, no chain). `testnet` = build a
+ * real ERC-20 transfer against an EVM testnet RPC (no broadcast without a funded signing key). */
+export type SettlementMode = 'internal' | 'simulated' | 'testnet';
+
+export interface SettlementConfig {
+  mode: SettlementMode;
+  /** EVM JSON-RPC endpoint for `testnet` mode (e.g. a Base/Sepolia RPC URL). */
+  rpcUrl?: string;
+  /** ERC-20 token contract address to settle in (a testnet USDC), for `testnet` mode. */
+  tokenAddress?: string;
+  /** Human-readable network label shown on receipts (e.g. `base-sepolia`). */
+  network: string;
+  /** Token decimals for display / minor-unit conversion. */
+  decimals: number;
+  /** Optional block-explorer base URL to build a tx link on receipts. */
+  explorerBaseUrl?: string;
+}
+
 export interface AcpConfig {
   host: string;
   port: number;
@@ -42,6 +61,7 @@ export interface AcpConfig {
   faucetGrant: number;
   guardrails: GuardrailConfig;
   auth: AuthConfig;
+  settlement: SettlementConfig;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -71,6 +91,14 @@ export const DEFAULT_CONFIG: AcpConfig = {
     clockSkewMs: Number(process.env.ACP_AUTH_CLOCK_SKEW_MS ?? 5_000),
     httpRateLimitPerWindow: Number(process.env.ACP_HTTP_RATE_LIMIT ?? 600),
     httpRateWindowMs: Number(process.env.ACP_HTTP_RATE_WINDOW_MS ?? 60_000),
+  },
+  settlement: {
+    mode: (process.env.ACP_SETTLEMENT as SettlementMode) || 'internal',
+    rpcUrl: process.env.ACP_SETTLEMENT_RPC_URL,
+    tokenAddress: process.env.ACP_SETTLEMENT_TOKEN,
+    network: process.env.ACP_SETTLEMENT_NETWORK ?? 'acp-ledger',
+    decimals: Number(process.env.ACP_SETTLEMENT_DECIMALS ?? 2),
+    explorerBaseUrl: process.env.ACP_SETTLEMENT_EXPLORER,
   },
   mongodbUri: process.env.ACP_MONGODB_URI,
   mongodbDb: process.env.ACP_MONGODB_DB ?? 'acp',

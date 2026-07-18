@@ -14,6 +14,7 @@ import { Guardrails } from './services/guardrails.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
 import { ReplayGuard } from './services/replay.js';
+import { type SettlementProvider, createSettlement } from './services/settlement.js';
 import { type Store, createStore } from './store/index.js';
 
 /**
@@ -29,6 +30,7 @@ export class Kernel {
   readonly bus: EventBus;
   readonly guardrails: Guardrails;
   readonly replay: ReplayGuard;
+  readonly settlement: SettlementProvider;
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
@@ -50,6 +52,7 @@ export class Kernel {
     this.bus = new EventBus(clock);
     this.guardrails = new Guardrails(this.config.guardrails, () => Date.now());
     this.replay = new ReplayGuard(this.config.auth, () => Date.now());
+    this.settlement = createSettlement(this.config.settlement);
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
       this.config.auth.httpRateWindowMs,
@@ -70,6 +73,7 @@ export class Kernel {
         ? 'persistence: MongoDB connected (state survives restarts)'
         : 'persistence: in-memory (state is lost on restart — set ACP_MONGODB_URI to persist)',
     );
+    this.http.log.info(`settlement: ${this.settlement.describe()}`);
     for (const card of await this.store.loadAgents()) this.registry.add(card);
     this.ledger.hydrate(await this.store.loadLedger());
     this.ledger.onAppend = (entry) => {
@@ -130,6 +134,7 @@ export class Kernel {
       bus: this.bus,
       guardrails: this.guardrails,
       replay: this.replay,
+      settlement: this.settlement,
       connections: this.connections,
       store: this.store,
       config: this.config,

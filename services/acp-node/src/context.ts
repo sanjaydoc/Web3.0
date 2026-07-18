@@ -6,6 +6,7 @@ import type { ConnectionHub } from './services/connections.js';
 import type { Guardrails } from './services/guardrails.js';
 import type { Registry } from './services/registry.js';
 import type { ReplayGuard } from './services/replay.js';
+import type { SettlementProvider } from './services/settlement.js';
 import type { Store } from './store/index.js';
 
 /**
@@ -21,6 +22,7 @@ export interface ModuleContext {
   bus: EventBus;
   guardrails: Guardrails;
   replay: ReplayGuard;
+  settlement: SettlementProvider;
   connections: ConnectionHub;
   store: Store;
   config: AcpConfig;

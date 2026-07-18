@@ -24,7 +24,23 @@ export function paymentsModule(): AcpModule {
   return {
     name: 'payments',
     version: '0.1.0',
-    register({ http, ledger, registry, bus, guardrails, replay, config }: ModuleContext) {
+    register({
+      http,
+      ledger,
+      registry,
+      bus,
+      guardrails,
+      replay,
+      settlement,
+      config,
+    }: ModuleContext) {
+      // Report the active settlement rail so clients/dashboards can show where value settles.
+      http.get('/settlement', () => ({
+        mode: config.settlement.mode,
+        network: settlement.network,
+        description: settlement.describe(),
+      }));
+
       http.get('/wallets/:web3Id', (request, reply) => {
         const { web3Id } = request.params as { web3Id: string };
         if (!isValidWeb3Id(web3Id)) return reply.code(400).send({ error: 'invalid Web3.0 ID' });
@@ -60,7 +76,7 @@ export function paymentsModule(): AcpModule {
       });
 
       // The signed payment rail. Settles a transfer on the ledger.
-      http.post('/pay', (request, reply) => {
+      http.post('/pay', async (request, reply) => {
         const env = request.body as SignedEnvelope<PaymentInstruction> | undefined;
         if (!env || typeof env !== 'object' || !env.payload) {
           return reply.code(400).send({ error: 'a signed payment envelope is required' });
@@ -125,16 +141,34 @@ export function paymentsModule(): AcpModule {
             taskId: instruction.taskId,
             currency: instruction.currency,
           });
+          // Settle the value on the configured rail (internal ledger by default; simulated/testnet
+          // stablecoin when configured). The internal ledger remains the accounting source of truth;
+          // external rails add a real (or realistic) settlement receipt on top.
+          const currency = instruction.currency ?? DEFAULT_CURRENCY;
+          const settlementResult = await settlement
+            .settle({
+              from: instruction.from,
+              to: instruction.to,
+              amount: instruction.amount,
+              currency,
+              reference: entry.hash,
+            })
+            .catch((err) => ({
+              network: settlement.network,
+              status: 'failed' as const,
+              detail: err instanceof Error ? err.message : String(err),
+            }));
           const receipt = {
             id: randomId('rcpt'),
             from: instruction.from,
             to: instruction.to,
             amount: instruction.amount,
-            currency: instruction.currency ?? DEFAULT_CURRENCY,
+            currency,
             taskId: instruction.taskId,
             ledgerSeq: entry.seq,
             ledgerHash: entry.hash,
             ts: entry.ts,
+            settlement: settlementResult,
           };
           bus.emit({
             kind: 'payment.settled',

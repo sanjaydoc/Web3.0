@@ -63,7 +63,16 @@ describe('ACP node (in-process integration)', () => {
     });
     const res = await post('/pay', envelope);
     expect(res.status).toBe(201);
-    expect((res.json.receipt as { amount: number }).amount).toBe(1250);
+    const receipt = res.json.receipt as {
+      amount: number;
+      ledgerHash: string;
+      settlement: { network: string; status: string; txRef?: string };
+    };
+    expect(receipt.amount).toBe(1250);
+    // Default rail is the internal ledger: the receipt carries a settled result tied to the entry.
+    expect(receipt.settlement.network).toBe('acp-ledger');
+    expect(receipt.settlement.status).toBe('settled');
+    expect(receipt.settlement.txRef).toBe(receipt.ledgerHash);
 
     const payeeWallet = await get(`/wallets/${payee.web3Id}`);
     expect((payeeWallet.json.wallet as { balance: number }).balance).toBe(
