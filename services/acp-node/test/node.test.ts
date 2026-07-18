@@ -214,6 +214,91 @@ describe('persistence (state survives a restart)', () => {
   });
 });
 
+describe('auth & rate-limit hardening', () => {
+  const fullAuth = (over: Partial<Kernel['config']['auth']> = {}) => ({
+    enforce: true,
+    freshnessMs: 120_000,
+    clockSkewMs: 5_000,
+    httpRateLimitPerWindow: 600,
+    httpRateWindowMs: 60_000,
+    ...over,
+  });
+
+  async function bootKernel(auth: Kernel['config']['auth']): Promise<Kernel> {
+    const k = new Kernel({ port: 0, auth }, generateKeypair(), new MemoryStore());
+    await k.init();
+    return k;
+  }
+  const inject = (k: Kernel, method: 'GET' | 'POST', url: string, payload?: unknown) =>
+    k.http.inject({ method, url, payload: payload as object }).then((r) => r.statusCode);
+
+  let kernel: Kernel;
+  beforeAll(async () => {
+    kernel = await bootKernel(fullAuth());
+  });
+  afterAll(async () => {
+    await kernel.close();
+  });
+
+  it('rejects an unsigned registration when enforcing', async () => {
+    const a = makeAgent('unsigned');
+    expect(await inject(kernel, 'POST', '/agents', a.registrationBody)).toBe(401);
+  });
+
+  it('rejects a registration whose signing key does not match signPublicKey', async () => {
+    const a = makeAgent('mismatch');
+    const other = makeAgent('other');
+    // Sign with a's key but claim other's signPublicKey — the wallet must not bind to a key you hold.
+    const forged = sealAs(a, { ...a.registrationBody, signPublicKey: other.signPublicKey });
+    expect(await inject(kernel, 'POST', '/agents', forged)).toBe(401);
+  });
+
+  it('rejects a replayed registration envelope (same nonce twice)', async () => {
+    const a = makeAgent('replayreg');
+    expect(await inject(kernel, 'POST', '/agents', a.registration)).toBe(201);
+    // Re-post the identical signed envelope: the nonce is already spent.
+    expect(await inject(kernel, 'POST', '/agents', a.registration)).toBe(401);
+  });
+
+  it('rejects a replayed payment envelope', async () => {
+    const payer = makeAgent('rpayer');
+    const payee = makeAgent('rpayee');
+    await inject(kernel, 'POST', '/agents', payer.registration);
+    await inject(kernel, 'POST', '/agents', payee.registration);
+    const pay = sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 100 });
+    expect(await inject(kernel, 'POST', '/pay', pay)).toBe(201);
+    expect(await inject(kernel, 'POST', '/pay', pay)).toBe(401); // replay
+  });
+
+  it('rejects a stale payment envelope', async () => {
+    const payer = makeAgent('spayer');
+    const payee = makeAgent('spayee');
+    await inject(kernel, 'POST', '/agents', payer.registration);
+    await inject(kernel, 'POST', '/agents', payee.registration);
+    const old = new Date(Date.now() - 10 * 60_000).toISOString(); // 10 min ago > freshnessMs
+    const pay = sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 100 }, old);
+    expect(await inject(kernel, 'POST', '/pay', pay)).toBe(401);
+  });
+
+  it('enforces a per-IP HTTP rate limit', async () => {
+    const k = await bootKernel(fullAuth({ httpRateLimitPerWindow: 3 }));
+    const statuses = [] as number[];
+    for (let i = 0; i < 5; i++) statuses.push(await inject(k, 'GET', '/agents'));
+    expect(statuses.slice(0, 3).every((s) => s === 200)).toBe(true);
+    expect(statuses.slice(3).every((s) => s === 429)).toBe(true);
+    // /health is exempt even after the limit is blown.
+    expect(await inject(k, 'GET', '/health')).toBe(200);
+    await k.close();
+  });
+
+  it('warn-only mode logs but allows an unsigned registration', async () => {
+    const k = await bootKernel(fullAuth({ enforce: false }));
+    const a = makeAgent('warnonly');
+    expect(await inject(k, 'POST', '/agents', a.registrationBody)).toBe(201);
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

@@ -24,7 +24,7 @@ export function paymentsModule(): AcpModule {
   return {
     name: 'payments',
     version: '0.1.0',
-    register({ http, ledger, registry, bus, guardrails }: ModuleContext) {
+    register({ http, ledger, registry, bus, guardrails, replay, config }: ModuleContext) {
       http.get('/wallets/:web3Id', (request, reply) => {
         const { web3Id } = request.params as { web3Id: string };
         if (!isValidWeb3Id(web3Id)) return reply.code(400).send({ error: 'invalid Web3.0 ID' });
@@ -74,6 +74,27 @@ export function paymentsModule(): AcpModule {
         if (!payer) return reply.code(404).send({ error: `unknown payer ${instruction.from}` });
         if (payer.signPublicKey !== env.publicKey) {
           return reply.code(401).send({ error: 'payment key does not match the payer account' });
+        }
+
+        // Replay/freshness: a valid signature proves who, not when — reject stale or reused envelopes
+        // so a captured /pay can't be resubmitted to drain the payer.
+        const fresh = replay.check(env.meta);
+        if (!fresh.ok) {
+          bus.emit({
+            kind: 'auth.rejected',
+            actor: instruction.from,
+            target: instruction.to,
+            summary: `DENY payment · replay: ${fresh.reason}`,
+            data: {
+              policy: 'replay',
+              decision: 'DENY',
+              reason: fresh.reason,
+              enforced: config.auth.enforce,
+            },
+          });
+          if (config.auth.enforce) {
+            return reply.code(401).send({ error: `payment rejected: ${fresh.reason}` });
+          }
         }
         if (!registry.has(instruction.to)) {
           return reply.code(404).send({ error: `unknown recipient ${instruction.to}` });

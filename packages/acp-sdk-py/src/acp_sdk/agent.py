@@ -57,7 +57,10 @@ class Agent:
     # --- identity / registration ----------------------------------------------------------
 
     def register(self) -> dict[str, Any]:
-        """Join the network: claim the Web3.0 ID, publish the agent card, open a wallet."""
+        """Join the network: claim the Web3.0 ID, publish the agent card, open a wallet.
+
+        The request is wrapped in a signed envelope so the node can prove we hold the private key
+        for the key we're registering — this binds the account and wallet to that key."""
         body = {
             "local": self.local,
             "name": self.name,
@@ -68,7 +71,7 @@ class Agent:
             "signPublicKey": self.sign_public_key,
             "kemPublicKey": self.kem_public_key,
         }
-        result = post_json(f"{self.base_url}/agents", body)
+        result = post_json(f"{self.base_url}/agents", self.seal_envelope(body))
         self.card = result["card"]
         return result
 

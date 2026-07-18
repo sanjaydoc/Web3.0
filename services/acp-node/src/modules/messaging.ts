@@ -27,7 +27,7 @@ export function messagingModule(): AcpModule {
     name: 'messaging',
     version: '0.1.0',
     register(ctx: ModuleContext) {
-      const { http, registry, ledger, bus, guardrails, connections } = ctx;
+      const { http, registry, ledger, bus, guardrails, connections, replay, config } = ctx;
 
       http.get('/relay', { websocket: true }, (socket: WebSocket) => {
         let authed: Web3Id | null = null;
@@ -73,6 +73,25 @@ export function messagingModule(): AcpModule {
           if (result.meta?.signer !== id || card.signPublicKey !== envelope.publicKey) {
             send({ kind: 'error', reason: 'hello key does not match the account' });
             return;
+          }
+          // Replay/freshness on the hello: a captured hello can't be replayed to hijack a session.
+          const fresh = result.meta ? replay.check(result.meta) : { ok: false, reason: 'no meta' };
+          if (!fresh.ok) {
+            bus.emit({
+              kind: 'auth.rejected',
+              actor: id,
+              summary: `DENY hello · replay: ${fresh.reason}`,
+              data: {
+                policy: 'replay',
+                decision: 'DENY',
+                reason: fresh.reason,
+                enforced: config.auth.enforce,
+              },
+            });
+            if (config.auth.enforce) {
+              send({ kind: 'error', reason: `hello rejected: ${fresh.reason}` });
+              return;
+            }
           }
           authed = id;
           connections.bind(id, socket);

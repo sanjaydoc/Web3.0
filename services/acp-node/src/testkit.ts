@@ -9,21 +9,32 @@ export interface TestAgent {
   keys: Keypair;
   signPublicKey: string;
   kemPublicKey: string;
-  registration: Record<string, unknown>;
+  /** The raw registration request (unsigned) — useful for asserting on fields or forging. */
+  registrationBody: Record<string, unknown>;
+  /** The signed registration envelope the node now requires. Post this to `/agents`. */
+  registration: SignedEnvelope<Record<string, unknown>>;
 }
 
-/** Build a test agent with a fresh post-quantum identity and a registration body. */
+/** Build a test agent with a fresh post-quantum identity and a signed registration envelope. */
 export function makeAgent(local: string, opts: Partial<Record<string, unknown>> = {}): TestAgent {
   const keys = generateKeypair();
   const kem = generateKemKeypair();
   const signPublicKey = toB64u(keys.publicKey);
   const kemPublicKey = toB64u(kem.publicKey);
+  const registrationBody = { local, signPublicKey, kemPublicKey, kind: 'agent', ...opts };
   return {
     web3Id: web3Id(local),
     keys,
     signPublicKey,
     kemPublicKey,
-    registration: { local, signPublicKey, kemPublicKey, kind: 'agent', ...opts },
+    registrationBody,
+    registration: seal(
+      keys,
+      web3Id(local),
+      registrationBody,
+      signPublicKey,
+      new Date().toISOString(),
+    ),
   };
 }
 

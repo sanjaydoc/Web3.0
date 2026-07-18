@@ -1,7 +1,19 @@
 import { AGENT_CARD_VERSION, formatAmount, isValidWeb3Id, web3Id as makeWeb3Id } from '@acp/core';
-import type { AgentCard, RegistrationRequest } from '@acp/core';
+import type { AgentCard, RegistrationRequest, SignedEnvelope } from '@acp/core';
 import { deriveDid, fromB64u } from '@acp/crypto';
 import type { AcpModule, ModuleContext } from '../context.js';
+import { checkEnvelope } from '../services/replay.js';
+
+/** True if the body is shaped like a signed envelope (rather than a bare registration request). */
+function isEnvelope(body: unknown): body is SignedEnvelope<RegistrationRequest> {
+  return (
+    !!body &&
+    typeof body === 'object' &&
+    'payload' in body &&
+    'signature' in body &&
+    'publicKey' in body
+  );
+}
 
 /**
  * registry — where agents join the network. On registration an account gets an email-like
@@ -12,9 +24,50 @@ export function registryModule(): AcpModule {
   return {
     name: 'registry',
     version: '0.1.0',
-    register({ http, registry, ledger, bus, store, config, clock }: ModuleContext) {
+    register({ http, registry, ledger, bus, replay, store, config, clock }: ModuleContext) {
       http.post('/agents', async (request, reply) => {
-        const body = request.body as Partial<RegistrationRequest> | undefined;
+        const raw = request.body;
+
+        // Registration must be a signed envelope: the registrant proves possession of the private
+        // key by signing the request with the very key being registered. This binds the wallet to
+        // that key — nobody can claim a handle (or a wallet) for a key they don't hold.
+        let body: Partial<RegistrationRequest> | undefined;
+        if (isEnvelope(raw)) {
+          const claimed = typeof raw.payload?.local === 'string' ? raw.payload.local : '';
+          let expected: ReturnType<typeof makeWeb3Id> | undefined;
+          try {
+            expected = makeWeb3Id(claimed);
+          } catch {
+            expected = undefined;
+          }
+          const outcome = checkEnvelope(replay, raw, expected);
+          const keyBinds = raw.payload?.signPublicKey === raw.publicKey;
+          if (!outcome.ok || !keyBinds) {
+            const reason = !outcome.ok
+              ? outcome.reason
+              : 'signPublicKey does not match the signing key';
+            bus.emit({
+              kind: 'auth.rejected',
+              summary: `DENY registration · ${reason}`,
+              data: {
+                policy: 'registration-auth',
+                decision: 'DENY',
+                reason,
+                enforced: config.auth.enforce,
+              },
+            });
+            if (config.auth.enforce)
+              return reply.code(401).send({ error: `registration rejected: ${reason}` });
+          }
+          body = outcome.payload ?? raw.payload;
+        } else if (config.auth.enforce) {
+          return reply.code(401).send({
+            error: 'registration must be a signed envelope (sign the request with your key)',
+          });
+        } else {
+          body = raw as Partial<RegistrationRequest> | undefined;
+        }
+
         if (!body || typeof body.local !== 'string' || !body.signPublicKey || !body.kemPublicKey) {
           return reply
             .code(400)

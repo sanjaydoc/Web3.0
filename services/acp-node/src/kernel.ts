@@ -11,7 +11,9 @@ import { MODULE_FACTORIES } from './modules/index.js';
 import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
 import { Guardrails } from './services/guardrails.js';
+import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
+import { ReplayGuard } from './services/replay.js';
 import { type Store, createStore } from './store/index.js';
 
 /**
@@ -26,6 +28,8 @@ export class Kernel {
   readonly registry: Registry;
   readonly bus: EventBus;
   readonly guardrails: Guardrails;
+  readonly replay: ReplayGuard;
+  readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
   readonly store: Store;
@@ -45,6 +49,12 @@ export class Kernel {
     this.registry = new Registry();
     this.bus = new EventBus(clock);
     this.guardrails = new Guardrails(this.config.guardrails, () => Date.now());
+    this.replay = new ReplayGuard(this.config.auth, () => Date.now());
+    this.httpLimiter = new RateLimiter(
+      this.config.auth.httpRateLimitPerWindow,
+      this.config.auth.httpRateWindowMs,
+      () => Date.now(),
+    );
     this.connections = new ConnectionHub();
     this.store = store ?? createStore(this.config);
     const level = process.env.ACP_LOG_LEVEL ?? 'info';
@@ -78,6 +88,32 @@ export class Kernel {
     await this.http.register(cors, { origin: true });
     await this.http.register(websocket);
 
+    // HTTP rate limit (per client IP) — a coarse DoS backstop in front of the per-agent guardrails.
+    // Runs before route handlers; /health is exempt so monitoring is never throttled.
+    this.http.addHook('onRequest', (request, reply, done) => {
+      if (request.url === '/health') return done();
+      const verdict = this.httpLimiter.check(request.ip);
+      if (!verdict.ok) {
+        this.bus.emit({
+          kind: 'auth.rejected',
+          summary: `DENY http · rate-limit: ${verdict.count}/${verdict.limit} from ${request.ip}`,
+          data: {
+            policy: 'http-rate-limit',
+            decision: 'DENY',
+            ip: request.ip,
+            count: verdict.count,
+            limit: verdict.limit,
+            enforced: this.config.auth.enforce,
+          },
+        });
+        if (this.config.auth.enforce) {
+          reply.code(429).send({ error: 'rate limit exceeded — slow down' });
+          return;
+        }
+      }
+      done();
+    });
+
     this.http.get('/', () => ({
       name: 'ACP node',
       description: 'The agentic internet — quantum-resistant agent communication protocol.',
@@ -93,6 +129,7 @@ export class Kernel {
       registry: this.registry,
       bus: this.bus,
       guardrails: this.guardrails,
+      replay: this.replay,
       connections: this.connections,
       store: this.store,
       config: this.config,

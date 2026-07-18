@@ -17,6 +17,7 @@ export type EventKind =
   | 'task.updated'
   | 'payment.settled'
   | 'guardrail.decision'
+  | 'auth.rejected'
   | 'data.shared';
 
 /** A single observable event in the network's activity feed. */
