@@ -514,6 +514,72 @@ describe('hosted agents (Genesis launch on node)', () => {
     await k.close();
   });
 
+  it('publishes a webhook dApp that forwards tasks to an external endpoint', async () => {
+    const http = await import('node:http');
+    const server = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => {
+        body += c;
+      });
+      req.on('end', () => {
+        const { input } = JSON.parse(body);
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ answer: `dapp: ${input.question}` }));
+      });
+    });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const port = (server.address() as { port: number }).port;
+
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const svc = new HostedAgentService(ctxOf(k) as never);
+    const status = await svc.launch({
+      handle: 'webdapp',
+      name: 'Web dApp',
+      description: 'external endpoint',
+      skillId: 'ask',
+      skillName: 'Ask',
+      skillDesc: 'x',
+      price: 0,
+      provider: 'http',
+      model: 'webhook',
+      webhookUrl: `http://127.0.0.1:${port}`,
+    });
+    expect(status.kind).toBe('webhook');
+
+    const senderId = 'caller@web3.0';
+    const got = new Promise<{ output: { answer?: string } }>((resolve) => {
+      k.connections.bind(
+        senderId as never,
+        {
+          readyState: 1,
+          OPEN: 1,
+          send: (raw: string) => {
+            const f = JSON.parse(raw);
+            if (f.message?.body?.type === 'task.result') resolve(f.message.body);
+          },
+        } as never,
+      );
+    });
+    k.connections.sendTo('webdapp@web3.0' as never, {
+      kind: 'deliver',
+      message: {
+        id: 'm',
+        from: senderId,
+        to: 'webdapp@web3.0',
+        ts: '',
+        body: { type: 'task.submit', taskId: 't1', input: { question: 'ping' } },
+      },
+    });
+    const result = (await Promise.race([
+      got,
+      new Promise((r) => setTimeout(() => r({ output: { error: 'timeout' } }), 3000)),
+    ])) as { output: { answer?: string } };
+    expect(result.output.answer).toBe('dapp: ping');
+    server.close();
+    await k.close();
+  });
+
   it('rejects an invalid handle with a clear error', async () => {
     const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
     await k.init();

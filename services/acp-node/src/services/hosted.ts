@@ -18,6 +18,10 @@ export interface HostedAgentConfig {
   apiKey?: string;
   baseUrl?: string;
   system?: string;
+  /** If set, this is a *dApp*: instead of an LLM, tasks are POSTed to this HTTP endpoint and its
+   * JSON response ({ answer } or any object) is returned. Lets developers publish any web service
+   * as an agent on Web3.0. */
+  webhookUrl?: string;
 }
 
 export interface HostedAgentStatus {
@@ -28,6 +32,8 @@ export interface HostedAgentStatus {
   price: number;
   provider: string;
   model: string;
+  /** 'llm' = brain is a model; 'webhook' = a dApp backed by an external endpoint. */
+  kind: 'llm' | 'webhook';
   hasKey: boolean;
   running: boolean;
 }
@@ -76,6 +82,7 @@ export class HostedAgentService {
       price: config.price,
       provider: config.provider,
       model: config.model,
+      kind: config.webhookUrl ? 'webhook' : 'llm',
       hasKey: Boolean(config.apiKey),
       running,
     }));
@@ -168,17 +175,20 @@ export class HostedAgentService {
     let output: Record<string, unknown>;
     let state = 'completed';
     try {
-      const answer = await this.chat(
-        {
-          provider: config.provider,
-          model: config.model,
-          apiKey: config.apiKey,
-          baseUrl: config.baseUrl,
-          system: config.system,
-        },
-        question,
-      );
-      output = { answer };
+      output = config.webhookUrl
+        ? await this.callWebhook(config.webhookUrl, m.body.input ?? { question })
+        : {
+            answer: await this.chat(
+              {
+                provider: config.provider,
+                model: config.model,
+                apiKey: config.apiKey,
+                baseUrl: config.baseUrl,
+                system: config.system,
+              },
+              question,
+            ),
+          };
     } catch (err) {
       output = { error: err instanceof Error ? err.message : String(err) };
       state = 'failed';
@@ -193,6 +203,25 @@ export class HostedAgentService {
         body: { type: 'task.result', taskId: m.body.taskId, state, output },
       },
     });
+  }
+
+  /** A dApp brain: POST the task input to the developer's endpoint, return its JSON response. */
+  private async callWebhook(
+    url: string,
+    input: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ input }),
+    });
+    if (!res.ok) throw new Error(`dApp endpoint ${res.status}`);
+    const data = (await res.json()) as Record<string, unknown>;
+    // Accept { answer } or { output: {...} } or any object; normalise to an output shape.
+    if (typeof data.answer === 'string') return { answer: data.answer };
+    if (data.output && typeof data.output === 'object')
+      return data.output as Record<string, unknown>;
+    return data;
   }
 }
 

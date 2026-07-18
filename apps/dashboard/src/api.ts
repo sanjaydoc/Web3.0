@@ -79,6 +79,7 @@ export interface HostedAgent {
   price: number;
   provider: string;
   model: string;
+  kind: 'llm' | 'webhook';
   hasKey: boolean;
   running: boolean;
 }
@@ -95,6 +96,15 @@ export interface HostedLaunchConfig {
   model: string;
   apiKey?: string;
   system?: string;
+  webhookUrl?: string;
+}
+
+export interface NodeInfo {
+  name: string;
+  description: string;
+  version: string;
+  modules: string[];
+  nodePublicKey: string;
 }
 
 export interface ConsensusInfo {
@@ -130,6 +140,7 @@ async function post<T>(path: string, body: unknown, adminToken?: string): Promis
 }
 
 export const api = {
+  info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
   agents: () => get<{ agents: AgentCard[]; count: number }>('/agents'),
   events: (limit = 60) => get<{ events: AcpEvent[] }>(`/events?limit=${limit}`),
