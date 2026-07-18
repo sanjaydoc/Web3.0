@@ -1,4 +1,6 @@
-import { generateKeypair, toB64u } from '@acp/crypto';
+import { AGENT_CARD_VERSION, web3Id as makeWeb3Id } from '@acp/core';
+import type { AgentCard } from '@acp/core';
+import { deriveDid, generateKemKeypair, generateKeypair, toB64u } from '@acp/crypto';
 import type { Keypair } from '@acp/crypto';
 import { Ledger } from '@acp/ledger';
 import cors from '@fastify/cors';
@@ -36,6 +38,7 @@ export class Kernel {
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
+  readonly treasuryId: string;
   readonly store: Store;
   readonly loaded: string[] = [];
   /** In-flight write-behind persistence, drained on close(). */
@@ -55,7 +58,11 @@ export class Kernel {
     this.guardrails = new Guardrails(this.config.guardrails, () => Date.now());
     this.replay = new ReplayGuard(this.config.auth, () => Date.now());
     this.settlement = createSettlement(this.config.settlement);
-    this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger);
+    this.treasuryId = makeWeb3Id(this.config.fees.treasuryLocal);
+    this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger, {
+      treasuryId: this.treasuryId,
+      blockReward: this.config.fees.blockReward,
+    });
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
       this.config.auth.httpRateWindowMs,
@@ -86,6 +93,9 @@ export class Kernel {
       this.inflight.add(p);
       void p.finally(() => this.inflight.delete(p));
     };
+    // The node treasury collects protocol fees + block rewards. Register it once (idempotent) so
+    // earnings are visible in the registry and wallets.
+    this.ensureTreasury();
     if (this.registry.size > 0 || this.ledger.size > 0) {
       this.http.log.info(
         `restored ${this.registry.size} agents and ${this.ledger.size} ledger entries from ${this.store.kind} store`,
@@ -142,6 +152,7 @@ export class Kernel {
       connections: this.connections,
       store: this.store,
       config: this.config,
+      treasuryId: this.treasuryId,
       clock: () => new Date().toISOString(),
       log: this.http.log,
     };
@@ -164,6 +175,30 @@ export class Kernel {
     const address = await this.http.listen({ host: this.config.host, port: this.config.port });
     this.http.log.info(`ACP node listening on ${address} · modules: ${this.loaded.join(', ')}`);
     return address;
+  }
+
+  /** Register the treasury account (card + wallet) if it isn't already on the node. */
+  private ensureTreasury(): void {
+    const id = makeWeb3Id(this.config.fees.treasuryLocal);
+    if (this.registry.has(id)) return;
+    const keys = generateKeypair();
+    const kem = generateKemKeypair();
+    const did = deriveDid(keys.publicKey);
+    const card: AgentCard = {
+      web3Id: id,
+      did,
+      name: 'Node treasury',
+      description: 'Collects protocol fees and block rewards for the node operator.',
+      kind: 'agent',
+      skills: [],
+      signPublicKey: toB64u(keys.publicKey),
+      kemPublicKey: toB64u(kem.publicKey),
+      version: AGENT_CARD_VERSION,
+      createdAt: new Date().toISOString(),
+    };
+    this.registry.add(card);
+    void this.store.saveAgent(card);
+    this.ledger.register(id, did, 0); // opens a zero-balance wallet
   }
 
   async close(): Promise<void> {

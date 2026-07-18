@@ -72,6 +72,16 @@ export interface ConsensusConfig {
   slotMs: number;
 }
 
+/** Operator incentives — how running a node earns aUSD. All default to 0 (off). */
+export interface FeesConfig {
+  /** Protocol fee on each payment, in basis points, skimmed from the payee to the node treasury. */
+  protocolBps: number;
+  /** aUSD minted to a block's proposer as a reward (only when this node proposes). */
+  blockReward: number;
+  /** Local part of the node's treasury Web3.0 ID that collects earnings. */
+  treasuryLocal: string;
+}
+
 export interface AcpConfig {
   host: string;
   port: number;
@@ -83,6 +93,7 @@ export interface AcpConfig {
   auth: AuthConfig;
   settlement: SettlementConfig;
   consensus: ConsensusConfig;
+  fees: FeesConfig;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -127,6 +138,11 @@ export const DEFAULT_CONFIG: AcpConfig = {
     peers: csv(process.env.ACP_PEERS),
     blockMs: Number(process.env.ACP_BLOCK_MS ?? 3_000),
     slotMs: Number(process.env.ACP_SLOT_MS ?? 6_000),
+  },
+  fees: {
+    protocolBps: Number(process.env.ACP_FEE_BPS ?? 0),
+    blockReward: Number(process.env.ACP_BLOCK_REWARD ?? 0),
+    treasuryLocal: process.env.ACP_TREASURY ?? 'treasury',
   },
   mongodbUri: process.env.ACP_MONGODB_URI,
   mongodbDb: process.env.ACP_MONGODB_DB ?? 'acp',

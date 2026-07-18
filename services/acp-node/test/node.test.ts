@@ -200,7 +200,7 @@ describe('persistence (state survives a restart)', () => {
     const k2 = new Kernel({ port: 0 }, nodeKeys, store);
     await k2.init();
 
-    expect(k2.registry.size).toBe(2);
+    expect(k2.registry.size).toBe(3); // alice, bob, and the node treasury account
     expect(k2.registry.has(alice.web3Id)).toBe(true);
     expect(k2.ledger.balanceOf(alice.web3Id)).toBe(k2.config.faucetGrant - 700);
     expect(k2.ledger.balanceOf(bob.web3Id)).toBe(k2.config.faucetGrant + 700);
@@ -363,6 +363,7 @@ function ctxOf(k: Kernel) {
     connections: k.connections,
     store: k.store,
     config: k.config,
+    treasuryId: k.treasuryId,
     clock: () => new Date().toISOString(),
     log: k.http.log,
   };
@@ -530,6 +531,59 @@ describe('hosted agents (Genesis launch on node)', () => {
         model: 'x',
       }),
     ).rejects.toThrow();
+    await k.close();
+  });
+});
+
+describe('operator incentives (fees & block rewards)', () => {
+  it('skims a protocol fee from each payment to the node treasury', async () => {
+    const k = new Kernel(
+      { port: 0, fees: { protocolBps: 250, blockReward: 0, treasuryLocal: 'treasury' } },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const inject = (url: string, payload: unknown) =>
+      k.http.inject({ method: 'POST', url, payload: payload as object });
+
+    const payer = makeAgent('feepayer');
+    const payee = makeAgent('feepayee');
+    await inject('/agents', payer.registration);
+    await inject('/agents', payee.registration);
+
+    const res = await inject(
+      '/pay',
+      sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 1000 }),
+    );
+    const receipt = res.json().receipt as { fee: number; netToPayee: number };
+    expect(receipt.fee).toBe(25); // 2.5% of 1000
+    expect(receipt.netToPayee).toBe(975);
+    expect(k.ledger.balanceOf(payee.web3Id)).toBe(k.config.faucetGrant + 975);
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(25);
+    await k.close();
+  });
+
+  it('mints a block reward to the treasury when this node proposes', async () => {
+    const k = new Kernel(
+      {
+        port: 0,
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+        fees: { protocolBps: 0, blockReward: 500, treasuryLocal: 'treasury' },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    await k.http.inject({
+      method: 'POST',
+      url: '/agents',
+      payload: makeAgent('rewardee').registration,
+    });
+
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(0);
+    const block = k.consensus.proposeTick();
+    expect(block).not.toBeNull();
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(500); // block reward minted
     await k.close();
   });
 });

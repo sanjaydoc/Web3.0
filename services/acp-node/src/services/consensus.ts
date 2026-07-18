@@ -35,6 +35,10 @@ export class ConsensusCoordinator {
     private readonly config: ConsensusConfig,
     nodeKeys: Keypair,
     private readonly ledger: Ledger,
+    private readonly rewards: { treasuryId: string; blockReward: number } = {
+      treasuryId: '',
+      blockReward: 0,
+    },
   ) {
     this.enabled = config.mode === 'poa';
     const authority = toB64u(nodeKeys.publicKey);
@@ -56,7 +60,16 @@ export class ConsensusCoordinator {
     const pending = all.slice(this.includedLocalEntries);
     if (pending.length === 0) return null;
     const block = this.engine.proposeIfDue(pending, Date.now());
-    if (block) this.includedLocalEntries = all.length;
+    if (block) {
+      this.includedLocalEntries = all.length;
+      // Block reward: producing a block mints aUSD to this node's treasury (operator incentive).
+      if (this.rewards.blockReward > 0 && this.rewards.treasuryId) {
+        this.ledger.mint(
+          this.rewards.treasuryId as Parameters<Ledger['mint']>[0],
+          this.rewards.blockReward,
+        );
+      }
+    }
     return block;
   }
 

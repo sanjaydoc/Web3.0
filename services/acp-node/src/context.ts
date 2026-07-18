@@ -28,6 +28,8 @@ export interface ModuleContext {
   connections: ConnectionHub;
   store: Store;
   config: AcpConfig;
+  /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
+  treasuryId: string;
   clock: () => string;
   log: FastifyBaseLogger;
 }

@@ -214,12 +214,56 @@ The node loads these by config (`config.modules`) — remove one and it's gone:
 | `guardrails` | Capability / rate-limit / spend-cap policies (ALLOW/DENY) |
 | `observability` | Live event feed (+ SSE), ledger view with verification, stats |
 | `consensus` | Distributed L1: PoA block proposal + peer gossip (`GET /consensus`) |
+| `telegram` | GUI-managed human front door (bridge agent, admin-gated) |
+| `hosted` | Run Genesis agents in-process — the node as a no-VPS host |
 
 **Auth hardening** (kernel-level): registration is a signed envelope so only the key holder can
 claim a handle and wallet; every envelope (registration, `/pay`, relay hello) passes a
 **replay/freshness** check so captured requests can't be resubmitted; and a **per-IP HTTP rate
 limiter** backstops the per-agent guardrails against floods. On by default, or `ACP_AUTH_ENFORCE=false`
 for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits).
+
+## Running a node (and earning)
+
+ACP has **two kinds of node**, with different jobs and cardinality:
+
+- **Authority nodes** — the small, curated set that runs the proof-of-authority L1 and agrees on
+  the block history. Security and finality live here.
+- **Relay / host nodes** — permissionless machines that route agent-to-agent traffic and **host
+  agents** (one process runs many agents; see the `hosted` module and `AgentHost`). Reach and
+  capacity live here. They come and go freely.
+
+**How many must stay online?**
+
+| Role | Minimum | Recommended | Why |
+| --- | --- | --- | --- |
+| Authority | **1** works (centralized) | **4+** | BFT tolerance is 3f+1: 4 nodes survive 1 offline/faulty. Keep **> 2/3** online. |
+| Relay/host | 0 required for correctness | as many as you like | More = more capacity + agents stay online; offline agents' messages queue meanwhile. |
+
+With the **proposer-skip** (`ACP_SLOT_MS`), if the authority whose turn it is goes offline, the next
+one steps in after a slot — so a single down node no longer stalls the chain. A practical launch is
+**3–4 authority nodes** you and partners run, growing the set (and moving toward staking/BFT) as real
+value flows.
+
+**How operators earn.** Running a node pays in aUSD, off two levers (both default **0** = off):
+
+- **Protocol fee** (`ACP_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
+  to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
+- **Block reward** (`ACP_BLOCK_REWARD`) — aUSD minted to the proposer's treasury for each block.
+- **Hosting revenue** — a host node runs other people's agents; those agents earn their per-task
+  fees directly into their wallets (a platform cut is a natural next step).
+
+Every fee and reward is an ordinary, auditable ledger entry — visible in the dashboard and covered by
+`verifyChain()`.
+
+## What is aUSD?
+
+**aUSD is this network's own credit unit — not an external cryptocurrency, and there's nothing to buy.**
+It's minted by the node as a faucet grant and tracked on the PQC-signed ledger in minor units (cents).
+Today it's a **closed-loop platform credit** that proves the payment, fee, and reward mechanics
+end-to-end — it has no market value and no chain behind it. It can later be **backed 1:1 by a real
+stablecoin** (USDC) or issued as a token — a legal/custody decision, not a code change, and the fee
+and reward logic above stays identical either way. Rename it freely; it's yours.
 
 ## Roadmap
 

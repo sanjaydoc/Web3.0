@@ -32,6 +32,7 @@ export function paymentsModule(): AcpModule {
       guardrails,
       replay,
       settlement,
+      treasuryId,
       config,
     }: ModuleContext) {
       // Report the active settlement rail so clients/dashboards can show where value settles.
@@ -141,6 +142,15 @@ export function paymentsModule(): AcpModule {
             taskId: instruction.taskId,
             currency: instruction.currency,
           });
+          // Protocol fee: skim a basis-point cut from the payee to the node treasury (operator
+          // revenue). The payer still pays the quoted amount; the marketplace takes its rate.
+          const fee = Math.floor((instruction.amount * config.fees.protocolBps) / 10_000);
+          if (fee > 0 && ledger.balanceOf(instruction.to) >= fee) {
+            ledger.transfer(instruction.to, treasuryId as typeof instruction.to, fee, {
+              memo: 'protocol-fee',
+              taskId: instruction.taskId,
+            });
+          }
           // Settle the value on the configured rail (internal ledger by default; simulated/testnet
           // stablecoin when configured). The internal ledger remains the accounting source of truth;
           // external rails add a real (or realistic) settlement receipt on top.
@@ -168,6 +178,8 @@ export function paymentsModule(): AcpModule {
             ledgerSeq: entry.seq,
             ledgerHash: entry.hash,
             ts: entry.ts,
+            fee,
+            netToPayee: instruction.amount - fee,
             settlement: settlementResult,
           };
           bus.emit({
