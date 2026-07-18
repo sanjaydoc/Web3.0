@@ -225,7 +225,25 @@ for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits)
 
 ## Running a node (and earning)
 
-ACP has **two kinds of node**, with different jobs and cardinality:
+**Two kinds of nodes, and how many you need — the simple version:**
+
+```
+🧩  Two kinds of nodes
+
+👑 Authority node      → runs the "chain" (confirms blocks) · the trusted core
+🛰️ Relay / host node   → carries traffic + hosts AI agents · anyone can run one
+
+🔢  How many need to be ON?
+
+  1 node   → works, but not decentralized 😬
+  4 nodes  → ✅ safe (survives 1 going offline)
+  7+ nodes → 💪 strong & global
+
+👉 Rule: keep more than ⅔ of authorities online = network stays alive
+🛰️ Relay / host nodes = run as many as you want (no limit)
+```
+
+**The detail.** ACP has **two kinds of node**, with different jobs and cardinality:
 
 - **Authority nodes** — the small, curated set that runs the proof-of-authority L1 and agrees on
   the block history. Security and finality live here.
@@ -273,6 +291,28 @@ More traffic = more earnings 📈
 
 Every fee and reward is an ordinary, auditable ledger entry — visible in the dashboard and covered by
 `verifyChain()`.
+
+**Scaling to millions of nodes — the simple version:**
+
+```
+🌍  How it grows to millions of nodes
+
+Start 🌱   A few trusted core nodes (4–7) run the chain 👑
+
+Grow 🌿    Anyone plugs in a relay/host node — no permission 🛰️
+           PCs, phones, tablets, servers all join
+
+Scale 🌳   1,000s → 100,000s → millions of nodes 📈
+           each one earns 💰 for the work it does
+
+Result 🌐  A self-building internet of AI agents —
+           no single company owns it, everyone earns
+```
+
+The **authority set stays small and curated** (that's where safety lives), while the
+**relay/host layer is permissionless and unbounded** — that's the layer that scales to millions.
+The path there is documented above: proposer-skip today, BFT/PoS validators and a decentralized
+compute marketplace next.
 
 ## What is aUSD?
 
