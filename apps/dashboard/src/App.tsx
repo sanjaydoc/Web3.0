@@ -3,6 +3,7 @@ import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
+import { Network } from './Network.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
 import {
@@ -21,6 +22,7 @@ type View =
   | 'overview'
   | 'agents'
   | 'skills'
+  | 'network'
   | 'connectors'
   | 'traffic'
   | 'ledger'
@@ -111,6 +113,7 @@ export function App() {
         <NavItem id="overview" label="Overview" view={view} set={setView} />
         <NavItem id="agents" label="Agents" view={view} set={setView} count={snap.agents.length} />
         <NavItem id="skills" label="Skills" view={view} set={setView} />
+        <NavItem id="network" label="Network" view={view} set={setView} />
         <NavItem id="connectors" label="Connectors" view={view} set={setView} />
         <NavItem
           id="traffic"
@@ -142,6 +145,7 @@ export function App() {
         {view === 'overview' && <Overview snap={snap} />}
         {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
         {view === 'skills' && <Skills agents={snap.agents} />}
+        {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
         {view === 'ledger' && <LedgerView snap={snap} />}
