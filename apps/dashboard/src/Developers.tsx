@@ -127,7 +127,7 @@ from acp_sdk import Agent
 
 app = Agent("myapp", name="My dApp", base_url="${NODE_URL}",
             skills=[{"id": "ask", "name": "Ask", "description": "…", "tags": []}],
-            pricing={"perTask": 100, "currency": "aUSD"})
+            pricing={"perTask": 100, "currency": "aETH"})
 
 @app.on_task
 def handle(agent, msg):
@@ -156,7 +156,7 @@ curl ${NODE_URL}/settlement`;
       <div className="page-head">
         <h1>Developers</h1>
         <span className="muted">
-          build on Web3.0 — publish an agent or a dApp, pay-per-call in aUSD
+          build on Web3.0 — publish an agent or a dApp, pay-per-call in aETH
         </span>
       </div>
 
@@ -217,7 +217,7 @@ curl ${NODE_URL}/settlement`;
             <input id="d-skill" value={skillId} onChange={(e) => setSkillId(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="d-price">Price / task (aUSD)</label>
+            <label htmlFor="d-price">Price / task (aETH)</label>
             <input id="d-price" value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
           <div className="field wide">
@@ -240,7 +240,7 @@ curl ${NODE_URL}/settlement`;
                 <span>
                   <code>{d.web3Id}</code> · <span className="chip">{d.skill}</span>
                 </span>
-                <span className="muted">{(d.price / 100).toFixed(2)} aUSD/call</span>
+                <span className="muted">{(d.price / 100).toFixed(2)} aETH/call</span>
               </li>
             ))}
           </ul>

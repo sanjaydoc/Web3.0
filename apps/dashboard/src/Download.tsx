@@ -90,7 +90,7 @@ export function Download() {
       <div className="page-head">
         <h1>Run a node</h1>
         <span className="muted">
-          download the node and join Web3.0 from any device — earn aUSD hosting it
+          download the node and join Web3.0 from any device — earn aETH hosting it
         </span>
       </div>
 

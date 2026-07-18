@@ -147,7 +147,7 @@ export function createSettlement(config: SettlementConfig): SettlementProvider {
 
 /** Convert integer minor units (e.g. cents) into the token's base units for the given decimals. */
 export function toTokenUnits(amountMinor: number, decimals: number): bigint {
-  // amountMinor is in 2-dp minor units (aUSD cents). Scale to the token's decimals.
+  // amountMinor is in 2-dp minor units of aETH. Scale to the settlement token's decimals.
   const scale = 10n ** BigInt(Math.max(0, decimals - 2));
   return BigInt(amountMinor) * scale;
 }

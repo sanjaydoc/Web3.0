@@ -90,7 +90,7 @@ def handle_command(bridge: Bridge, text: str) -> str:
             bal = bridge.agent.balance() / 100
         except HttpError:
             bal = 0.0
-        return f"I am `{bridge.agent.web3_id}`\nwallet: {bal:.2f} aUSD"
+        return f"I am `{bridge.agent.web3_id}`\nwallet: {bal:.2f} aETH"
     if cmd == "/agents":
         try:
             data = get_json(f"{NODE_URL}/agents")

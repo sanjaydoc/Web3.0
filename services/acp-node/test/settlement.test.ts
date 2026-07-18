@@ -14,7 +14,7 @@ const intent = {
   from: 'a@web3.0',
   to: 'b@web3.0',
   amount: 1250,
-  currency: 'aUSD',
+  currency: 'aETH',
   reference: 'HASH',
 };
 
@@ -59,7 +59,7 @@ describe('settlement providers', () => {
   });
 
   it('encodes ERC-20 transfer calldata and scales minor units to token decimals', () => {
-    // 12.50 aUSD (1250 minor units) in a 6-decimal token → 12_500_000 base units.
+    // 12.50 aETH (1250 minor units) in a 6-decimal token → 12_500_000 base units.
     expect(toTokenUnits(1250, 6)).toBe(12_500_000n);
     const data = encodeErc20Transfer('0x00000000000000000000000000000000000000Ab', 12_500_000n);
     expect(data.slice(0, 10)).toBe('0xa9059cbb');

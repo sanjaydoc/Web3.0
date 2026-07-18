@@ -62,7 +62,7 @@ export class ConsensusCoordinator {
     const block = this.engine.proposeIfDue(pending, Date.now());
     if (block) {
       this.includedLocalEntries = all.length;
-      // Block reward: producing a block mints aUSD to this node's treasury (operator incentive).
+      // Block reward: producing a block mints aETH to this node's treasury (operator incentive).
       if (this.rewards.blockReward > 0 && this.rewards.treasuryId) {
         this.ledger.mint(
           this.rewards.treasuryId as Parameters<Ledger['mint']>[0],

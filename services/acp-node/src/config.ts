@@ -73,11 +73,11 @@ export interface ConsensusConfig {
   slotMs: number;
 }
 
-/** Operator incentives — how running a node earns aUSD. All default to 0 (off). */
+/** Operator incentives — how running a node earns aETH. All default to 0 (off). */
 export interface FeesConfig {
   /** Protocol fee on each payment, in basis points, skimmed from the payee to the node treasury. */
   protocolBps: number;
-  /** aUSD minted to a block's proposer as a reward (only when this node proposes). */
+  /** aETH minted to a block's proposer as a reward (only when this node proposes). */
   blockReward: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
@@ -112,9 +112,9 @@ export const DEFAULT_CONFIG: AcpConfig = {
   host: process.env.ACP_HOST ?? '127.0.0.1',
   port: Number(process.env.ACP_PORT ?? 8787),
   modules: [...ALL_MODULES],
-  faucetGrant: Number(process.env.ACP_FAUCET ?? 100_000), // 1,000.00 aUSD
+  faucetGrant: Number(process.env.ACP_FAUCET ?? 100_000), // 1,000.00 aETH
   guardrails: {
-    spendCapPerWindow: Number(process.env.ACP_SPEND_CAP ?? 500_000), // 5,000.00 aUSD
+    spendCapPerWindow: Number(process.env.ACP_SPEND_CAP ?? 500_000), // 5,000.00 aETH
     rateLimitPerWindow: Number(process.env.ACP_RATE_LIMIT ?? 120),
     windowMs: Number(process.env.ACP_WINDOW_MS ?? 60_000),
   },

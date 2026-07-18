@@ -15,7 +15,7 @@ interface PaymentInstruction {
 }
 
 /**
- * payments — "effortless agentic payments". Agents settle value in the aUSD stablecoin unit on
+ * payments — "effortless agentic payments". Agents settle value in the network's native aETH unit on
  * the ledger. Every transfer is a *signed* instruction (post-quantum), checked against the
  * spend-cap guardrail before it settles. The x402 quote endpoint exposes the standard
  * "HTTP 402 Payment Required" handshake so a service can price a skill before doing the work.

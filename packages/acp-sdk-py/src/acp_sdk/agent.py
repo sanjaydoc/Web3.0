@@ -133,7 +133,7 @@ class Agent:
     def pay(
         self, to: str, amount: int, *, task_id: str | None = None, memo: str | None = None
     ) -> dict[str, Any]:
-        """Settle a signed payment to another agent in the aUSD stablecoin unit."""
+        """Settle a signed payment to another agent in the network's native aETH unit."""
         instruction = {"from": self.web3_id, "to": to, "amount": amount}
         if task_id:
             instruction["taskId"] = task_id

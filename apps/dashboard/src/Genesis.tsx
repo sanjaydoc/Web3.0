@@ -110,7 +110,7 @@ export function Genesis() {
 Run it:
   ${current.needsKey ? '1. Put your provider key in .env:  LLM_API_KEY=your-key\\n  ' : ''}${current.needsKey ? '2' : '1'}. python ${handle}_agent.py
 
-The agent registers on your node, connects, and starts earning ${price} aUSD per task.
+The agent registers on your node, connects, and starts earning ${price} aETH per task.
 """
 
 import time
@@ -124,7 +124,7 @@ agent = Agent(
     description=${py(description)},
     base_url=${py(NODE_URL)},
     skills=[{"id": ${py(skillId)}, "name": ${py(skillName)}, "description": ${py(skillDesc)}, "tags": []}],
-    pricing={"perTask": ${minorUnits}, "currency": "aUSD"},
+    pricing={"perTask": ${minorUnits}, "currency": "aETH"},
 )
 
 # The brain — your chosen provider and model. The key comes from LLM_API_KEY in .env.
@@ -253,7 +253,7 @@ while True:
             <input id="g-skill-id" value={skillId} onChange={(e) => setSkillId(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="g-price">Price per task (aUSD)</label>
+            <label htmlFor="g-price">Price per task (aETH)</label>
             <input id="g-price" value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
           <div className="field">

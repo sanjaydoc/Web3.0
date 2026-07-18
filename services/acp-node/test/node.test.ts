@@ -413,7 +413,7 @@ describe('telegram bridge (GUI-managed, in-node)', () => {
     // Register an "echo" agent with an ask skill + price, and a virtual connection that replies.
     const echo = makeAgent('echobot', {
       skills: [{ id: 'ask', name: 'Ask', description: 'echoes', tags: [] }],
-      pricing: { perTask: 200, currency: 'aUSD' },
+      pricing: { perTask: 200, currency: 'aETH' },
     });
     await k.http.inject({ method: 'POST', url: '/agents', payload: echo.registration });
     const echoConn = {

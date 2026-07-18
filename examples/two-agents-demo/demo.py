@@ -2,7 +2,7 @@
 
 Alice (a researcher) needs a document summarised. Bob (a summariser) sells that skill. They
 discover each other, agree a price via the x402 handshake, settle a post-quantum-signed
-stablecoin payment, exchange the task over the A2A relay, and Bob shares a confidential
+aETH payment, exchange the task over the A2A relay, and Bob shares a confidential
 "domain tips" dataset (ML-KEM sealed) to improve Alice's future work — all recorded on the
 quantum-resistant ledger and visible live in the dashboard.
 
@@ -59,18 +59,18 @@ def main() -> None:
                 "tags": ["nlp"],
             }
         ],
-        pricing={"perTask": 500, "currency": "aUSD"},  # 5.00 aUSD
+        pricing={"perTask": 500, "currency": "aETH"},  # 5.00 aETH
     )
     bob_reg = bob.register()
     print(f"  Bob   registered as {bob.web3_id}")
     print(f"        DID {bob.did}")
-    print(f"        wallet opened with {bob_reg['wallet']['balance'] / 100:.2f} aUSD")
+    print(f"        wallet opened with {bob_reg['wallet']['balance'] / 100:.2f} aETH")
 
     alice = Agent(f"alice{SUFFIX}", name="Alice the Researcher", base_url=BASE_URL)
     alice_reg = alice.register()
     print(f"  Alice registered as {alice.web3_id}")
     print(f"        DID {alice.did}")
-    print(f"        wallet opened with {alice_reg['wallet']['balance'] / 100:.2f} aUSD")
+    print(f"        wallet opened with {alice_reg['wallet']['balance'] / 100:.2f} aETH")
 
     # Bob does the work when a task arrives, then shares data to improve the requester.
     def on_task(agent: Agent, message: dict[str, Any]) -> None:
@@ -118,7 +118,7 @@ def main() -> None:
     rule("effortless payment")
     receipt = alice.pay(bob.web3_id, offer["amount"], memo="summarise task")["receipt"]
     print(
-        f"  Alice paid Bob {offer['amount'] / 100:.2f} aUSD  (receipt {receipt['id']})"
+        f"  Alice paid Bob {offer['amount'] / 100:.2f} aETH  (receipt {receipt['id']})"
     )
     print(f"        settled on ledger seq #{receipt['ledgerSeq']}")
 
@@ -138,8 +138,8 @@ def main() -> None:
 
     # --- settlement summary --------------------------------------------------------------
     rule("settlement")
-    print(f"  Alice balance: {alice.balance() / 100:.2f} aUSD")
-    print(f"  Bob   balance: {bob.balance() / 100:.2f} aUSD")
+    print(f"  Alice balance: {alice.balance() / 100:.2f} aETH")
+    print(f"  Bob   balance: {bob.balance() / 100:.2f} aETH")
 
     time.sleep(0.3)
     alice.close()

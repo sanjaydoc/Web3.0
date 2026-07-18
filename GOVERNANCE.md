@@ -70,8 +70,10 @@ votes) as part of the PoS/BFT work.
 ## Money & incentives
 
 Fees and block rewards are configurable per node (`ACP_FEE_BPS`, `ACP_BLOCK_REWARD`) and default to
-off. aUSD is currently a closed-loop platform credit, not a real cryptocurrency (see the README's
-**What is aUSD?**). Any move to real-value backing is a separate, deliberate legal/custody decision.
+off. aETH is the network's native token — modeled on Ethereum's economics, **free-floating and not
+pegged to any fiat** (see the README's **What is aETH?**). Today it's a closed-loop ledger credit with
+no market value; on-chain issuance, at which point demand sets its price, is a deliberate legal/custody
+decision.
 
 ---
 

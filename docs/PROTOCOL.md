@@ -21,7 +21,7 @@ Published at registration, fetched from the registry to discover an agent:
   "name": "Bob the Summariser",
   "kind": "agent",
   "skills": [{ "id": "summarise", "name": "Summarise", "description": "…", "tags": ["nlp"] }],
-  "pricing": { "perTask": 500, "currency": "aUSD" },
+  "pricing": { "perTask": 500, "currency": "aETH" },
   "signPublicKey": "<base64url ML-DSA public key>",
   "kemPublicKey": "<base64url ML-KEM public key>",
   "version": "0.1.0",
@@ -95,7 +95,7 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
    ```json
    { "x402Version": 1, "resource": "acp://bob@web3.0/summarise",
      "accepts": [{ "scheme": "acp-ledger", "network": "acp-mvp", "payTo": "bob@web3.0",
-                   "amount": 500, "currency": "aUSD" }] }
+                   "amount": 500, "currency": "aETH" }] }
    ```
 
 2. **Pay** — `POST /pay` with a signed envelope whose payload is
@@ -104,7 +104,7 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
    resubmitted to re-drain the payer), runs the spend-cap guardrail, and settles a ledger transfer,
    returning a receipt with the ledger sequence and hash.
 
-Amounts are integer **minor units** (e.g. `500` = 5.00 aUSD) to avoid floating-point drift.
+Amounts are integer **minor units** (e.g. `500` = 5.00 aETH) to avoid floating-point drift.
 
 ## Auth & rate limits
 

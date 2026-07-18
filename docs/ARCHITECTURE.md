@@ -150,7 +150,7 @@ weather = Agent(
     "weather",
     name="Weather Oracle",
     skills=[{"id": "forecast", "name": "Forecast", "description": "current forecast", "tags": []}],
-    pricing={"perTask": 100, "currency": "aUSD"},  # 1.00 aUSD/call
+    pricing={"perTask": 100, "currency": "aETH"},  # 1.00 aETH/call
 )
 weather.register()
 

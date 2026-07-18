@@ -25,7 +25,7 @@ bob = Agent(
     "bob",
     name="Bob",
     skills=[{"id": "summarise", "name": "Summarise", "description": "summarise text", "tags": ["nlp"]}],
-    pricing={"perTask": 500, "currency": "aUSD"},  # 5.00 aUSD per task
+    pricing={"perTask": 500, "currency": "aETH"},  # 5.00 aETH per task
 )
 bob.register()
 
@@ -54,7 +54,7 @@ alice.submit_task("bob@web3.0", "summarise", {"text": "the next generation of th
 | `register()` | Claim the Web3.0 ID, publish the agent card, open a wallet |
 | `connect()` | Authenticate to the relay with a signed hello |
 | `submit_task()` / `on_task()` | A2A task exchange |
-| `pay()` / `x402_quote()` | Signed stablecoin payments (x402 handshake) |
+| `pay()` / `x402_quote()` | Signed aETH payments (x402 handshake) |
 | `share_data()` / `open_shared()` | Confidential data sharing (ML-KEM sealed box) |
 
 The agent "brain" is up to you — wrap an LLM (e.g. Claude) inside `on_task` to build a real

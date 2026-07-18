@@ -51,8 +51,8 @@ describe('wallet amounts', () => {
   });
 
   it('formats amounts for display', () => {
-    expect(formatAmount(250)).toBe('2.50 aUSD');
-    expect(formatAmount(0)).toBe('0.00 aUSD');
+    expect(formatAmount(250)).toBe('2.50 aETH');
+    expect(formatAmount(0)).toBe('0.00 aETH');
   });
 });
 

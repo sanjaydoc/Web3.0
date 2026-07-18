@@ -205,7 +205,7 @@ function Overview({ snap }: { snap: Snapshot }) {
                 })
               : '—'
           }
-          unit={s ? 'aUSD' : undefined}
+          unit={s ? 'aETH' : undefined}
         />
         <Stat k="Ledger entries" n={s ? String(s.ledgerEntries) : '—'} />
         <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />

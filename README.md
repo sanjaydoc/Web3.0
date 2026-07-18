@@ -42,7 +42,7 @@ NIST-standardized post-quantum cryptography.
 | 1 | Every agent needs its own VPS to run 24/7 | Relay queues messages for offline agents; hosting marketplace on the [roadmap](#roadmap) |
 | 2 | No agent-to-agent communication protocol | **messaging** module — signed A2A relay ([A2A](https://a2a-protocol.org)-aligned) |
 | 3 | No observability or guardrails | **guardrails** (ALLOW/DENY policies) + **observability** (live feed, ledger) modules |
-| 4 | No agentic payments | **payments** module — x402 handshake + signed stablecoin transfers |
+| 4 | No agentic payments | **payments** module — x402 handshake + signed aETH token transfers |
 | 5 | No agentic operating system | A thin **kernel** that loads capabilities as modules |
 
 ## Architecture
@@ -176,9 +176,9 @@ the ledger and visible live in the dashboard.
 ```
 ─── x402: agree a price ───
   Alice requested a quote for 'summarise' → HTTP 402 Payment Required
-  Bob quotes 5.00 aUSD per task
+  Bob quotes 5.00 aETH per task
 ─── effortless payment ───
-  Alice paid Bob 5.00 aUSD  (receipt rcpt_…)  settled on ledger seq #2
+  Alice paid Bob 5.00 aETH  (receipt rcpt_…)  settled on ledger seq #2
 ─── agent-to-agent task ───
   Alice → Bob  task.submit
   Bob → Alice  task.result: The next generation of the internet, Web 3.0, …
@@ -210,7 +210,7 @@ The node loads these by config (`config.modules`) — remove one and it's gone:
 | `naming` | Resolve email-like Web3.0 IDs (`alice@web3.0`) to DIDs and keys |
 | `registry` | **Signed** agent registration → Web3.0 ID + DID + wallet; discovery |
 | `messaging` | Signed-hello auth + A2A WebSocket relay with per-message guardrails |
-| `payments` | x402 quote + signed stablecoin transfers (with replay protection) |
+| `payments` | x402 quote + signed aETH token transfers (with replay protection) |
 | `guardrails` | Capability / rate-limit / spend-cap policies (ALLOW/DENY) |
 | `observability` | Live event feed (+ SSE), ledger view with verification, stats |
 | `consensus` | Distributed L1: PoA block proposal + peer gossip (`GET /consensus`) |
@@ -304,16 +304,16 @@ Your node helps the network 3 ways:
   2️⃣  Confirms blocks   →  a reward 🎁
   3️⃣  Hosts AI agents   →  earns per task 🤖
         ⬇️
-All three pile into your wallet 👛  →  you earn (in aUSD) 💰
+All three pile into your wallet 👛  →  you earn (in aETH) 💰
 
 More traffic = more earnings 📈
 ```
 
-**The detail.** Running a node pays in aUSD, off these levers (all default **0** = off):
+**The detail.** Running a node pays in aETH, off these levers (all default **0** = off):
 
 - **Protocol fee** (`ACP_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
   to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
-- **Block reward** (`ACP_BLOCK_REWARD`) — aUSD minted to the proposer's treasury for each block.
+- **Block reward** (`ACP_BLOCK_REWARD`) — aETH minted to the proposer's treasury for each block.
 - **Hosting revenue** — a host node runs other people's agents; those agents earn their per-task
   fees directly into their wallets (a platform cut is a natural next step).
 
@@ -342,14 +342,23 @@ The **authority set stays small and curated** (that's where safety lives), while
 The path there is documented above: proposer-skip today, BFT/PoS validators and a decentralized
 compute marketplace next.
 
-## What is aUSD?
+## What is aETH?
 
-**aUSD is this network's own credit unit — not an external cryptocurrency, and there's nothing to buy.**
-It's minted by the node as a faucet grant and tracked on the PQC-signed ledger in minor units (cents).
-Today it's a **closed-loop platform credit** that proves the payment, fee, and reward mechanics
-end-to-end — it has no market value and no chain behind it. It can later be **backed 1:1 by a real
-stablecoin** (USDC) or issued as a token — a legal/custody decision, not a code change, and the fee
-and reward logic above stays identical either way. Rename it freely; it's yours.
+**aETH is this network's own native token** — the unit agents earn and spend for network work. It's
+modeled on Ethereum's economics, **not on a stablecoin**: it is deliberately *not* pegged 1:1 to the
+dollar. There's no promise to redeem 1 aETH for $1. Instead its price is meant to **float with demand**
+for the network — launched as a fraction of a dollar and (the goal) appreciating as more agents,
+transactions, and nodes use it.
+
+Today, in this MVP, aETH is a **closed-loop ledger credit**: minted by the node as a faucet grant,
+tracked on the PQC-signed ledger in integer minor units, with no market value and no external chain
+behind it yet — it proves the payment, fee, and reward mechanics end-to-end. The roadmap issues it
+**on-chain as a real, freely-traded token** (its own asset, ETH-style), at which point market demand
+sets the price. The fee and reward logic above stays identical either way.
+
+> **Why not a USD-pegged stablecoin?** A 1:1 peg is a promise to hold a matching dollar reserve for
+> every unit — a heavy legal/custody commitment we're not making at launch. A free-floating native
+> token lets the network bootstrap cheaply and lets value accrue to holders as usage grows.
 
 ## Roadmap
 

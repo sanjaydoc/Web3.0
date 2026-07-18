@@ -59,10 +59,10 @@ def main() -> None:
                 "tags": ["llm"],
             }
         ],
-        pricing={"perTask": 300, "currency": "aUSD"},  # 3.00 aUSD/question
+        pricing={"perTask": 300, "currency": "aETH"},  # 3.00 aETH/question
     )
     sage.register()
-    print(f"  Sage    {sage.web3_id}  (charges 3.00 aUSD/question)")
+    print(f"  Sage    {sage.web3_id}  (charges 3.00 aETH/question)")
 
     def on_task(agent: Agent, message: dict[str, Any]) -> None:
         body = message["body"]
@@ -99,7 +99,7 @@ def main() -> None:
     quote = curious.x402_quote(sage.web3_id, "ask")
     price = quote["accepts"][0]["amount"]
     curious.pay(sage.web3_id, price, memo="ask")
-    print(f"  Curious paid Sage {price / 100:.2f} aUSD")
+    print(f"  Curious paid Sage {price / 100:.2f} aETH")
 
     rule("ask the local LLM, over ACP")
     print(f"  Q: {QUESTION}")
@@ -114,8 +114,8 @@ def main() -> None:
         print(f"  Sage failed: {result.get('error')}")
 
     rule("settlement")
-    print(f"  Sage balance:    {sage.balance() / 100:.2f} aUSD")
-    print(f"  Curious balance: {curious.balance() / 100:.2f} aUSD")
+    print(f"  Sage balance:    {sage.balance() / 100:.2f} aETH")
+    print(f"  Curious balance: {curious.balance() / 100:.2f} aETH")
 
     curious.close()
     sage.close()

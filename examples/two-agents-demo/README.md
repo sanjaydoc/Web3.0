@@ -27,7 +27,7 @@ python examples/two-agents-demo/verify_ledger.py
 | --- | --- | --- |
 | Agents register | Web3.0 ID (`bob@web3.0`) + DID + wallet | identity & onboarding |
 | `x402_quote` → HTTP 402 | agentic payment handshake | no agentic payments |
-| `pay` | signed stablecoin transfer on the ledger | no agentic payments |
+| `pay` | signed aETH token transfer on the ledger | no agentic payments |
 | `submit_task` / `reply_result` | A2A messaging over the relay | no agent-to-agent protocol |
 | `share_data` | ML-KEM sealed confidential data | improve agents by sharing data |
 | guardrails + events | ALLOW/DENY + live feed | no observability or guardrails |

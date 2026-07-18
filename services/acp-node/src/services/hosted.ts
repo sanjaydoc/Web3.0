@@ -126,7 +126,7 @@ export class HostedAgentService {
           tags: ['llm'],
         },
       ],
-      pricing: { perTask: config.price, currency: 'aUSD' },
+      pricing: { perTask: config.price, currency: 'aETH' },
       signPublicKey: toB64u(keys.publicKey),
       kemPublicKey: toB64u(kem.publicKey),
       version: AGENT_CARD_VERSION,

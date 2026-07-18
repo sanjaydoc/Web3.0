@@ -16,7 +16,7 @@ class StubAgent:
     web3_id = "tg@web3.0"
 
     def balance(self) -> int:
-        return 500  # 5.00 aUSD
+        return 500  # 5.00 aETH
 
 
 class StubBridge:
@@ -39,7 +39,7 @@ def test_help_and_start() -> None:
 def test_whoami_shows_id_and_balance() -> None:
     reply = bot.handle_command(StubBridge(), "/whoami")
     assert "tg@web3.0" in reply
-    assert "5.00 aUSD" in reply
+    assert "5.00 aETH" in reply
 
 
 def test_ask_routes_agent_and_question() -> None:
