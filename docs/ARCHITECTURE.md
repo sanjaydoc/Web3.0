@@ -77,6 +77,11 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
   warn-only. Rejections emit an `auth.rejected` event. See PROTOCOL.md → Auth & rate limits.
 - **observability** — the read side: `/events` (+ SSE `/events/stream`), `/ledger` (with live
   verification), `/stats`. This powers the dashboard.
+- **consensus** — the distributed L1 (opt-in, `ACP_CONSENSUS=poa`). Proof-of-authority: authorities
+  take turns proposing ML-DSA-signed blocks over the ledger, gossiped to peers via `/consensus/peer`
+  until all converge. `GET /consensus` reports status. See PROTOCOL.md → Consensus.
+- **settlement** (kernel service, surfaced on `/pay` + `GET /settlement`) — pluggable payment rail:
+  internal ledger (default), simulated stablecoin, or a testnet ERC-20 that never broadcasts.
 
 ## Data flow: a paid task
 

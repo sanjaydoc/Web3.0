@@ -130,3 +130,25 @@ Each entry: `{ seq, ts, prevHash, type, data, hash, signature }`, where `hash =
 sha256(canonical({seq, ts, prevHash, type, data}))` and `signature` is the node's ML-DSA signature
 over `hash`. Types: `register`, `payment`, `message` (hash-only provenance). `verifyChain()` /
 `verifySnapshot()` recompute hashes, check links, and verify every signature — across languages.
+
+## Settlement
+
+Where a payment's value settles, chosen by `ACP_SETTLEMENT`. `GET /settlement` reports the active
+rail, and every `/pay` receipt carries a `settlement` block (`{ network, status, txRef?, ... }`):
+
+- **internal** (default) — the PQC-signed ACP ledger is the source of truth; `txRef` is the entry hash.
+- **simulated** — mimics an on-chain stablecoin transfer with deterministic tx refs + explorer links.
+- **testnet** — builds a real ERC-20 `transfer(address,uint256)` against an EVM testnet RPC and
+  returns `pending`; it never broadcasts, because signing needs a funded key the node doesn't hold.
+  Adding a signer is the (explicit, later) mainnet step.
+
+## Consensus (distributed L1)
+
+With `ACP_CONSENSUS=poa`, nodes run a proof-of-authority chain over the ledger. A fixed, ordered
+authority set (`ACP_AUTHORITIES`) takes turns — the proposer at `height` is
+`authorities[height % n]` — batching ledger entries into a **block** signed with the proposer's
+ML-DSA key: `{ height, prevBlockHash, proposer, entries, ts, hash, signature }`. Peers gossip blocks
+over the `/consensus/peer` WebSocket and accept one only from the authority whose turn it is, linking
+to the head, with a valid hash + signature. Fork choice is longest-valid-chain with a deterministic
+tie-break. `GET /consensus` reports height, head, and the current proposer. Three nodes converging:
+`pnpm --filter @acp/node demo:consensus`.

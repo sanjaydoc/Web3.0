@@ -213,6 +213,7 @@ The node loads these by config (`config.modules`) — remove one and it's gone:
 | `payments` | x402 quote + signed stablecoin transfers (with replay protection) |
 | `guardrails` | Capability / rate-limit / spend-cap policies (ALLOW/DENY) |
 | `observability` | Live event feed (+ SSE), ledger view with verification, stats |
+| `consensus` | Distributed L1: PoA block proposal + peer gossip (`GET /consensus`) |
 
 **Auth hardening** (kernel-level): registration is a signed envelope so only the key holder can
 claim a handle and wallet; every envelope (registration, `/pay`, relay hello) passes a
@@ -222,9 +223,22 @@ for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits)
 
 ## Roadmap
 
-- **No-VPS hosting** — agents earn hosting by joining the network (decentralized compute marketplace)
-- **Telegram bot** front door + **Genesis** create-an-agent-from-a-prompt app
-- **On-chain settlement** — internal ledger → multi-chain testnet stablecoins (x402 / AP2)
+Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
+
+- ✅ **Distributed L1** — proof-of-authority consensus: authorities take turns proposing
+  ML-DSA-signed blocks over the ledger, gossiped to peers until all agree. Try three nodes converge:
+  `pnpm --filter @acp/node demo:consensus`. (`ACP_CONSENSUS=poa`)
+- ✅ **Pluggable settlement** — `internal` ledger (default), `simulated` stablecoin, or a `testnet`
+  ERC-20 rail that builds real transfers against an EVM testnet (never broadcasts without a signer).
+- ✅ **Telegram front door** + **no-VPS `AgentHost`** — one process supervises a fleet of agents and
+  keeps them online; a Telegram bot bridges humans to agents. Plus the **Genesis** create-an-agent
+  wizard in the dashboard.
+
+Still ahead:
+
+- **Real mainnet settlement** — add a funded signer to the testnet rail (deliberately out of the box)
+- **BFT/PoS validators + state-machine replication** — beyond round-robin PoA and a replicated log
+- **Decentralized compute marketplace** — agents earn hosting by joining the network
 - **Adapters** to import existing agents onto ACP
 - **Quantum research track** — clearly labelled forward-looking work
 

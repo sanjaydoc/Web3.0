@@ -37,18 +37,22 @@ demonstrable meaning of "quantum-resistant and tamper-evident".
 
 ## The ledger, honestly
 
-The MVP ledger is a **verifiable, PQC-signed, append-only log** maintained by a single node — not a
-distributed layer-1 blockchain. It proves the mechanics (identity, payments, provenance, integrity)
-end-to-end and is fully serialisable, but it is **not** production financial infrastructure and
-should not be treated as such. Decentralized consensus and settlement are roadmap items.
+The base ledger is a **verifiable, PQC-signed, append-only log**. On top of it, an **opt-in
+proof-of-authority L1** (`ACP_CONSENSUS=poa`) now lets multiple nodes agree on a shared, signed block
+history — real multi-node consensus, but round-robin PoA over a fixed authority set, not yet a
+byzantine-fault-tolerant validator set. Likewise, **settlement is pluggable** (internal / simulated /
+testnet ERC-20), but real-money mainnet settlement deliberately requires a signer you add yourself.
+So: the mechanics are real and demonstrable end-to-end, but this is **not** production financial
+infrastructure yet — treat the items below as the remaining distance.
 
 ## Roadmap: the quantum research track
 
 Clearly labelled as forward-looking, not shipped:
 
-1. **On-chain settlement** — migrate the internal ledger to a real L1 with post-quantum signatures,
-   and bridge to multi-chain testnet stablecoins via x402 / AP2.
-2. **Distributed consensus** — replace the single-authority signer with a PQC-secured validator set.
+1. **Mainnet settlement** — add a funded signer to the testnet ERC-20 rail (out of the box by design)
+   and bridge to multi-chain stablecoins via x402 / AP2.
+2. **BFT/PoS validators + state-machine replication** — go beyond round-robin PoA and a replicated
+   block log to a byzantine-fault-tolerant validator set that also replicates balances across nodes.
 3. **Hash-based signatures** — offer SLH-DSA (FIPS 205) for parties who prefer conservative,
    hash-based security over lattice assumptions.
 4. **Quantum hardware exploration** — QKD and quantum-RNG experiments, tracked as research, never
