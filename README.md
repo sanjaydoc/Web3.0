@@ -263,6 +263,9 @@ one steps in after a slot — so a single down node no longer stalls the chain. 
 **3–4 authority nodes** you and partners run, growing the set (and moving toward staking/BFT) as real
 value flows.
 
+> **Who should run authority nodes?** Run them yourself at launch, then decentralize deliberately —
+> authority is trust-sensitive, relay/host nodes are open to everyone. See **[GOVERNANCE.md](GOVERNANCE.md)**.
+
 **How operators earn — the simple version:**
 
 ```
