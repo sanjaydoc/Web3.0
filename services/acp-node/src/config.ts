@@ -8,6 +8,7 @@ export const ALL_MODULES = [
   'observability',
   'consensus',
   'telegram',
+  'hosted',
 ] as const;
 
 export type ModuleName = (typeof ALL_MODULES)[number];

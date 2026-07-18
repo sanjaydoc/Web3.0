@@ -2,6 +2,7 @@ import type { ModuleName } from '../config.js';
 import type { AcpModule } from '../context.js';
 import { consensusModule } from './consensus.js';
 import { guardrailsModule } from './guardrails.js';
+import { hostedModule } from './hosted.js';
 import { messagingModule } from './messaging.js';
 import { namingModule } from './naming.js';
 import { observabilityModule } from './observability.js';
@@ -19,4 +20,5 @@ export const MODULE_FACTORIES: Record<ModuleName, () => AcpModule> = {
   observability: observabilityModule,
   consensus: consensusModule,
   telegram: telegramModule,
+  hosted: hostedModule,
 };

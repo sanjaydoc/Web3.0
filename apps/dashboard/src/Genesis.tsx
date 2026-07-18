@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { NODE_URL } from './api.js';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type HostedAgent, NODE_URL, api } from './api.js';
+
+const ADMIN_KEY = 'acp.adminToken';
 
 // Provider → a sensible default model to prefill when the provider changes.
 const PROVIDERS: { id: string; label: string; model: string; needsKey: boolean }[] = [
@@ -31,8 +33,75 @@ export function Genesis() {
     'You are a concise, helpful expert agent on the ACP network.',
   );
   const [copied, setCopied] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [admin, setAdmin] = useState(() => localStorage.getItem(ADMIN_KEY) ?? '');
+  const [launching, setLaunching] = useState(false);
+  const [launchMsg, setLaunchMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [hosted, setHosted] = useState<HostedAgent[]>([]);
+  const [adminRequired, setAdminRequired] = useState(false);
 
   const current = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
+
+  const refreshHosted = useCallback(async () => {
+    try {
+      const res = await api.hosted();
+      setHosted(res.agents);
+      setAdminRequired(res.adminRequired);
+    } catch {
+      /* node may be offline */
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshHosted();
+    const t = setInterval(refreshHosted, 5000);
+    return () => clearInterval(t);
+  }, [refreshHosted]);
+
+  const rememberAdmin = (value: string) => {
+    setAdmin(value);
+    localStorage.setItem(ADMIN_KEY, value);
+  };
+
+  async function launch() {
+    setLaunching(true);
+    setLaunchMsg(null);
+    try {
+      const minorUnits = Math.max(0, Math.round(Number.parseFloat(price || '0') * 100));
+      const agent = await api.hostedLaunch(
+        {
+          handle,
+          name,
+          description,
+          skillId,
+          skillName,
+          skillDesc,
+          price: minorUnits,
+          provider,
+          model,
+          apiKey: apiKey || undefined,
+          system,
+        },
+        admin,
+      );
+      setLaunchMsg({ kind: 'ok', text: `Launched ${agent.web3Id} — live on the node.` });
+      setApiKey('');
+      refreshHosted();
+    } catch (err) {
+      setLaunchMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setLaunching(false);
+    }
+  }
+
+  async function stopHosted(h: string) {
+    try {
+      await api.hostedStop(h, admin);
+      refreshHosted();
+    } catch (err) {
+      setLaunchMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
 
   const script = useMemo(() => {
     const minorUnits = Math.max(0, Math.round(Number.parseFloat(price || '0') * 100));
@@ -162,6 +231,23 @@ while True:
             <input id="g-model" value={model} onChange={(e) => setModel(e.target.value)} />
           </div>
 
+          {current.needsKey && (
+            <div className="field wide">
+              <label htmlFor="g-key">{current.label} API key (for launching on the node)</label>
+              <input
+                id="g-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="stored server-side, only used to run this agent"
+              />
+              <span className="hint">
+                Only needed for the “Launch on node” button. The downloadable script reads its key
+                from your own <code>.env</code> instead.
+              </span>
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="g-skill-id">Skill id</label>
             <input id="g-skill-id" value={skillId} onChange={(e) => setSkillId(e.target.value)} />
@@ -193,8 +279,61 @@ while True:
         </div>
       </div>
 
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="section-title">Launch on the node (one click — no VPS)</div>
+        <p className="muted" style={{ margin: '2px 0 12px' }}>
+          Run this agent inside the node itself. It registers, hosts its LLM brain, and starts
+          earning immediately — nothing to install, no separate process.
+        </p>
+        {adminRequired && (
+          <div className="field wide">
+            <label htmlFor="g-admin">Admin token</label>
+            <input
+              id="g-admin"
+              type="password"
+              value={admin}
+              onChange={(e) => rememberAdmin(e.target.value)}
+              placeholder="required to launch on this node"
+            />
+          </div>
+        )}
+        <div className="gen-actions">
+          <button type="button" className="btn act" disabled={launching} onClick={launch}>
+            {launching ? 'Launching…' : 'Launch on node'}
+          </button>
+        </div>
+        {launchMsg && (
+          <div className={`note ${launchMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+            {launchMsg.text}
+          </div>
+        )}
+        {hosted.length > 0 && (
+          <ul className="kv-list" style={{ marginTop: 14 }}>
+            {hosted.map((h) => (
+              <li key={h.web3Id}>
+                <span>
+                  <code>{h.web3Id}</code> · {h.provider}/{h.model} ·{' '}
+                  <span className={`chip ${h.running ? 'allow' : 'deny'}`}>
+                    {h.running ? 'running' : 'stopped'}
+                  </span>
+                </span>
+                {h.running && (
+                  <button
+                    type="button"
+                    className="btn ghost btn-sm"
+                    onClick={() => stopHosted(h.handle)}
+                  >
+                    Stop
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div className="card">
-        <div className="section-title">Your agent</div>
+        <div className="section-title">Or download the script</div>
         <div className="gen-actions">
           <button type="button" className="btn btn-sm" onClick={copy}>
             Copy script

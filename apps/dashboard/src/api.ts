@@ -71,6 +71,32 @@ export interface SettlementInfo {
   description: string;
 }
 
+export interface HostedAgent {
+  handle: string;
+  web3Id: string;
+  name: string;
+  skill: string;
+  price: number;
+  provider: string;
+  model: string;
+  hasKey: boolean;
+  running: boolean;
+}
+
+export interface HostedLaunchConfig {
+  handle: string;
+  name: string;
+  description: string;
+  skillId: string;
+  skillName: string;
+  skillDesc: string;
+  price: number;
+  provider: string;
+  model: string;
+  apiKey?: string;
+  system?: string;
+}
+
 export interface ConsensusInfo {
   mode: string;
   enabled: boolean;
@@ -125,6 +151,11 @@ export const api = {
   ) => post<TelegramStatus>('/telegram/config', patch, adminToken),
   telegramStart: (adminToken?: string) => post<TelegramStatus>('/telegram/start', {}, adminToken),
   telegramStop: (adminToken?: string) => post<TelegramStatus>('/telegram/stop', {}, adminToken),
+  hosted: () => get<{ agents: HostedAgent[]; adminRequired: boolean }>('/hosted'),
+  hostedLaunch: (config: HostedLaunchConfig, adminToken?: string) =>
+    post<HostedAgent>('/hosted/launch', config, adminToken),
+  hostedStop: (handle: string, adminToken?: string) =>
+    post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
 };
 
 export function formatAmount(minor: number, currency = 'aUSD'): string {

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 process.env.ACP_LOG_LEVEL = 'silent';
 import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
+import { HostedAgentService } from '../src/services/hosted.js';
 import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
 import { makeAgent, message, sealAs } from '../src/testkit.js';
@@ -346,25 +347,25 @@ describe('consensus (PoA)', () => {
   });
 });
 
-describe('telegram bridge (GUI-managed, in-node)', () => {
-  function ctxOf(k: Kernel) {
-    return {
-      http: k.http,
-      ledger: k.ledger,
-      registry: k.registry,
-      bus: k.bus,
-      guardrails: k.guardrails,
-      replay: k.replay,
-      settlement: k.settlement,
-      consensus: k.consensus,
-      connections: k.connections,
-      store: k.store,
-      config: k.config,
-      clock: () => new Date().toISOString(),
-      log: k.http.log,
-    };
-  }
+function ctxOf(k: Kernel) {
+  return {
+    http: k.http,
+    ledger: k.ledger,
+    registry: k.registry,
+    bus: k.bus,
+    guardrails: k.guardrails,
+    replay: k.replay,
+    settlement: k.settlement,
+    consensus: k.consensus,
+    connections: k.connections,
+    store: k.store,
+    config: k.config,
+    clock: () => new Date().toISOString(),
+    log: k.http.log,
+  };
+}
 
+describe('telegram bridge (GUI-managed, in-node)', () => {
   it('config masks the token, never returning it, and persists to the store', async () => {
     const store = new MemoryStore();
     const k = new Kernel({ port: 0 }, generateKeypair(), store);
@@ -441,6 +442,91 @@ describe('telegram bridge (GUI-managed, in-node)', () => {
     expect(answer).toBe('echo: hello acp');
     // The bridge paid the agent from its faucet-funded wallet.
     expect(k.ledger.balanceOf(echo.web3Id)).toBe(k.config.faucetGrant + 200);
+    await k.close();
+  });
+});
+
+describe('hosted agents (Genesis launch on node)', () => {
+  it('launches an agent that answers tasks with its LLM brain, and persists it', async () => {
+    const store = new MemoryStore();
+    const k = new Kernel({ port: 0 }, generateKeypair(), store);
+    await k.init();
+    const chat = async (_cfg: unknown, prompt: string) => `brain says: ${prompt}`;
+    const svc = new HostedAgentService(ctxOf(k) as never, chat);
+
+    const status = await svc.launch({
+      handle: 'genagent',
+      name: 'Gen',
+      description: 'an llm agent',
+      skillId: 'ask',
+      skillName: 'Ask',
+      skillDesc: 'answers',
+      price: 150,
+      provider: 'local',
+      model: 'x',
+      apiKey: 'secret-key',
+      system: 'be helpful',
+    });
+    expect(status.web3Id).toBe('genagent@web3.0');
+    expect(status.running).toBe(true);
+    expect(status.hasKey).toBe(true);
+    // The API key must never appear in the status surface.
+    expect(JSON.stringify(status)).not.toContain('secret-key');
+    expect(k.registry.has('genagent@web3.0' as never)).toBe(true);
+
+    // A sender routes a task to the hosted agent; capture the LLM-backed reply.
+    const senderId = 'asker@web3.0';
+    const got = new Promise<Record<string, unknown>>((resolve) => {
+      const senderConn = {
+        readyState: 1,
+        OPEN: 1,
+        send: (raw: string) => {
+          const f = JSON.parse(raw);
+          if (f.message?.body?.type === 'task.result') resolve(f.message.body);
+        },
+      };
+      k.connections.bind(senderId as never, senderConn as never);
+    });
+    k.connections.sendTo('genagent@web3.0' as never, {
+      kind: 'deliver',
+      message: {
+        id: 'm',
+        from: senderId,
+        to: 'genagent@web3.0',
+        ts: '',
+        body: { type: 'task.submit', taskId: 't1', skillId: 'ask', input: { question: 'hello' } },
+      },
+    });
+    const result = (await Promise.race([
+      got,
+      new Promise((r) => setTimeout(() => r({ output: { error: 'timeout' } }), 3000)),
+    ])) as { output: { answer?: string } };
+    expect(result.output.answer).toBe('brain says: hello');
+
+    // Persisted (with key server-side): a fresh service over the same store relaunches it.
+    const svc2 = new HostedAgentService(ctxOf(k) as never, chat);
+    await svc2.load();
+    expect(svc2.status().some((a) => a.web3Id === 'genagent@web3.0')).toBe(true);
+    await k.close();
+  });
+
+  it('rejects an invalid handle with a clear error', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const svc = new HostedAgentService(ctxOf(k) as never, async () => 'x');
+    await expect(
+      svc.launch({
+        handle: 'x', // too short → invalid Web3.0 ID
+        name: 'X',
+        description: '',
+        skillId: 'ask',
+        skillName: 'Ask',
+        skillDesc: '',
+        price: 0,
+        provider: 'local',
+        model: 'x',
+      }),
+    ).rejects.toThrow();
     await k.close();
   });
 });
