@@ -51,6 +51,7 @@ class Agent:
         self._ws_lock = threading.Lock()
         self._reader: threading.Thread | None = None
         self._running = False
+        self._registered = False
         self._handlers: dict[str, list[Handler]] = {}
         self.card: dict[str, Any] | None = None
 
@@ -73,6 +74,7 @@ class Agent:
         }
         result = post_json(f"{self.base_url}/agents", self.seal_envelope(body))
         self.card = result["card"]
+        self._registered = True
         return result
 
     def resolve(self, web3_id: str) -> dict[str, Any]:
@@ -172,6 +174,32 @@ class Agent:
         self._running = True
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
+
+    @property
+    def is_connected(self) -> bool:
+        """True while the relay connection is open and its reader thread is alive."""
+        return (
+            self._running
+            and self._ws is not None
+            and self._reader is not None
+            and self._reader.is_alive()
+        )
+
+    def reconnect(self, timeout: float = 5.0) -> None:
+        """Re-open the relay connection after a drop, reusing the existing identity and handlers.
+
+        Registration is not repeated (the account already exists); only the WebSocket is re-opened.
+        Safe to call when already connected — it's a no-op then."""
+        if self.is_connected:
+            return
+        self._running = False
+        if self._ws is not None:
+            try:
+                self._ws.close()
+            except Exception:
+                pass
+            self._ws = None
+        self.connect(timeout=timeout)
 
     def _read_loop(self) -> None:
         while self._running and self._ws is not None:
