@@ -245,7 +245,25 @@ one steps in after a slot — so a single down node no longer stalls the chain. 
 **3–4 authority nodes** you and partners run, growing the set (and moving toward staking/BFT) as real
 value flows.
 
-**How operators earn.** Running a node pays in aUSD, off two levers (both default **0** = off):
+**How operators earn — the simple version:**
+
+```
+🌐  Run a node  →  Earn money 💰
+
+You run a node (on your PC / phone) 🖥️📱
+        ⬇️
+Your node helps the network 3 ways:
+
+  1️⃣  Handles payments  →  small fee 💸
+  2️⃣  Confirms blocks   →  a reward 🎁
+  3️⃣  Hosts AI agents   →  earns per task 🤖
+        ⬇️
+All three pile into your wallet 👛  →  you earn (in aUSD) 💰
+
+More traffic = more earnings 📈
+```
+
+**The detail.** Running a node pays in aUSD, off these levers (all default **0** = off):
 
 - **Protocol fee** (`ACP_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
   to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
