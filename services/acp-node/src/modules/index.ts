@@ -1,5 +1,6 @@
 import type { ModuleName } from '../config.js';
 import type { AcpModule } from '../context.js';
+import { consensusModule } from './consensus.js';
 import { guardrailsModule } from './guardrails.js';
 import { messagingModule } from './messaging.js';
 import { namingModule } from './naming.js';
@@ -15,4 +16,5 @@ export const MODULE_FACTORIES: Record<ModuleName, () => AcpModule> = {
   payments: paymentsModule,
   guardrails: guardrailsModule,
   observability: observabilityModule,
+  consensus: consensusModule,
 };

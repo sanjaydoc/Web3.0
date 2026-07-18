@@ -308,6 +308,43 @@ describe('auth & rate-limit hardening', () => {
   });
 });
 
+describe('consensus (PoA)', () => {
+  it('is off by default and reports status', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const res = await k.http.inject({ method: 'GET', url: '/consensus' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ mode: 'off', enabled: false });
+    await k.close();
+  });
+
+  it('batches ledger entries into a signed block when it is this authority turn', async () => {
+    const k = new Kernel(
+      { port: 0, consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9 } },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    // Sole authority → always our turn. Register an agent to append ledger entries.
+    await k.http.inject({
+      method: 'POST',
+      url: '/agents',
+      payload: makeAgent('cagent').registration,
+    });
+
+    const block = k.consensus.proposeTick();
+    expect(block).not.toBeNull();
+    expect(block!.height).toBe(0);
+    expect(block!.entries.length).toBeGreaterThan(0);
+    expect(k.consensus.engine!.chain.verifyChain()).toMatchObject({ ok: true });
+
+    const status = k.consensus.status();
+    expect(status).toMatchObject({ mode: 'poa', enabled: true, height: 1 });
+    expect(status.authorities).toContain(status.authority);
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

@@ -3,6 +3,7 @@ import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import type { AcpConfig } from './config.js';
 import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
+import type { ConsensusCoordinator } from './services/consensus.js';
 import type { Guardrails } from './services/guardrails.js';
 import type { Registry } from './services/registry.js';
 import type { ReplayGuard } from './services/replay.js';
@@ -23,6 +24,7 @@ export interface ModuleContext {
   guardrails: Guardrails;
   replay: ReplayGuard;
   settlement: SettlementProvider;
+  consensus: ConsensusCoordinator;
   connections: ConnectionHub;
   store: Store;
   config: AcpConfig;

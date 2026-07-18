@@ -10,6 +10,7 @@ import type { AcpModule, ModuleContext } from './context.js';
 import { MODULE_FACTORIES } from './modules/index.js';
 import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
+import { ConsensusCoordinator } from './services/consensus.js';
 import { Guardrails } from './services/guardrails.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
@@ -31,6 +32,7 @@ export class Kernel {
   readonly guardrails: Guardrails;
   readonly replay: ReplayGuard;
   readonly settlement: SettlementProvider;
+  readonly consensus: ConsensusCoordinator;
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
@@ -53,6 +55,7 @@ export class Kernel {
     this.guardrails = new Guardrails(this.config.guardrails, () => Date.now());
     this.replay = new ReplayGuard(this.config.auth, () => Date.now());
     this.settlement = createSettlement(this.config.settlement);
+    this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger);
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
       this.config.auth.httpRateWindowMs,
@@ -135,6 +138,7 @@ export class Kernel {
       guardrails: this.guardrails,
       replay: this.replay,
       settlement: this.settlement,
+      consensus: this.consensus,
       connections: this.connections,
       store: this.store,
       config: this.config,

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@acp/crypto": ["../acp-crypto/src/index.ts"],
+      "@acp/core": ["../acp-core/src/index.ts"],
+      "@acp/ledger": ["../acp-ledger/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

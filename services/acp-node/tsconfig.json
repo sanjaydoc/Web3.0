@@ -6,7 +6,8 @@
     "paths": {
       "@acp/crypto": ["../../packages/acp-crypto/src/index.ts"],
       "@acp/core": ["../../packages/acp-core/src/index.ts"],
-      "@acp/ledger": ["../../packages/acp-ledger/src/index.ts"]
+      "@acp/ledger": ["../../packages/acp-ledger/src/index.ts"],
+      "@acp/consensus": ["../../packages/acp-consensus/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]

@@ -8,10 +8,12 @@
     "start": "tsx src/index.ts",
     "keygen": "tsx src/keygen.ts",
     "reset-store": "tsx src/reset-store.ts",
+    "demo:consensus": "tsx src/demo-consensus.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
+    "@acp/consensus": "workspace:*",
     "@acp/core": "workspace:*",
     "@acp/crypto": "workspace:*",
     "@acp/ledger": "workspace:*",

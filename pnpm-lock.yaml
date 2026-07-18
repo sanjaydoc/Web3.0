@@ -52,6 +52,25 @@ importers:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.1)
 
+  packages/acp-consensus:
+    dependencies:
+      '@acp/core':
+        specifier: workspace:*
+        version: link:../acp-core
+      '@acp/crypto':
+        specifier: workspace:*
+        version: link:../acp-crypto
+      '@acp/ledger':
+        specifier: workspace:*
+        version: link:../acp-ledger
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/acp-core:
     dependencies:
       '@acp/crypto':
@@ -105,6 +124,9 @@ importers:
 
   services/acp-node:
     dependencies:
+      '@acp/consensus':
+        specifier: workspace:*
+        version: link:../../packages/acp-consensus
       '@acp/core':
         specifier: workspace:*
         version: link:../../packages/acp-core

@@ -6,6 +6,7 @@ export const ALL_MODULES = [
   'payments',
   'guardrails',
   'observability',
+  'consensus',
 ] as const;
 
 export type ModuleName = (typeof ALL_MODULES)[number];
@@ -52,6 +53,20 @@ export interface SettlementConfig {
   explorerBaseUrl?: string;
 }
 
+/** Distributed L1: `off` runs a solo node (default); `poa` joins a proof-of-authority block chain. */
+export type ConsensusMode = 'off' | 'poa';
+
+export interface ConsensusConfig {
+  mode: ConsensusMode;
+  /** Ordered base64url authority public keys (the round-robin proposer set). This node's own key
+   * must be in the set to propose. Empty → this node is the sole authority. */
+  authorities: string[];
+  /** Peer node base URLs to gossip blocks with (e.g. http://host:8788). */
+  peers: string[];
+  /** How often (ms) to attempt to propose a block when it's this node's turn. */
+  blockMs: number;
+}
+
 export interface AcpConfig {
   host: string;
   port: number;
@@ -62,6 +77,7 @@ export interface AcpConfig {
   guardrails: GuardrailConfig;
   auth: AuthConfig;
   settlement: SettlementConfig;
+  consensus: ConsensusConfig;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -100,6 +116,20 @@ export const DEFAULT_CONFIG: AcpConfig = {
     decimals: Number(process.env.ACP_SETTLEMENT_DECIMALS ?? 2),
     explorerBaseUrl: process.env.ACP_SETTLEMENT_EXPLORER,
   },
+  consensus: {
+    mode: (process.env.ACP_CONSENSUS as ConsensusMode) || 'off',
+    authorities: csv(process.env.ACP_AUTHORITIES),
+    peers: csv(process.env.ACP_PEERS),
+    blockMs: Number(process.env.ACP_BLOCK_MS ?? 3_000),
+  },
   mongodbUri: process.env.ACP_MONGODB_URI,
   mongodbDb: process.env.ACP_MONGODB_DB ?? 'acp',
 };
+
+/** Parse a comma-separated env var into a trimmed, non-empty list. */
+function csv(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
