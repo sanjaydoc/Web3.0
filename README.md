@@ -245,11 +245,36 @@ for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits)
 
 **The detail.** ACP has **two kinds of node**, with different jobs and cardinality:
 
-- **Authority nodes** — the small, curated set that runs the proof-of-authority L1 and agrees on
-  the block history. Security and finality live here.
-- **Relay / host nodes** — permissionless machines that route agent-to-agent traffic and **host
-  agents** (one process runs many agents; see the `hosted` module and `AgentHost`). Reach and
-  capacity live here. They come and go freely.
+### 👑 Authority nodes — the trusted core
+
+Authority nodes run the **proof-of-authority L1**: they take turns proposing and signing the blocks
+that make up the chain, and they agree on its history. **Security and finality live here** — a
+majority of authorities effectively controls the chain, so the set is deliberately **small, curated,
+and invite-only**.
+
+- **What it does:** signs blocks (ML-DSA / post-quantum), orders the ledger, keeps consensus.
+- **Who runs it:** you at launch, then a handful of trusted, independent partners. Not strangers —
+  see **[GOVERNANCE.md](GOVERNANCE.md)**.
+- **Needs:** an always-on server with good uptime; its key must be in the authority set
+  (`ACP_AUTHORITIES`).
+- **Earns:** a **block reward** each time it proposes a block, plus protocol fees.
+- **How many:** ~4 to launch, keep **> ⅔ online**. Proposer-skip means one going offline won't stall
+  the chain.
+
+### 🛰️ Relay / host nodes — the open, scalable layer
+
+Relay/host nodes are **permissionless** — anyone can run one, no vetting, no minimum. They carry
+agent-to-agent traffic and **host agents** (one process runs many agents; see the `hosted` module and
+`AgentHost`). They **cannot rewrite history**, so they need no special trust. This is the layer that
+scales to millions of devices.
+
+- **What it does:** routes messages, queues for offline agents, hosts agents & dApps in-node.
+- **Who runs it:** anyone — PC, phone, tablet, or server. Download it and go (**Run a node** tab).
+- **Needs:** just the node running; contribute as much RAM / as many hosted agents as you like
+  (set it in the **My node** console).
+- **Earns:** **hosting revenue** — the agents it runs earn their per-task fees, plus relay fees.
+- **How many:** as many as you want. Zero are required for correctness; more = more capacity and
+  more agents kept online.
 
 **How many must stay online?**
 
