@@ -40,16 +40,22 @@ export class ConsensusCoordinator {
     const authority = toB64u(nodeKeys.publicKey);
     // Default to a single-authority chain (this node) if none configured, so `poa` always works.
     const authorities = config.authorities.length > 0 ? config.authorities : [authority];
-    this.engine = this.enabled ? new ConsensusEngine(nodeKeys, authority, authorities) : null;
+    this.engine = this.enabled
+      ? new ConsensusEngine(nodeKeys, authority, authorities, undefined, config.slotMs)
+      : null;
   }
 
-  /** Propose a block from this node's not-yet-blocked ledger entries, if it's our turn. */
+  /**
+   * Propose a block from this node's not-yet-blocked ledger entries when it's due — in-turn, or
+   * out-of-turn once earlier authorities have missed their slots (proposer-skip keeps the chain
+   * live if a node is down).
+   */
   proposeTick(): Block | null {
-    if (!this.engine || !this.engine.isMyTurn()) return null;
+    if (!this.engine) return null;
     const all = this.ledger.all();
     const pending = all.slice(this.includedLocalEntries);
     if (pending.length === 0) return null;
-    const block = this.engine.proposeIfMyTurn(pending);
+    const block = this.engine.proposeIfDue(pending, Date.now());
     if (block) this.includedLocalEntries = all.length;
     return block;
   }

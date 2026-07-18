@@ -19,7 +19,15 @@ export interface BlockValidation {
 export class Blockchain {
   private readonly _blocks: Block[] = [];
 
-  constructor(readonly authorities: string[]) {
+  /**
+   * @param authorities ordered proposer set (base64url pubkeys)
+   * @param slotMs      how long an authority's turn lasts before the next may step in. 0 disables
+   *                    skipping (strict round-robin: only round-0 blocks are valid).
+   */
+  constructor(
+    readonly authorities: string[],
+    readonly slotMs = 0,
+  ) {
     if (authorities.length === 0) throw new Error('a PoA chain needs at least one authority');
   }
 
@@ -33,9 +41,9 @@ export class Blockchain {
     return this._blocks.at(-1)?.hash ?? GENESIS_BLOCK_HASH;
   }
 
-  /** The authority whose turn it is to propose the block at `height`. */
-  expectedProposer(height: number): string {
-    return this.authorities[height % this.authorities.length]!;
+  /** The authority whose turn it is to propose the block at `height` in the given skip round. */
+  expectedProposer(height: number, round = 0): string {
+    return this.authorities[(height + round) % this.authorities.length]!;
   }
 
   /** Validate a block against the current head without applying it. */
@@ -46,9 +54,29 @@ export class Blockchain {
     if (block.prevBlockHash !== this.head()) {
       return { ok: false, reason: 'prevBlockHash does not link to the current head' };
     }
-    const proposer = this.expectedProposer(block.height);
-    if (block.proposer !== proposer) {
-      return { ok: false, reason: 'proposer is not the authority whose turn it is' };
+    const round = block.round ?? 0;
+    if (round < 0 || !Number.isInteger(round)) {
+      return { ok: false, reason: 'invalid round' };
+    }
+    if (block.proposer !== this.expectedProposer(block.height, round)) {
+      return {
+        ok: false,
+        reason: 'proposer is not the authority whose turn it is (for this round)',
+      };
+    }
+    // Skip legitimacy: an out-of-turn proposer (round > 0) must have waited round × slotMs past the
+    // previous block, proven by its timestamp — so it can't race ahead of the in-turn authority.
+    if (round > 0) {
+      if (this.slotMs <= 0) return { ok: false, reason: 'skipping is disabled on this chain' };
+      const prev = this._blocks.at(-1);
+      const prevMs = prev ? Date.parse(prev.ts) : Number.NaN;
+      const blockMs = Date.parse(block.ts);
+      if (Number.isNaN(prevMs) || Number.isNaN(blockMs)) {
+        return { ok: false, reason: 'round > 0 requires a timestamped predecessor' };
+      }
+      if (blockMs - prevMs < round * this.slotMs) {
+        return { ok: false, reason: 'out-of-turn block is too early for its round' };
+      }
     }
     if (hashBlock(block) !== block.hash) {
       return { ok: false, reason: 'block hash mismatch (tampered content)' };
@@ -68,7 +96,7 @@ export class Blockchain {
 
   /** Re-validate the whole chain from genesis (what an auditor / a syncing node runs). */
   verifyChain(): BlockValidation {
-    const replay = new Blockchain(this.authorities);
+    const replay = new Blockchain(this.authorities, this.slotMs);
     for (const block of this._blocks) {
       const result = replay.apply(block);
       if (!result.ok) return { ok: false, reason: `block #${block.height}: ${result.reason}` };
@@ -78,14 +106,14 @@ export class Blockchain {
 }
 
 /**
- * Fork choice: pick the canonical chain from competing candidates — the longest valid one, with a
- * deterministic tie-break on the head hash so every honest node converges on the same choice.
- * Each candidate is the ordered block list of a competing view; `authorities` is the shared set.
+ * Fork choice: pick the canonical chain from competing candidates. Prefer (1) the longest valid
+ * chain, then (2) the one that stayed most in-turn (lowest total skip round — i.e. fewer authorities
+ * had to step in), then (3) the lowest head hash. Deterministic, so every honest node converges.
  */
-export function heaviest(candidates: Block[][], authorities: string[]): Block[] {
-  let best: Block[] = [];
+export function heaviest(candidates: Block[][], authorities: string[], slotMs = 0): Block[] {
+  let best: Block[] | null = null;
   for (const blocks of candidates) {
-    const chain = new Blockchain(authorities);
+    const chain = new Blockchain(authorities, slotMs);
     let valid = true;
     for (const block of blocks) {
       if (!chain.apply(block).ok) {
@@ -94,14 +122,21 @@ export function heaviest(candidates: Block[][], authorities: string[]): Block[] 
       }
     }
     if (!valid) continue;
-    if (
-      blocks.length > best.length ||
-      (blocks.length === best.length && headHash(blocks) < headHash(best))
-    ) {
-      best = blocks;
-    }
+    if (best === null || preferred(blocks, best)) best = blocks;
   }
-  return best;
+  return best ?? [];
+}
+
+function preferred(a: Block[], b: Block[]): boolean {
+  if (a.length !== b.length) return a.length > b.length;
+  const ra = totalRounds(a);
+  const rb = totalRounds(b);
+  if (ra !== rb) return ra < rb;
+  return headHash(a) < headHash(b);
+}
+
+function totalRounds(blocks: Block[]): number {
+  return blocks.reduce((sum, b) => sum + (b.round ?? 0), 0);
 }
 
 function headHash(blocks: Block[]): string {

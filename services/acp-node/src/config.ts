@@ -67,6 +67,9 @@ export interface ConsensusConfig {
   peers: string[];
   /** How often (ms) to attempt to propose a block when it's this node's turn. */
   blockMs: number;
+  /** An authority's slot length (ms): if it doesn't produce within a slot, the next may step in
+   * (proposer-skip), so one offline node doesn't stall the chain. 0 disables skipping. */
+  slotMs: number;
 }
 
 export interface AcpConfig {
@@ -123,6 +126,7 @@ export const DEFAULT_CONFIG: AcpConfig = {
     authorities: csv(process.env.ACP_AUTHORITIES),
     peers: csv(process.env.ACP_PEERS),
     blockMs: Number(process.env.ACP_BLOCK_MS ?? 3_000),
+    slotMs: Number(process.env.ACP_SLOT_MS ?? 6_000),
   },
   mongodbUri: process.env.ACP_MONGODB_URI,
   mongodbDb: process.env.ACP_MONGODB_DB ?? 'acp',

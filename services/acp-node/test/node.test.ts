@@ -322,7 +322,10 @@ describe('consensus (PoA)', () => {
 
   it('batches ledger entries into a signed block when it is this authority turn', async () => {
     const k = new Kernel(
-      { port: 0, consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9 } },
+      {
+        port: 0,
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+      },
       generateKeypair(),
       new MemoryStore(),
     );

@@ -115,6 +115,40 @@ describe('PoA consensus', () => {
     expect(winner.length).toBe(5);
   });
 
+  it('keeps advancing when an authority is offline (proposer-skip)', () => {
+    const auths = [authority(), authority(), authority()];
+    const set = auths.map((a) => a.pub);
+    const slot = 1000;
+    // node 1 is "offline": we never let it propose. nodes 0 and 2 gossip to each other.
+    const node0 = new ConsensusEngine(auths[0]!.keys, auths[0]!.pub, set, () => '', slot);
+    const node2 = new ConsensusEngine(auths[2]!.keys, auths[2]!.pub, set, () => '', slot);
+    const gossip = (b: Block, from: ConsensusEngine) => {
+      for (const n of [node0, node2]) if (n !== from) expect(n.receive(b).ok).toBe(true);
+    };
+
+    // height 0 — node 0 is in-turn, proposes at t=0.
+    const b0 = node0.proposeIfDue(sampleEntries('a'), 0);
+    expect(b0?.round).toBe(0);
+    gossip(b0!, node0);
+
+    // height 1 — the in-turn authority is node 1 (offline). Nobody may jump in early…
+    expect(node0.proposeIfDue([], 500)).toBeNull();
+    expect(node2.proposeIfDue([], 500)).toBeNull();
+    // …but after one slot, node 2 (round 1) legitimately steps in.
+    const b1 = node2.proposeIfDue(sampleEntries('b'), 1000);
+    expect(b1?.round).toBe(1);
+    gossip(b1!, node2);
+
+    // height 2 — node 2 is in-turn again (round 0).
+    const b2 = node2.proposeIfDue(sampleEntries('c'), 1500);
+    expect(b2?.round).toBe(0);
+    gossip(b2!, node2);
+
+    expect(node0.height).toBe(3);
+    expect(node0.head()).toBe(node2.head());
+    expect(node0.chain.verifyChain().ok).toBe(true);
+  });
+
   it('verifyChain flips to false if a committed block is altered', () => {
     const a = authority();
     const eng = new ConsensusEngine(a.keys, a.pub, [a.pub]);

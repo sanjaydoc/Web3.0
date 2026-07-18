@@ -25,7 +25,7 @@ async function main(): Promise<void> {
       const kernel = new Kernel(
         {
           port: ports[i]!,
-          consensus: { mode: 'poa', authorities, peers, blockMs: 500 },
+          consensus: { mode: 'poa', authorities, peers, blockMs: 500, slotMs: 3_000 },
         },
         nodeKeys,
         new MemoryStore(),

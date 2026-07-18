@@ -13,6 +13,13 @@ export interface BlockCore {
   prevBlockHash: string;
   /** base64url ML-DSA public key of the authority that proposed this block. */
   proposer: string;
+  /**
+   * Skip round. 0 = the in-turn authority (`authorities[height % n]`). A higher round means an
+   * out-of-turn authority stepped in because earlier ones didn't produce in time — legitimacy is
+   * proven by `ts` advancing at least `round × slotMs` past the previous block. This is what keeps
+   * the chain live when an authority is offline.
+   */
+  round: number;
   /** The ledger entries batched into this block, in order. */
   entries: LedgerEntry[];
   /** ISO-8601 proposal time. */
@@ -31,6 +38,7 @@ export function hashBlock(core: BlockCore): string {
     height: core.height,
     prevBlockHash: core.prevBlockHash,
     proposer: core.proposer,
+    round: core.round,
     entries: core.entries,
     ts: core.ts,
   });
@@ -47,11 +55,13 @@ export function proposeBlock(
   prevBlockHash: string,
   entries: LedgerEntry[],
   now: string,
+  round = 0,
 ): Block {
   const core: BlockCore = {
     height,
     prevBlockHash,
     proposer: proposerPublicKeyB64u,
+    round,
     entries,
     ts: now,
   };
