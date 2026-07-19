@@ -106,6 +106,26 @@ citizens on top of it.
 
 ## Quickstart
 
+### Just want the app? Download it (no terminal)
+
+The **Windows desktop app** runs a node and opens the dashboard in one window — a double-click, no
+Node.js/pnpm/terminal required:
+
+| Download | |
+| --- | --- |
+| **[Windows installer (.exe)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | recommended — one-click setup |
+| **[Windows (.msi)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | for managed / MSI deployments |
+| **[All releases](https://github.com/sanjaydoc/Web3.0/releases)** | changelog · checksums |
+
+It installs as **Web3.0** (W3 icon) with desktop + Start-menu shortcuts. The build is **unsigned**, so
+Windows SmartScreen shows "unknown publisher" → click **More info → Run anyway**. It runs in-memory by
+default; set `WEB3_MONGODB_URI` to persist. Build details: [`desktop/README.md`](desktop/README.md).
+
+> Prefer running from source, or on macOS/Linux/server/phone? Use the developer setup below (or the
+> **Run a node** tab in the dashboard for one-click installer scripts).
+
+### From source (all platforms)
+
 **Prerequisites:** **Node 20+**, **pnpm 10+**, and **Python 3.10–3.12**.
 
 If you don't have pnpm yet:
@@ -442,12 +462,13 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
 - ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
   real ERC-20 transfers; the node holds no key and never broadcasts by default.
+- ✅ **Desktop app (Windows `.msi` / `.exe`)** — an **Electron** app in `desktop/` that bundles the
+  node and the dashboard into one double-click install (no terminal). Built on a Windows CI runner and
+  attached to each [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
+  [`desktop/README.md`](desktop/README.md) has the build details.
 
 Still ahead:
 
-- **Desktop node app (MSI / one-click installer)** — a Tauri scaffold ships in `desktop/` (WebView
-  wrapping the dashboard; targets msi/dmg/AppImage). Build it on a native toolchain; the remaining
-  step is bundling the node as a sidecar for the full double-click experience.
 - **Real mainnet settlement** — the signer seam exists; going live is an operator plugging their own
   funded key (deliberately out of the box — the node never holds real funds autonomously).
 - **BFT/PoS validators + state-machine replication** — design in

@@ -2,6 +2,13 @@ import { useState } from 'react';
 
 const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
+// The packaged Windows desktop app (Electron) — runs a node + opens the dashboard in one window.
+// Published by the `desktop` workflow on every version tag.
+const DESKTOP_VERSION = '0.1.0';
+const DESKTOP_RELEASE = `${REPO}/releases/latest`;
+const DESKTOP_EXE = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
+const DESKTOP_MSI = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.${DESKTOP_VERSION}.msi`;
+
 const INSTALL_SCRIPT = `#!/usr/bin/env bash
 # Run a Web3.0 node on macOS or Linux.
 # Installs Node.js 20+ and git automatically if they're missing.
@@ -343,6 +350,85 @@ function NodeClients() {
   );
 }
 
+const W3Logo = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="1.5" y="1.5" width="21" height="21" rx="5" stroke="currentColor" strokeWidth="1.5" />
+    <text
+      x="12"
+      y="16.5"
+      textAnchor="middle"
+      fontSize="10"
+      fontWeight="700"
+      fontFamily="Newsreader, Georgia, serif"
+      fill="currentColor"
+    >
+      W3
+    </text>
+  </svg>
+);
+
+/** The featured one-click Windows desktop app (.exe / .msi) — the no-terminal install. */
+function DesktopApp() {
+  const btns = [
+    {
+      label: 'Windows installer',
+      sub: `.exe · v${DESKTOP_VERSION}`,
+      accent: '#00adef',
+      icon: <WindowsLogo />,
+      href: DESKTOP_EXE,
+    },
+    {
+      label: 'Windows (MSI)',
+      sub: `.msi · v${DESKTOP_VERSION}`,
+      accent: '#7c5cff',
+      icon: <WindowsLogo />,
+      href: DESKTOP_MSI,
+    },
+    {
+      label: 'All releases',
+      sub: 'changelog · checksums',
+      accent: '#a0a0a0',
+      icon: <W3Logo />,
+      href: DESKTOP_RELEASE,
+    },
+  ];
+  return (
+    <div className="dl-panel">
+      <p className="dl-head">
+        Desktop app <span className="muted">— one double-click, no terminal</span>
+      </p>
+      <div className="dl-grid">
+        {btns.map((b) => (
+          <a
+            key={b.label}
+            className="dl-btn"
+            href={b.href}
+            target="_blank"
+            rel="noreferrer"
+            style={{ ['--accent' as string]: b.accent }}
+          >
+            <span style={{ flexShrink: 0 }}>{b.icon}</span>
+            <div className="dl-txt">
+              <div className="dl-lab">{b.label}</div>
+              <div className="dl-sub">{b.sub}</div>
+            </div>
+            <span className="dl-arrow">
+              <ArrowDown />
+            </span>
+          </a>
+        ))}
+      </div>
+      <p className="hint" style={{ margin: '10px 2px 0' }}>
+        Installs <b>Web3.0</b> (W3 icon) with desktop + Start-menu shortcuts. Launch it and it boots a
+        node in the background and opens this dashboard in its own window — no Node.js, pnpm, or
+        terminal needed. The build is <b>unsigned</b>, so Windows SmartScreen shows “unknown
+        publisher” → click <b>More info → Run anyway</b>. Runs in-memory by default; set{' '}
+        <code>WEB3_MONGODB_URI</code> to persist.
+      </p>
+    </div>
+  );
+}
+
 function Card({ p }: { p: Platform }) {
   return (
     <div>
@@ -376,6 +462,8 @@ export function Download() {
         </span>
       </div>
 
+      <DesktopApp />
+      <div style={{ height: 18 }} />
       <NodeClients />
       <div style={{ height: 18 }} />
       <NodeTerminal />
