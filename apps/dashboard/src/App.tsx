@@ -36,6 +36,32 @@ type View =
   | 'developers'
   | 'download';
 
+type Role = 'operator' | 'developer';
+const ROLE_KEY = 'acp.role';
+
+/** Sidebar entries. `operator: true` = shown to node operators too; the rest are developer-only. */
+const NAV: {
+  id: View;
+  label: string;
+  badge?: 'agents' | 'events' | 'entries';
+  operator?: boolean;
+}[] = [
+  { id: 'overview', label: 'Overview', operator: true },
+  { id: 'mynode', label: 'My node · earnings', operator: true },
+  { id: 'network', label: 'Network', operator: true },
+  { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
+  { id: 'connectors', label: 'Connectors', operator: true },
+  { id: 'ledger', label: 'Payments & ledger', badge: 'entries', operator: true },
+  { id: 'telegram', label: 'Telegram bot', operator: true },
+  { id: 'download', label: 'Run a node', operator: true },
+  { id: 'agents', label: 'Agents', badge: 'agents' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'traffic', label: 'Live traffic', badge: 'events' },
+  { id: 'guardrails', label: 'Guardrails' },
+  { id: 'genesis', label: 'Genesis · new agent' },
+  { id: 'developers', label: 'Developers' },
+];
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -72,6 +98,18 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  const [role, setRole] = useState<Role>(
+    () => (localStorage.getItem(ROLE_KEY) as Role | null) ?? 'developer',
+  );
+
+  const visibleNav = NAV.filter((n) => role === 'developer' || n.operator);
+
+  const changeRole = (r: Role) => {
+    setRole(r);
+    localStorage.setItem(ROLE_KEY, r);
+    // If the current page isn't in the new role's menu, fall back to Overview.
+    if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView('overview');
+  };
 
   useEffect(() => {
     let active = true;
@@ -114,32 +152,40 @@ export function App() {
           <span className="badge">A</span> ACP
         </div>
         <p className="tagline">the agentic internet · console</p>
-        <NavItem id="overview" label="Overview" view={view} set={setView} />
-        <NavItem id="mynode" label="My node · earnings" view={view} set={setView} />
-        <NavItem id="agents" label="Agents" view={view} set={setView} count={snap.agents.length} />
-        <NavItem id="skills" label="Skills" view={view} set={setView} />
-        <NavItem id="network" label="Network" view={view} set={setView} />
-        <NavItem id="connectors" label="Connectors" view={view} set={setView} />
-        <NavItem
-          id="traffic"
-          label="Live traffic"
-          view={view}
-          set={setView}
-          count={snap.events.length}
-        />
-        <NavItem
-          id="ledger"
-          label="Payments & ledger"
-          view={view}
-          set={setView}
-          count={snap.entries.length}
-        />
-        <NavItem id="guardrails" label="Guardrails" view={view} set={setView} />
-        <NavItem id="genesis" label="Genesis · new agent" view={view} set={setView} />
-        <NavItem id="hosteddapps" label="Hosted dApps" view={view} set={setView} />
-        <NavItem id="developers" label="Developers" view={view} set={setView} />
-        <NavItem id="download" label="Run a node" view={view} set={setView} />
-        <NavItem id="telegram" label="Telegram bot" view={view} set={setView} />
+        <div className="role-toggle" role="group" aria-label="View mode">
+          <button
+            type="button"
+            className={role === 'operator' ? 'active' : ''}
+            onClick={() => changeRole('operator')}
+          >
+            Operator
+          </button>
+          <button
+            type="button"
+            className={role === 'developer' ? 'active' : ''}
+            onClick={() => changeRole('developer')}
+          >
+            Developer
+          </button>
+        </div>
+        {visibleNav.map((n) => (
+          <NavItem
+            key={n.id}
+            id={n.id}
+            label={n.label}
+            view={view}
+            set={setView}
+            count={
+              n.badge === 'agents'
+                ? snap.agents.length
+                : n.badge === 'events'
+                  ? snap.events.length
+                  : n.badge === 'entries'
+                    ? snap.entries.length
+                    : undefined
+            }
+          />
+        ))}
         <div className="foot">
           <span className={`pill-live ${snap.online ? '' : 'pill-off'}`}>
             <span className="dot" /> {snap.online ? 'node online' : 'node offline'}

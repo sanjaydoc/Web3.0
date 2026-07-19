@@ -45,7 +45,31 @@ body {
 .side .tagline {
   font-size: 0.74rem;
   color: var(--muted);
-  margin: 0 0 18px 2px;
+  margin: 0 0 14px 2px;
+}
+.role-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin: 0 0 14px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+}
+.role-toggle button {
+  flex: 1;
+  padding: 0.32rem 0.4rem;
+  border: none;
+  background: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.role-toggle button.active {
+  background: var(--ink);
+  color: #fff;
 }
 .navitem {
   display: flex;
