@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type TelegramStatus, api } from './api.js';
 
-const ADMIN_KEY = 'acp.adminToken';
+const ADMIN_KEY = 'web3.adminToken';
 
 export function Telegram() {
   const [status, setStatus] = useState<TelegramStatus | null>(null);

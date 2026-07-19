@@ -7,7 +7,7 @@ export interface BlockValidation {
 }
 
 /**
- * A proof-of-authority blockchain over the ACP ledger. A fixed, ordered set of **authorities**
+ * A proof-of-authority blockchain over the Web3.0 ledger. A fixed, ordered set of **authorities**
  * (their ML-DSA public keys) take turns proposing blocks in round-robin order: the proposer for a
  * block at `height` is `authorities[height % authorities.length]`. Every block is signed by that
  * authority, so validators accept a block only if it came from the right authority, in turn, links

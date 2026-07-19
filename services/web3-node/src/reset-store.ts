@@ -2,7 +2,7 @@ import './env.js'; // load .env so WEB3_MONGODB_URI / WEB3_MONGODB_DB are availa
 import { MongoClient } from 'mongodb';
 
 /**
- * Wipe the persisted ACP state (agent registry + ledger) from MongoDB so the node can boot fresh.
+ * Wipe the persisted Web3.0 state (agent registry + ledger) from MongoDB so the node can boot fresh.
  *
  * Use this when the persisted ledger can't be verified on startup — e.g. it was written by an
  * older/buggy build, or by a different node identity (`WEB3_NODE_SEED`). The ledger is intentionally
@@ -13,7 +13,7 @@ import { MongoClient } from 'mongodb';
  */
 async function main(): Promise<void> {
   const uri = process.env.WEB3_MONGODB_URI;
-  const dbName = process.env.WEB3_MONGODB_DB ?? 'acp';
+  const dbName = process.env.WEB3_MONGODB_DB ?? 'web3';
   if (!uri) {
     console.error(
       'WEB3_MONGODB_URI is not set — nothing to reset (the in-memory store starts fresh already).',

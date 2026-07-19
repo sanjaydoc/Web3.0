@@ -1,7 +1,7 @@
 import { AGENT_CARD_VERSION, formatAmount, isValidWeb3Id, web3Id as makeWeb3Id } from '@web3/core';
 import type { AgentCard, RegistrationRequest, SignedEnvelope } from '@web3/core';
 import { deriveDid, fromB64u } from '@web3/crypto';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 import { checkEnvelope } from '../services/replay.js';
 
 /** True if the body is shaped like a signed envelope (rather than a bare registration request). */
@@ -20,7 +20,7 @@ function isEnvelope(body: unknown): body is SignedEnvelope<RegistrationRequest> 
  * Web3.0 ID, a DID derived from its post-quantum public key, and a wallet seeded with a faucet
  * grant. Others discover it here.
  */
-export function registryModule(): AcpModule {
+export function registryModule(): Web3Module {
   return {
     name: 'registry',
     version: '0.1.0',
@@ -109,7 +109,7 @@ export function registryModule(): AcpModule {
         bus.emit({
           kind: 'agent.registered',
           actor: id,
-          summary: `${id} joined ACP with ${formatAmount(config.faucetGrant)} · ${did}`,
+          summary: `${id} joined Web3.0 with ${formatAmount(config.faucetGrant)} · ${did}`,
           data: { did, kind: card.kind, skills: card.skills.map((s) => s.id) },
         });
 

@@ -1,4 +1,4 @@
-"""The ACP agent SDK.
+"""The Web3.0 agent SDK.
 
 An :class:`Agent` owns a post-quantum identity (an email-like Web3.0 ID, a DID, and a wallet),
 registers with a node, and then talks to other agents over the relay: submitting tasks, paying

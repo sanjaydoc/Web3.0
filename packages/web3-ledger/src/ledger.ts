@@ -36,7 +36,7 @@ export class InsufficientFundsError extends Error {
 }
 
 /**
- * The ACP ledger: an append-only, hash-linked log whose every entry is signed by the node
+ * The Web3.0 ledger: an append-only, hash-linked log whose every entry is signed by the node
  * authority with a post-quantum (ML-DSA) signature. Wallet balances are derived from the log,
  * so the log is the single source of truth and `verifyChain()` can prove it was never altered.
  *

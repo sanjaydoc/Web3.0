@@ -1,7 +1,7 @@
 import type { Web3Id } from './id.js';
 
 /**
- * ACP settles value in its own native unit, `aETH` — a free-floating token (ETH-style), whose value
+ * Web3.0 settles value in its own native unit, `aETH` — a free-floating token (ETH-style), whose value
  * is set by demand for network work, not pegged to any fiat. For the MVP it's an internal
  * ledger credit with no market value; the roadmap issues it on-chain (and can optionally settle via
  * an external stablecoin rail), keeping the same amount semantics.

@@ -1,7 +1,7 @@
 {
   "name": "@web3/core",
   "version": "0.1.0",
-  "description": "Core ACP protocol types: Web3.0 IDs, DIDs, agent cards, wallets, signed envelopes and tasks.",
+  "description": "Core Web3.0 protocol types: Web3.0 IDs, DIDs, agent cards, wallets, signed envelopes and tasks.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

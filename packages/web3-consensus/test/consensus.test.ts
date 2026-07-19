@@ -16,8 +16,8 @@ function authority(): { keys: Keypair; pub: string } {
 function sampleEntries(seed: string) {
   const keys = generateKeypair();
   const ledger = new Ledger(keys, toB64u(keys.publicKey));
-  ledger.register(web3Id(`n${seed}1`), `did:acp:z${seed}1`, 1000);
-  ledger.register(web3Id(`n${seed}2`), `did:acp:z${seed}2`, 0);
+  ledger.register(web3Id(`n${seed}1`), `did:web3:z${seed}1`, 1000);
+  ledger.register(web3Id(`n${seed}2`), `did:web3:z${seed}2`, 0);
   return ledger.all();
 }
 

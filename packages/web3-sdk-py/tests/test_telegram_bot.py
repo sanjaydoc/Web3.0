@@ -31,9 +31,9 @@ class StubBridge:
 
 def test_help_and_start() -> None:
     b = StubBridge()
-    assert "ACP bridge" in bot.handle_command(b, "/help")
-    assert "ACP bridge" in bot.handle_command(b, "/start")
-    assert "ACP bridge" in bot.handle_command(b, "")  # empty → help
+    assert "Web3.0 bridge" in bot.handle_command(b, "/help")
+    assert "Web3.0 bridge" in bot.handle_command(b, "/start")
+    assert "Web3.0 bridge" in bot.handle_command(b, "")  # empty → help
 
 
 def test_whoami_shows_id_and_balance() -> None:

@@ -5,7 +5,7 @@ import { base58 } from '@scure/base';
 import { fromB64u, toB64u, utf8ToBytes } from './encoding.js';
 
 /**
- * The post-quantum signature scheme ACP uses everywhere identity or integrity matters.
+ * The post-quantum signature scheme Web3.0 uses everywhere identity or integrity matters.
  * ML-DSA-65 (FIPS 204, "Dilithium" family) targets a 192-bit security level and is the
  * balanced choice for a network of many small messages.
  */
@@ -58,12 +58,12 @@ export function verifyString(
 }
 
 /**
- * Derive a decentralized identifier from a public key: `did:acp:z<base58(sha256(pubkey))>`.
+ * Derive a decentralized identifier from a public key: `did:web3:z<base58(sha256(pubkey))>`.
  * The `z` prefix follows the multibase base58btc convention. The DID is stable for the key
  * and reveals nothing about the secret.
  */
 export function deriveDid(publicKey: Uint8Array): string {
-  return `did:acp:z${base58.encode(sha256(publicKey))}`;
+  return `did:web3:z${base58.encode(sha256(publicKey))}`;
 }
 
 export function encodeKeypair(keys: Keypair): EncodedKeypair {

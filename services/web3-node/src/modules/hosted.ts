@@ -1,4 +1,4 @@
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 import { adminRequired, checkAdmin } from '../services/admin.js';
 import { currentAccount, requireRole } from '../services/auth.js';
 import { type HostedAgentConfig, HostedAgentService } from '../services/hosted.js';
@@ -7,7 +7,7 @@ import { type HostedAgentConfig, HostedAgentService } from '../services/hosted.j
  * hosted — launch and run Genesis agents inside the node (the GUI "no-VPS host"). Management
  * endpoints are admin-gated; the read-only list is open so the dashboard can show what's running.
  */
-export function hostedModule(): AcpModule {
+export function hostedModule(): Web3Module {
   return {
     name: 'hosted',
     version: '0.1.0',

@@ -11,7 +11,7 @@ import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
 import { makeAgent, message, sealAs } from '../src/testkit.js';
 
-describe('ACP node (in-process integration)', () => {
+describe('Web3.0 node (in-process integration)', () => {
   let kernel: Kernel;
 
   beforeAll(async () => {
@@ -714,7 +714,7 @@ describe('accounts & authentication', () => {
         method: 'POST',
         url,
         payload: payload as object,
-        headers: token ? { 'x-acp-token': token } : undefined,
+        headers: token ? { 'x-web3-token': token } : undefined,
       });
 
     // sign up a developer → gets an address + a one-time token
@@ -729,7 +729,7 @@ describe('accounts & authentication', () => {
     const me = await k.http.inject({
       method: 'GET',
       url: '/accounts/me',
-      headers: { 'x-acp-token': created.token },
+      headers: { 'x-web3-token': created.token },
     });
     expect(me.statusCode).toBe(200);
     expect(me.json()).toMatchObject({ address: 'sanjay@web3.0', role: 'developer' });
@@ -749,7 +749,7 @@ describe('accounts & authentication', () => {
         method: 'POST',
         url,
         payload: payload as object,
-        headers: token ? { 'x-acp-token': token } : undefined,
+        headers: token ? { 'x-web3-token': token } : undefined,
       });
 
     const admin = (await post('/accounts/signup', { local: 'boss', role: 'admin' })).json() as {
@@ -763,13 +763,13 @@ describe('accounts & authentication', () => {
     const denied = await k.http.inject({
       method: 'GET',
       url: '/accounts',
-      headers: { 'x-acp-token': dev.token },
+      headers: { 'x-web3-token': dev.token },
     });
     expect(denied.statusCode).toBe(403);
     const allowed = await k.http.inject({
       method: 'GET',
       url: '/accounts',
-      headers: { 'x-acp-token': admin.token },
+      headers: { 'x-web3-token': admin.token },
     });
     expect(allowed.statusCode).toBe(200);
     expect((allowed.json() as { accounts: unknown[] }).accounts.length).toBe(2);
@@ -808,7 +808,7 @@ describe('hosted dApp ownership scoping', () => {
       k.http.inject({
         method: 'POST',
         url: '/hosted/launch',
-        headers: { 'x-acp-token': token },
+        headers: { 'x-web3-token': token },
         payload: {
           handle,
           name: 'D',
@@ -829,7 +829,7 @@ describe('hosted dApp ownership scoping', () => {
         .inject({
           method: 'GET',
           url: '/hosted',
-          headers: token ? { 'x-acp-token': token } : undefined,
+          headers: token ? { 'x-web3-token': token } : undefined,
         })
         .then((r) => r.json() as { agents: { web3Id: string; createdBy: string }[] });
 

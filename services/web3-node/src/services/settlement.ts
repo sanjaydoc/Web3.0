@@ -56,7 +56,7 @@ export interface Signer {
 }
 
 /**
- * internal — the ACP ledger IS the settlement. The transfer has already been recorded on the
+ * internal — the Web3.0 ledger IS the settlement. The transfer has already been recorded on the
  * PQC-signed ledger by the time we're called; we just surface its hash as the tx reference. This is
  * the default and keeps the MVP self-contained.
  */
@@ -67,7 +67,7 @@ export class InternalSettlement implements SettlementProvider {
     return { network: this.network, status: 'settled', txRef: intent.reference, confirmations: 1 };
   }
   describe(): string {
-    return 'internal ACP ledger (PQC-signed) — value settles on the local ledger';
+    return 'internal Web3.0 ledger (PQC-signed) — value settles on the local ledger';
   }
 }
 

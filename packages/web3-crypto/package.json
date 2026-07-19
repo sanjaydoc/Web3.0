@@ -1,7 +1,7 @@
 {
   "name": "@web3/crypto",
   "version": "0.1.0",
-  "description": "Post-quantum cryptographic primitives for ACP (ML-DSA signatures, ML-KEM key exchange).",
+  "description": "Post-quantum cryptographic primitives for Web3.0 (ML-DSA signatures, ML-KEM key exchange).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

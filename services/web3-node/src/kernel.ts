@@ -7,8 +7,8 @@ import type { Keypair } from '@web3/crypto';
 import { Ledger } from '@web3/ledger';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { type AcpConfig, DEFAULT_CONFIG } from './config.js';
-import type { AcpModule, ModuleContext } from './context.js';
+import { DEFAULT_CONFIG, type Web3Config } from './config.js';
+import type { ModuleContext, Web3Module } from './context.js';
 import { MODULE_FACTORIES } from './modules/index.js';
 import { AccountsService } from './services/accounts.js';
 import { EventBus } from './services/bus.js';
@@ -22,12 +22,12 @@ import { type SettlementProvider, createSettlement } from './services/settlement
 import { type Store, createStore } from './store/index.js';
 
 /**
- * The ACP kernel — a thin core that owns the shared services (ledger, registry, event bus,
+ * The Web3.0 kernel — a thin core that owns the shared services (ledger, registry, event bus,
  * guardrails, connections) and loads the modules named in config. This is the "agentic OS":
  * capabilities are modules bolted onto a small, stable core.
  */
 export class Kernel {
-  readonly config: AcpConfig;
+  readonly config: Web3Config;
   readonly http: FastifyInstance;
   readonly ledger: Ledger;
   readonly registry: Registry;
@@ -47,7 +47,7 @@ export class Kernel {
   private readonly inflight = new Set<Promise<void>>();
 
   constructor(
-    config: Partial<AcpConfig> = {},
+    config: Partial<Web3Config> = {},
     nodeKeys: Keypair = generateKeypair(),
     store?: Store,
   ) {
@@ -134,7 +134,7 @@ export class Kernel {
     });
 
     this.http.get('/', () => ({
-      name: 'ACP node',
+      name: 'Web3.0 node',
       description: 'The agentic internet — quantum-resistant agent communication protocol.',
       version: '0.1.0',
       modules: this.loaded,
@@ -171,7 +171,7 @@ export class Kernel {
         this.http.log.warn(`unknown module "${name}" — skipping`);
         continue;
       }
-      const mod: AcpModule = factory();
+      const mod: Web3Module = factory();
       await mod.register(ctx);
       this.loaded.push(mod.name);
       this.http.log.info(`loaded module ${mod.name}@${mod.version}`);
@@ -181,7 +181,7 @@ export class Kernel {
 
   async listen(): Promise<string> {
     const address = await this.http.listen({ host: this.config.host, port: this.config.port });
-    this.http.log.info(`ACP node listening on ${address} · modules: ${this.loaded.join(', ')}`);
+    this.http.log.info(`Web3.0 node listening on ${address} · modules: ${this.loaded.join(', ')}`);
     return address;
   }
 

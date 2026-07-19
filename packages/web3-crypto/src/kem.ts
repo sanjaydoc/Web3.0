@@ -5,7 +5,7 @@ import { randomBytes } from '@noble/post-quantum/utils.js';
 import { fromB64u, toB64u } from './encoding.js';
 
 /**
- * The post-quantum key-encapsulation mechanism ACP uses to share data confidentially between
+ * The post-quantum key-encapsulation mechanism Web3.0 uses to share data confidentially between
  * agents. ML-KEM-768 (FIPS 203, "Kyber" family) establishes a shared secret; we then encrypt
  * the payload with XChaCha20-Poly1305 — a hybrid PQC "sealed box".
  */

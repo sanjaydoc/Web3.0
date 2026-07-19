@@ -1,5 +1,5 @@
 /**
- * @web3/ledger — the quantum-resistant, append-only ledger at the core of ACP.
+ * @web3/ledger — the quantum-resistant, append-only ledger at the core of Web3.0.
  *
  * Every entry (registration, payment, message provenance) is hash-linked to the previous one
  * and signed by the node authority with ML-DSA. `verifyChain()` proves the whole history is

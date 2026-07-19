@@ -22,7 +22,7 @@ export type EventKind =
   | 'data.shared';
 
 /** A single observable event in the network's activity feed. */
-export interface AcpEvent {
+export interface Web3Event {
   id: string;
   ts: string;
   kind: EventKind;

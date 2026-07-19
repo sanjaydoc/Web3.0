@@ -1,4 +1,4 @@
-/** All ACP modules that ship with the node. Disable any by removing it from `config.modules`. */
+/** All Web3.0 modules that ship with the node. Disable any by removing it from `config.modules`. */
 export const ALL_MODULES = [
   'naming',
   'accounts',
@@ -38,7 +38,7 @@ export interface AuthConfig {
   httpRateWindowMs: number;
 }
 
-/** How payments settle value. `internal` = the ACP ledger is the source of truth (default).
+/** How payments settle value. `internal` = the Web3.0 ledger is the source of truth (default).
  * `simulated` = mimic an on-chain stablecoin transfer (fake tx refs, no chain). `testnet` = build a
  * real ERC-20 transfer against an EVM testnet RPC (no broadcast without a funded signing key). */
 export type SettlementMode = 'internal' | 'simulated' | 'testnet';
@@ -84,10 +84,10 @@ export interface FeesConfig {
   treasuryLocal: string;
 }
 
-export interface AcpConfig {
+export interface Web3Config {
   host: string;
   port: number;
-  /** Which modules the kernel loads, in order. ACP is module-first: add/remove freely. */
+  /** Which modules the kernel loads, in order. Web3.0 is module-first: add/remove freely. */
   modules: ModuleName[];
   /** Opening balance minted to every new account (a testnet faucet). */
   faucetGrant: number;
@@ -119,7 +119,7 @@ function envBool(name: string, fallback: boolean): boolean {
   return !['0', 'false', 'no', 'off'].includes(raw.trim().toLowerCase());
 }
 
-export const DEFAULT_CONFIG: AcpConfig = {
+export const DEFAULT_CONFIG: Web3Config = {
   host: process.env.WEB3_HOST ?? '127.0.0.1',
   port: Number(process.env.WEB3_PORT ?? 8787),
   modules: [...ALL_MODULES],
@@ -157,7 +157,7 @@ export const DEFAULT_CONFIG: AcpConfig = {
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
   },
   mongodbUri: process.env.WEB3_MONGODB_URI,
-  mongodbDb: process.env.WEB3_MONGODB_DB ?? 'acp',
+  mongodbDb: process.env.WEB3_MONGODB_DB ?? 'web3',
 };
 
 /** Parse a comma-separated env var into a trimmed, non-empty list. */

@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { formatAmount } from '@web3/core';
 import type { Web3Id } from '@web3/core';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
 
 export interface NodeLimits {
@@ -21,7 +21,7 @@ export const LIMITS_KEY = 'node-limits';
  * fees vs block rewards), traffic, resource usage (RAM, uptime), and the resources they choose to
  * contribute. Read endpoints are open; changing limits is admin-gated.
  */
-export function operatorModule(): AcpModule {
+export function operatorModule(): Web3Module {
   return {
     name: 'operator',
     version: '0.1.0',

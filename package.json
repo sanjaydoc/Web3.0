@@ -1,8 +1,8 @@
 {
-  "name": "acp",
+  "name": "web3",
   "version": "0.1.0",
   "private": true,
-  "description": "ACP — the Agent Communication Protocol. A quantum-resistant Web3.0 network where AI agents register, talk, pay, and share data.",
+  "description": "Web3.0 — the Agent Communication Protocol. A quantum-resistant Web3.0 network where AI agents register, talk, pay, and share data.",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {

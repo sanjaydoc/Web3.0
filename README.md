@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛰️ ACP — The Agentic Internet
+# 🛰️ Web3.0 — The Agentic Internet
 
 **A quantum-resistant Web3.0 network where AI agents get an identity and a wallet, discover each other, communicate, pay, and share data — no VPS, no middleman.**
 
@@ -18,9 +18,9 @@ _Every agent gets an email-like Web3.0 ID (`alice@web3.0`). Every message, payme
 
 <br />
 
-<img src="docs/media/dashboard-overview.png" alt="ACP console — live overview with agents, payments, and guardrail decisions" width="90%" />
+<img src="docs/media/dashboard-overview.png" alt="Web3.0 console — live overview with agents, payments, and guardrail decisions" width="90%" />
 
-<sub>The ACP console (LabSuite theme) showing live agent activity, payments, and ALLOW/DENY guardrail decisions.</sub>
+<sub>The Web3.0 console (LabSuite theme) showing live agent activity, payments, and ALLOW/DENY guardrail decisions.</sub>
 
 </div>
 
@@ -30,14 +30,14 @@ _Every agent gets an email-like Web3.0 ID (`alice@web3.0`). Every message, payme
 
 Open-source AI agents can't yet live on the internet as first-class citizens. Running one 24/7
 means renting a VPS. Two agents from different authors have no shared language to talk. There's
-no built-in way to pay for another agent's work, no guardrails, and no observability. ACP is a
+no built-in way to pay for another agent's work, no guardrails, and no observability. Web3.0 is a
 small, honest attempt to fix that: an **agent communication protocol** with identity, messaging,
 payments, guardrails, and a verifiable ledger — assembled from open standards and
 NIST-standardized post-quantum cryptography.
 
 ## The problem (five gaps)
 
-| # | Gap | ACP's answer |
+| # | Gap | Web3.0's answer |
 | - | --- | --- |
 | 1 | Every agent needs its own VPS to run 24/7 | Relay queues messages for offline agents; hosting marketplace on the [roadmap](#roadmap) |
 | 2 | No agent-to-agent communication protocol | **messaging** module — signed A2A relay ([A2A](https://a2a-protocol.org)-aligned) |
@@ -47,7 +47,7 @@ NIST-standardized post-quantum cryptography.
 
 ## Architecture
 
-ACP is a **module-first monorepo**. The node is a thin kernel; every capability is a module you
+Web3.0 is a **module-first monorepo**. The node is a thin kernel; every capability is a module you
 can add or remove via config.
 
 ```
@@ -70,9 +70,9 @@ Full write-ups: **[Architecture](docs/ARCHITECTURE.md)** · **[Protocol](docs/PR
 
 ## Quantum security (the honest version)
 
-ACP is **quantum-resistant, not "unhackable"** — no system is unhackable, and a literal
+Web3.0 is **quantum-resistant, not "unhackable"** — no system is unhackable, and a literal
 quantum-computing blockchain isn't shippable today. What *is* real and standardized is
-**post-quantum cryptography**, and that's what ACP uses everywhere identity or integrity matters:
+**post-quantum cryptography**, and that's what Web3.0 uses everywhere identity or integrity matters:
 
 - **ML-DSA-65** (FIPS 204, "Dilithium") — signatures on identities, messages, payments, and ledger entries
 - **ML-KEM-768** (FIPS 203, "Kyber") — confidential data sharing between agents
@@ -87,21 +87,21 @@ verifies the node's ledger from Python.
 
 ## Relationship to the existing web
 
-ACP does **not** replace or delete the existing internet — it's an **additive, interoperable
+Web3.0 does **not** replace or delete the existing internet — it's an **additive, interoperable
 layer**, the same way Web 2.0 added interactivity on top of Web 1.0 rather than demolishing it.
 
 - **Websites and apps keep running** exactly as-is over HTTP. They can *progressively* adopt Web3
   features (wallet login, agent endpoints, on-chain payments) if and when they choose.
 - **Your existing data stays where it is.** Web3 changes who controls *new* data going forward
   (self-sovereign identity); it does not retroactively seize or migrate anything. Migration is opt-in.
-- **ACP is an overlay network.** It runs *over* ordinary TCP/IP, HTTP and WebSockets — an ACP
+- **Web3.0 is an overlay network.** It runs *over* ordinary TCP/IP, HTTP and WebSockets — a Web3.0
   agent is a normal internet citizen that *also* has a Web3.0 ID and wallet. Agents can still call
   any REST API, read any website, or use any cloud service as a tool.
 - **The old world bridges in through adapters**, not rewrites: an existing REST API or agent can be
-  wrapped as an ACP agent (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#bridging-the-existing-web)).
+  wrapped as a Web3.0 agent (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#bridging-the-existing-web)).
 
 In short: "Web3 replaces the internet" is marketing. Realistically it's a complementary layer that
-interoperates with today's web for the foreseeable future — ACP just makes *agents* first-class
+interoperates with today's web for the foreseeable future — Web3.0 just makes *agents* first-class
 citizens on top of it.
 
 ## Quickstart
@@ -131,7 +131,7 @@ WEB3_MONGODB_DB=acp
 
 Then run each block in its own terminal (start Terminal 1 first and leave it running).
 
-**Terminal 1 — the ACP node**
+**Terminal 1 — the Web3.0 node**
 ```bash
 pnpm install
 pnpm --filter @web3/node dev        # reads .env → listening on http://127.0.0.1:8787
@@ -240,7 +240,7 @@ tests. What passed:
 | **Distributed L1** | Three nodes form a PoA chain, gossip ML-DSA-signed blocks, and **converge on one canonical history**; the chain **keeps advancing when an authority goes offline** (proposer-skip). |
 | **Pluggable settlement** | `internal` ledger, `simulated` rail (deterministic tx refs + explorer links), and `testnet` ERC-20 that **builds real calldata but never broadcasts**. |
 | **Operator economics** | Live earnings (fees + block rewards), traffic, RAM/uptime, and enforced contribution limits in the **My node** console. |
-| **Telegram front door** | A human on Telegram queries the node and **pays an ACP agent in aETH for an LLM answer** — the whole loop from a phone. |
+| **Telegram front door** | A human on Telegram queries the node and **pays a Web3.0 agent in aETH for an LLM answer** — the whole loop from a phone. |
 | **Quantum-resistant claim** | **Python cross-verifies the TypeScript node's ML-DSA signatures**, and any tampering is rejected (`verifyChain()` flips to false). |
 
 Reproduce the automated portion with `pnpm -w test` (71 TS tests) and `pytest packages/web3-sdk-py`
@@ -257,7 +257,7 @@ traffic, payments, guardrail ALLOW/DENY decisions, and the live-verified ledger.
 </p>
 
 <p align="center">
-  <img src="docs/media/landing-page.png" alt="ACP GitHub Pages landing page in the LabSuite editorial theme" width="90%" />
+  <img src="docs/media/landing-page.png" alt="Web3.0 GitHub Pages landing page in the LabSuite editorial theme" width="90%" />
   <br /><sub>The docs landing page (<code>docs/index.html</code>), reusing the LabSuite design system.</sub>
 </p>
 
@@ -303,7 +303,7 @@ for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits)
 🛰️ Relay / host nodes = run as many as you want (no limit)
 ```
 
-**The detail.** ACP has **two kinds of node**, with different jobs and cardinality:
+**The detail.** Web3.0 has **two kinds of node**, with different jobs and cardinality:
 
 ### 👑 Authority nodes — the trusted core
 
@@ -438,7 +438,7 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
 - ✅ **Per-developer scoping (server-side)** — `POST /hosted/launch` stamps the dApp's owner = the
   signed-in developer; `GET /hosted` returns only your own dApps (admins see all). The old UI-only
   "My apps" filter is now a real API boundary.
-- ✅ **Adapters** — put an existing agent/model on ACP in one call: `CallableAdapter`, `HttpAdapter`,
+- ✅ **Adapters** — put an existing agent/model on Web3.0 in one call: `CallableAdapter`, `HttpAdapter`,
   `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
 - ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
   real ERC-20 transfers; the node holds no key and never broadcasts by default.

@@ -1,6 +1,6 @@
 # Quantum Security — the honest model
 
-ACP is marketed as **quantum-resistant**. This page is deliberate about what that does and does
+Web3.0 is marketed as **quantum-resistant**. This page is deliberate about what that does and does
 not mean, because building on a false promise would be worse than not building at all.
 
 ## What we do *not* claim
@@ -8,11 +8,11 @@ not mean, because building on a false promise would be worse than not building a
 - **"Unhackable."** No system is unhackable. Bugs, key mismanagement, social engineering, and
   implementation flaws all remain. We claim resistance to a *specific* future threat, nothing more.
 - **A literal quantum-computing blockchain.** Chains running on quantum hardware or QKD links are
-  research-stage; there is nothing production-grade to ship today. ACP does not pretend otherwise.
+  research-stage; there is nothing production-grade to ship today. Web3.0 does not pretend otherwise.
 
 ## What we *do* claim
 
-ACP is secure against an adversary with a large-scale **quantum computer** running Shor's
+Web3.0 is secure against an adversary with a large-scale **quantum computer** running Shor's
 algorithm, which would break the elliptic-curve and RSA signatures that most of Web3 relies on. It
 does this by using **NIST-standardized post-quantum cryptography** everywhere identity or integrity
 matters:
@@ -59,4 +59,4 @@ Clearly labelled as forward-looking, not shipped:
    marketed as production security.
 
 If you take one thing from this page: **quantum-resistant is a real, defensible property; "unhackable"
-is not.** ACP only claims the former.
+is not.** Web3.0 only claims the former.

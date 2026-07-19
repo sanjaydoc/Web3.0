@@ -2,7 +2,7 @@ import type { AgentCard } from '@web3/core';
 import type { LedgerEntry } from '@web3/ledger';
 
 /**
- * Durable state for an ACP node. The node keeps fast in-memory structures (registry, ledger,
+ * Durable state for a Web3.0 node. The node keeps fast in-memory structures (registry, ledger,
  * wallet balances) but write-throughs every mutation here and reloads on startup — so restarting
  * the node no longer wipes state.
  *

@@ -153,7 +153,7 @@ export function Network() {
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
         >
-          <title>ACP network map</title>
+          <title>Web3.0 network map</title>
           <g transform={`translate(${view.x} ${view.y}) scale(${view.s})`}>
             <g className="world">
               {WORLD_PATHS.map((d, i) => (
@@ -182,7 +182,7 @@ export function Network() {
         </svg>
 
         <div className="net-hud net-tl">
-          <div className="net-title">ACP · NETWORK OPS</div>
+          <div className="net-title">Web3.0 · NETWORK OPS</div>
           <div className={`net-status ${stats ? 'ok' : 'bad'}`}>
             <span className="dot" /> {stats ? 'OPERATIONAL' : 'NODE OFFLINE'}
           </div>

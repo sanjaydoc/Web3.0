@@ -1,4 +1,4 @@
-# ACP Protocol
+# Web3.0 Protocol
 
 The wire protocol agents speak. It is **A2A-aligned** (Google's Agent2Agent) for messaging and
 **x402-aligned** for payments, with a post-quantum identity and signature layer.
@@ -7,7 +7,7 @@ The wire protocol agents speak. It is **A2A-aligned** (Google's Agent2Agent) for
 
 - **Web3.0 ID** — a human-readable, email-like handle: `alice@web3.0`. Case-insensitive; the
   `@web3.0` namespace is the default network.
-- **DID** — `did:acp:z<base58(sha256(signPublicKey))>`, derived from the agent's ML-DSA public key.
+- **DID** — `did:web3:z<base58(sha256(signPublicKey))>`, derived from the agent's ML-DSA public key.
 - **Keys** — an ML-DSA-65 signing keypair (identity) and an ML-KEM-768 keypair (receiving sealed data).
 
 ## Agent card (A2A-aligned)
@@ -17,7 +17,7 @@ Published at registration, fetched from the registry to discover an agent:
 ```json
 {
   "web3Id": "bob@web3.0",
-  "did": "did:acp:z…",
+  "did": "did:web3:z…",
   "name": "Bob the Summariser",
   "kind": "agent",
   "skills": [{ "id": "summarise", "name": "Summarise", "description": "…", "tags": ["nlp"] }],
@@ -38,7 +38,7 @@ Python, which is why cross-language verification works).
 ```json
 {
   "payload": { "...": "..." },
-  "meta": { "signer": "alice@web3.0", "did": "did:acp:z…", "ts": "2026-…", "nonce": "…" },
+  "meta": { "signer": "alice@web3.0", "did": "did:web3:z…", "ts": "2026-…", "nonce": "…" },
   "alg": "ML-DSA-65",
   "publicKey": "<base64url>",
   "signature": "<base64url>"
@@ -73,13 +73,13 @@ A WebSocket at `/relay`. Frames are JSON `{ kind, … }`.
 | --- | --- | --- |
 | client → | `{ kind: "hello", envelope }` | Authenticate; envelope payload is `{ web3Id }` |
 | → client | `{ kind: "ready", web3Id, online, drained }` | Authenticated; queued messages flushed |
-| client → | `{ kind: "send", envelope }` | Envelope payload is an `AcpMessage` |
+| client → | `{ kind: "send", envelope }` | Envelope payload is an `Web3Message` |
 | → client | `{ kind: "deliver", message }` | A routed message from a peer |
 | → client | `{ kind: "ack", ref, routing }` | `routing` is `delivered` or `queued` |
 | → client | `{ kind: "denied", ref, verdict }` | Blocked by a guardrail |
 | → client | `{ kind: "error", reason }` | Malformed / unauthenticated |
 
-### AcpMessage
+### Web3Message
 
 ```json
 { "id": "msg_…", "from": "alice@web3.0", "to": "bob@web3.0", "ts": "…", "body": { "type": "task.submit", "…": "…" } }
@@ -136,7 +136,7 @@ over `hash`. Types: `register`, `payment`, `message` (hash-only provenance). `ve
 Where a payment's value settles, chosen by `WEB3_SETTLEMENT`. `GET /settlement` reports the active
 rail, and every `/pay` receipt carries a `settlement` block (`{ network, status, txRef?, ... }`):
 
-- **internal** (default) — the PQC-signed ACP ledger is the source of truth; `txRef` is the entry hash.
+- **internal** (default) — the PQC-signed Web3.0 ledger is the source of truth; `txRef` is the entry hash.
 - **simulated** — mimics an on-chain stablecoin transfer with deterministic tx refs + explorer links.
 - **testnet** — builds a real ERC-20 `transfer(address,uint256)` against an EVM testnet RPC and
   returns `pending`; it never broadcasts, because signing needs a funded key the node doesn't hold.

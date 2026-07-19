@@ -1,7 +1,7 @@
 import type { Block } from '@web3/consensus';
 import WebSocket from 'ws';
 import type { WebSocket as WsSocket } from 'ws';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 
 /**
  * consensus — the distributed L1 surface. Always exposes `GET /consensus` (status). When
@@ -12,7 +12,7 @@ import type { AcpModule, ModuleContext } from '../context.js';
  *
  * Blocks form a replicated, authority-signed ordered log; see ConsensusCoordinator for scope.
  */
-export function consensusModule(): AcpModule {
+export function consensusModule(): Web3Module {
   return {
     name: 'consensus',
     version: '0.1.0',

@@ -1,7 +1,7 @@
 {
   "name": "@web3/dashboard",
   "version": "0.1.0",
-  "description": "ACP observability & guardrails console — LabSuite-themed.",
+  "description": "Web3.0 observability & guardrails console — LabSuite-themed.",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { type HostedAgent, api, formatAmount } from './api.js';
 
-const ADMIN_KEY = 'acp.adminToken';
-const CREATOR_KEY = 'acp.creatorName';
+const ADMIN_KEY = 'web3.adminToken';
+const CREATOR_KEY = 'web3.creatorName';
 
 /**
  * HostedDapps — the catalogue of dApps/agents running inside this node. Scoped by ownership: the

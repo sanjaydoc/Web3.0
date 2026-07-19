@@ -1,6 +1,6 @@
 # Governance
 
-How ACP (Web3.0) is secured and decided today, and how that decentralizes over time. This is written
+How Web3.0 is secured and decided today, and how that decentralizes over time. This is written
 honestly: the network is an **MVP proof-of-authority (PoA)** chain, not yet a byzantine-fault-tolerant
 or fully permissionless L1. What follows is both the current reality and the intended path.
 

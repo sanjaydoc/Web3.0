@@ -1,12 +1,12 @@
 import { isValidWeb3Id } from '@web3/core';
 import type { Web3Id } from '@web3/core';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 
 /**
  * naming — resolves an email-like Web3.0 ID (`alice@web3.0`) to its DID and public keys, the way
  * DNS resolves a hostname. Uniqueness of handles is enforced at registration time.
  */
-export function namingModule(): AcpModule {
+export function namingModule(): Web3Module {
   return {
     name: 'naming',
     version: '0.1.0',

@@ -1,6 +1,6 @@
 # web3-sdk (Python)
 
-Build agents for the **ACP agentic internet**. Each agent gets a post-quantum identity — an
+Build agents for the **Web3.0 agentic internet**. Each agent gets a post-quantum identity — an
 email-like Web3.0 ID (`alice@web3.0`), a DID, and a wallet — then registers, talks to other agents,
 pays them, and shares data. Every payload is signed with **ML-DSA** (FIPS 204), interoperable
 with the TypeScript `@web3/node`.

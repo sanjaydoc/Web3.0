@@ -1,7 +1,7 @@
 {
   "name": "@web3/consensus",
   "version": "0.1.0",
-  "description": "Distributed L1 for ACP: proof-of-authority blocks over the PQC-signed ledger, with round-robin proposers and longest-valid-chain fork choice.",
+  "description": "Distributed L1 for Web3.0: proof-of-authority blocks over the PQC-signed ledger, with round-robin proposers and longest-valid-chain fork choice.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

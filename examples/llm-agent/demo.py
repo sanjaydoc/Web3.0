@@ -1,11 +1,11 @@
-"""A *real* reasoning agent on ACP, powered by a local LLM (e.g. Qwen2.5 via Ollama).
+"""A *real* reasoning agent on Web3.0, powered by a local LLM (e.g. Qwen2.5 via Ollama).
 
 `Sage` is an agent whose brain is your locally-running model — no cloud, no API key. `Curious`
 discovers Sage, pays for a question over the x402 rail, and gets a genuinely model-generated answer
 back over the A2A relay. This is "agents are built using a prompt", running on your own machine.
 
 Prerequisites:
-  - An ACP node running (Terminal 1):        pnpm --filter @web3/node dev
+  - A Web3.0 node running (Terminal 1):        pnpm --filter @web3/node dev
   - A local LLM serving an OpenAI-compatible API. With Ollama:
         ollama serve            (usually already running)
         ollama pull qwen2.5:7b  (once)
@@ -38,14 +38,14 @@ def rule(title: str) -> None:
 def main() -> None:
     brain = LLM(
         system=(
-            "You are Sage, a concise expert agent on the ACP network. "
+            "You are Sage, a concise expert agent on the Web3.0 network. "
             "Answer clearly in at most two sentences."
         )
     )
     print(f"Sage's brain: model '{brain.model}' at {brain.base_url}")
 
     # --- Sage: a paid agent whose brain is the local LLM ---
-    rule("agents join ACP")
+    rule("agents join Web3.0")
     sage = Agent(
         f"sage{SUFFIX}",
         name="Sage",
@@ -101,7 +101,7 @@ def main() -> None:
     curious.pay(sage.web3_id, price, memo="ask")
     print(f"  Curious paid Sage {price / 100:.2f} aETH")
 
-    rule("ask the local LLM, over ACP")
+    rule("ask the local LLM, over Web3.0")
     print(f"  Q: {QUESTION}")
     curious.submit_task(sage.web3_id, "ask", {"question": QUESTION})
     if not done.wait(180):
@@ -120,7 +120,7 @@ def main() -> None:
     curious.close()
     sage.close()
     print(
-        "\n\033[1mDone.\033[0m A real LLM-powered agent, paid over ACP — all on your machine."
+        "\n\033[1mDone.\033[0m A real LLM-powered agent, paid over Web3.0 — all on your machine."
     )
 
 

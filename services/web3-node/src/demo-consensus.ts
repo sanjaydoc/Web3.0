@@ -1,5 +1,5 @@
 /**
- * Distributed L1 demo: three real ACP nodes form a proof-of-authority chain, gossip blocks over
+ * Distributed L1 demo: three real Web3.0 nodes form a proof-of-authority chain, gossip blocks over
  * WebSocket, and converge on one canonical, signed block history.
  *
  * Run:  pnpm --filter @web3/node demo:consensus
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
       return kernel;
     }),
   );
-  console.log(`\n\x1b[1m${N} ACP nodes online, authorities set, peers dialed.\x1b[0m`);
+  console.log(`\n\x1b[1m${N} Web3.0 nodes online, authorities set, peers dialed.\x1b[0m`);
   console.log(`authorities: ${authorities.map((a) => `${a.slice(0, 8)}…`).join('  ')}\n`);
 
   // Each node registers a local agent → ledger entries that its authority will batch into a block.

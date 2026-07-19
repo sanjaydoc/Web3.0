@@ -8,7 +8,7 @@ import {
   api,
 } from './api.js';
 
-const ADMIN_KEY = 'acp.adminToken';
+const ADMIN_KEY = 'web3.adminToken';
 
 function Snippet({ title, code }: { title: string; code: string }) {
   const [copied, setCopied] = useState(false);
@@ -53,7 +53,7 @@ export function Developers() {
   const [name, setName] = useState('Weather dApp');
   const [skillId, setSkillId] = useState('ask');
   const [price, setPrice] = useState('1.00');
-  const [endpoint, setEndpoint] = useState('https://your-service.example/acp');
+  const [endpoint, setEndpoint] = useState('https://your-service.example/web3');
   const [createdBy, setCreatedBy] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -112,7 +112,7 @@ export function Developers() {
         },
         admin,
       );
-      if (createdBy.trim()) localStorage.setItem('acp.creatorName', createdBy.trim());
+      if (createdBy.trim()) localStorage.setItem('web3.creatorName', createdBy.trim());
       setMsg({
         kind: 'ok',
         text: `Published ${handle}@web3.0 — tasks now forward to your endpoint.`,
@@ -144,7 +144,7 @@ app.register(); app.connect()   # now live on Web3.0`;
 //   { "input": { "question": "…" } }
 // Return JSON: { "answer": "…" }  (or any object)
 
-app.post("/acp", (req, res) => {
+app.post("/web3", (req, res) => {
   const { question } = req.body.input;
   res.json({ answer: \`echo: \${question}\` });
 });`;

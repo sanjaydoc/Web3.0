@@ -3,7 +3,7 @@ import { useState } from 'react';
 const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
 const INSTALL_SCRIPT = `#!/usr/bin/env bash
-# Run an ACP (Web3.0) node on macOS or Linux.
+# Run a Web3.0 node on macOS or Linux.
 # Installs Node.js 20+ and git automatically if they're missing.
 set -euo pipefail
 REPO="\${WEB3_REPO:-${REPO}.git}"
@@ -32,7 +32,7 @@ if ! have node; then
 fi
 # Warn (don't fail) if the Node major version is < 20.
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-[ "\${NODE_MAJOR:-0}" -ge 20 ] || echo "⚠ Node \${NODE_MAJOR} found; ACP wants 20+. If it errors, upgrade via nvm: https://github.com/nvm-sh/nvm"
+[ "\${NODE_MAJOR:-0}" -ge 20 ] || echo "⚠ Node \${NODE_MAJOR} found; Web3.0 wants 20+. If it errors, upgrade via nvm: https://github.com/nvm-sh/nvm"
 
 [ -d "$DIR" ] || git clone --depth 1 "$REPO" "$DIR"
 cd "$DIR"
@@ -42,7 +42,7 @@ pnpm install
 pnpm --filter @web3/node start
 `;
 
-const INSTALL_PS1 = `# Run an ACP (Web3.0) node on Windows (PowerShell).
+const INSTALL_PS1 = `# Run a Web3.0 node on Windows (PowerShell).
 # Installs Node.js 20+ and git automatically (via winget) if they're missing.
 # Usage:  powershell -ExecutionPolicy Bypass -File install-web3-node.ps1
 $ErrorActionPreference = "Stop"

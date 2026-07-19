@@ -3,7 +3,7 @@ import { Kernel } from './kernel.js';
 import { resolveNodeKeys } from './keys.js';
 
 /**
- * Boot an ACP node with the default configuration. Configure via environment variables
+ * Boot a Web3.0 node with the default configuration. Configure via environment variables
  * (WEB3_PORT, WEB3_HOST, WEB3_FAUCET, WEB3_SPEND_CAP, WEB3_MONGODB_URI, WEB3_NODE_SEED, …) — see
  * src/config.ts and src/keys.ts.
  */

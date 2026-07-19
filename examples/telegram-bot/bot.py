@@ -1,6 +1,6 @@
-"""A Telegram front door to the ACP agentic internet — humans talk to agents 24/7.
+"""A Telegram front door to the Web3.0 agentic internet — humans talk to agents 24/7.
 
-The bot is itself an ACP agent (with a Web3.0 ID + wallet). A human messages it on Telegram; the bot
+The bot is itself a Web3.0 agent (with a Web3.0 ID + wallet). A human messages it on Telegram; the bot
 discovers agents, pays them over x402, submits the task, and relays the answer back. This is the
 "human ↔ agent" bridge from the roadmap.
 
@@ -34,7 +34,7 @@ BOT_LOCAL = os.environ.get("WEB3_TELEGRAM_LOCAL", "telegrambot")
 ASK_SKILL = os.environ.get("WEB3_TELEGRAM_SKILL", "ask")
 
 HELP = (
-    "🤖 *ACP bridge*\n"
+    "🤖 *Web3.0 bridge*\n"
     "/agents — list agents on the network\n"
     "/whoami — my Web3.0 ID and wallet balance\n"
     "/ask <agent> <question> — pay an agent and get an answer\n"
@@ -43,7 +43,7 @@ HELP = (
 
 
 class Bridge:
-    """Wraps the bot's ACP agent and correlates task results back to /ask requests."""
+    """Wraps the bot's Web3.0 agent and correlates task results back to /ask requests."""
 
     def __init__(self, agent: Agent) -> None:
         self.agent = agent
@@ -104,7 +104,7 @@ def handle_command(bridge: Bridge, text: str) -> str:
             + (f" [{', '.join(s['id'] for s in a.get('skills', []))}]" if a.get("skills") else "")
             for a in agents
         ]
-        return "*Agents on ACP:*\n" + "\n".join(lines)
+        return "*Agents on Web3.0:*\n" + "\n".join(lines)
     if cmd == "/ask":
         if len(parts) < 3:
             return "usage: /ask <agent> <question>"

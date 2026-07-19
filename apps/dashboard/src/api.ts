@@ -1,4 +1,4 @@
-// Thin typed client for the ACP node's observability endpoints.
+// Thin typed client for the Web3.0 node's observability endpoints.
 
 export const NODE_URL =
   (import.meta.env.VITE_WEB3_URL as string | undefined) ?? 'http://127.0.0.1:8787';
@@ -20,7 +20,7 @@ export interface Wallet {
   balance: number;
 }
 
-export interface AcpEvent {
+export interface Web3Event {
   id: string;
   ts: string;
   kind: string;
@@ -170,17 +170,17 @@ export interface ConsensusInfo {
 }
 
 // ── account token (an `web3_…` API token from sign-up), stored in this browser ──
-const TOKEN_KEY = 'acp.token';
-export function getAcpToken(): string {
+const TOKEN_KEY = 'web3.token';
+export function getWeb3Token(): string {
   return localStorage.getItem(TOKEN_KEY) ?? '';
 }
-export function setAcpToken(token: string): void {
+export function setWeb3Token(token: string): void {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
 }
 function authHeaders(base: Record<string, string> = {}): Record<string, string> {
-  const t = getAcpToken();
-  return t ? { ...base, 'x-acp-token': t } : base;
+  const t = getWeb3Token();
+  return t ? { ...base, 'x-web3-token': t } : base;
 }
 
 async function get<T>(path: string): Promise<T> {
@@ -208,7 +208,7 @@ export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
   agents: () => get<{ agents: AgentCard[]; count: number }>('/agents'),
-  events: (limit = 60) => get<{ events: AcpEvent[] }>(`/events?limit=${limit}`),
+  events: (limit = 60) => get<{ events: Web3Event[] }>(`/events?limit=${limit}`),
   ledger: () =>
     get<{
       size: number;

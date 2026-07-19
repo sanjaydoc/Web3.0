@@ -1,7 +1,7 @@
 """A tiny multi-provider LLM client so an agent's brain can be "built using a prompt".
 
 Bring your own key (BYOK): you pick a provider and supply your own key. The key lives with your
-agent — it is **never** sent to the ACP node or the network. Supported providers:
+agent — it is **never** sent to the Web3.0 node or the network. Supported providers:
 
     local / ollama   → your machine (Ollama), no key, free   e.g. qwen2.5:7b
     openai           → https://api.openai.com/v1             e.g. gpt-4o-mini

@@ -1,4 +1,4 @@
-// ACP Node desktop shell — wraps the Web3.0 dashboard in a native window (WebView) so an operator
+// Web3.0 Node desktop shell — wraps the Web3.0 dashboard in a native window (WebView) so an operator
 // double-clicks to run and manage a node. The bundled dashboard talks to a local node on :8787.
 //
 // Node process: this scaffold expects the node reachable at http://127.0.0.1:8787. To launch it
@@ -11,5 +11,5 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .run(tauri::generate_context!())
-        .expect("error while running the ACP Node desktop app");
+        .expect("error while running the Web3.0 Node desktop app");
 }

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Account as Acct, type Role, api, getAcpToken, setAcpToken } from './api.js';
+import { type Account as Acct, type Role, api, getWeb3Token, setWeb3Token } from './api.js';
 
 /**
- * Account — sign up (mint an address + one-time ACP token) or sign in (paste a token). The token is
- * stored in this browser and sent as `x-acp-token` on every request, so the node scopes what you see
+ * Account — sign up (mint an address + one-time Web3.0 token) or sign in (paste a token). The token is
+ * stored in this browser and sent as `x-web3-token` on every request, so the node scopes what you see
  * and can do by your role. This is the GUI front for the accounts/auth backend.
  */
 export function Account() {
@@ -17,7 +17,7 @@ export function Account() {
   const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!getAcpToken()) {
+    if (!getWeb3Token()) {
       setMe(null);
       setChecked(true);
       return;
@@ -40,10 +40,10 @@ export function Account() {
     setFreshToken(null);
     try {
       const res = await api.signup(local.trim(), role);
-      setAcpToken(res.token);
+      setWeb3Token(res.token);
       setFreshToken(res.token);
       // remember the creator name for dApp scoping too
-      localStorage.setItem('acp.creatorName', res.address);
+      localStorage.setItem('web3.creatorName', res.address);
       await refresh();
       setMsg({ kind: 'ok', text: `Account created: ${res.address} (${res.role})` });
     } catch (err) {
@@ -54,21 +54,21 @@ export function Account() {
   async function signin() {
     setMsg(null);
     setFreshToken(null);
-    setAcpToken(tokenInput.trim());
+    setWeb3Token(tokenInput.trim());
     try {
       const acct = await api.me();
       setMe(acct);
-      localStorage.setItem('acp.creatorName', acct.address);
+      localStorage.setItem('web3.creatorName', acct.address);
       setTokenInput('');
       setMsg({ kind: 'ok', text: `Signed in as ${acct.address}` });
     } catch {
-      setAcpToken('');
+      setWeb3Token('');
       setMsg({ kind: 'err', text: 'That token is not valid on this node.' });
     }
   }
 
   function signout() {
-    setAcpToken('');
+    setWeb3Token('');
     setMe(null);
     setFreshToken(null);
     setMsg({ kind: 'ok', text: 'Signed out.' });
@@ -78,7 +78,7 @@ export function Account() {
     <>
       <div className="page-head">
         <h1>Account</h1>
-        <span className="muted">your ACP identity — an address + a token, with a role</span>
+        <span className="muted">your Web3.0 identity — an address + a token, with a role</span>
       </div>
 
       {me ? (
@@ -100,8 +100,8 @@ export function Account() {
             </button>
           </div>
           <p className="hint">
-            Your token is sent as <code>x-acp-token</code> on every request — the node scopes Hosted
-            dApps and management to your role.
+            Your token is sent as <code>x-web3-token</code> on every request — the node scopes
+            Hosted dApps and management to your role.
           </p>
         </div>
       ) : (
@@ -176,7 +176,7 @@ export function Account() {
             <div className="card">
               <div className="section-title">Sign in</div>
               <div className="field wide">
-                <label htmlFor="a-token">ACP token</label>
+                <label htmlFor="a-token">Web3.0 token</label>
                 <input
                   id="a-token"
                   type="password"

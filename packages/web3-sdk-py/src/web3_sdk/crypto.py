@@ -1,4 +1,4 @@
-"""Post-quantum cryptographic primitives for ACP, byte-compatible with the TypeScript
+"""Post-quantum cryptographic primitives for Web3.0, byte-compatible with the TypeScript
 ``@web3/crypto`` package.
 
 Signatures use ML-DSA-65 (FIPS 204) via ``dilithium-py``; confidential data sharing uses
@@ -28,7 +28,7 @@ _B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 
 def b64u(data: bytes) -> str:
-    """Base64url without padding — the transport encoding used across ACP."""
+    """Base64url without padding — the transport encoding used across Web3.0."""
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
@@ -97,8 +97,8 @@ def verify_string(public_key: bytes, message: str, signature_b64u: str) -> bool:
 
 
 def derive_did(public_key: bytes) -> str:
-    """``did:acp:z<base58(sha256(pubkey))>`` — identical to the TypeScript derivation."""
-    return "did:acp:z" + base58_encode(hashlib.sha256(public_key).digest())
+    """``did:web3:z<base58(sha256(pubkey))>`` — identical to the TypeScript derivation."""
+    return "did:web3:z" + base58_encode(hashlib.sha256(public_key).digest())
 
 
 # --- ML-KEM sealed box (Python <-> Python confidential data sharing) -----------------------

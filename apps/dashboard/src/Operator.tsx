@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type NodeOperator, api, formatAmount } from './api.js';
 
-const ADMIN_KEY = 'acp.adminToken';
+const ADMIN_KEY = 'web3.adminToken';
 
 function uptime(sec: number): string {
   const d = Math.floor(sec / 86400);

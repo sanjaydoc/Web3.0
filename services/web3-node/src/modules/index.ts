@@ -1,5 +1,5 @@
 import type { ModuleName } from '../config.js';
-import type { AcpModule } from '../context.js';
+import type { Web3Module } from '../context.js';
 import { accountsModule } from './accounts.js';
 import { consensusModule } from './consensus.js';
 import { guardrailsModule } from './guardrails.js';
@@ -13,7 +13,7 @@ import { registryModule } from './registry.js';
 import { telegramModule } from './telegram.js';
 
 /** The built-in module catalogue. The kernel instantiates only the ones listed in config. */
-export const MODULE_FACTORIES: Record<ModuleName, () => AcpModule> = {
+export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
   naming: namingModule,
   accounts: accountsModule,
   registry: registryModule,

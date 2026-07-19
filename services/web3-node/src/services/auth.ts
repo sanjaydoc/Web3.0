@@ -1,9 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Account, AccountsService, Role } from './accounts.js';
 
-/** Pull the raw ACP token from the request (header or bearer). */
+/** Pull the raw Web3.0 token from the request (header or bearer). */
 export function bearerToken(request: FastifyRequest): string | undefined {
-  const h = request.headers['x-acp-token'];
+  const h = request.headers['x-web3-token'];
   if (typeof h === 'string' && h) return h;
   const auth = request.headers.authorization;
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7);

@@ -25,7 +25,7 @@ def test_derive_did_is_stable_and_formatted() -> None:
     pk, _ = crypto.generate_keypair()
     did = crypto.derive_did(pk)
     assert did == crypto.derive_did(pk)
-    assert did.startswith("did:acp:z")
+    assert did.startswith("did:web3:z")
 
 
 def test_base58_encode_known_vectors() -> None:

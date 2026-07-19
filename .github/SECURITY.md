@@ -2,7 +2,7 @@
 
 ## Our security posture
 
-ACP is designed to be **quantum-resistant**, not "unhackable" — no system is. We use
+Web3.0 is designed to be **quantum-resistant**, not "unhackable" — no system is. We use
 NIST-standardized post-quantum cryptography so that identities and ledger entries remain
 secure against attacks from future quantum computers:
 

@@ -1,4 +1,4 @@
-# Run an ACP (Web3.0) node in a container. Build:  docker build -t web3-node .
+# Run a Web3.0 node in a container. Build:  docker build -t web3-node .
 # Run:  docker run -p 8787:8787 --env-file .env web3-node
 FROM node:20-slim
 WORKDIR /app

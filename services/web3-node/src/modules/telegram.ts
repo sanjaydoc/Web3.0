@@ -1,13 +1,13 @@
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 import { adminRequired, checkAdmin } from '../services/admin.js';
 import { TelegramService } from '../services/telegram.js';
 
 /**
  * telegram — a GUI-managed Telegram front door. All settings (bot token, enabled) come from the
  * dashboard and persist in the Store; nothing lives in .env. The bot runs inside the node and
- * bridges humans to ACP agents. Management endpoints are admin-gated (see services/admin.ts).
+ * bridges humans to Web3.0 agents. Management endpoints are admin-gated (see services/admin.ts).
  */
-export function telegramModule(): AcpModule {
+export function telegramModule(): Web3Module {
   return {
     name: 'telegram',
     version: '0.1.0',

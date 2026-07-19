@@ -19,7 +19,7 @@ export interface Pricing {
 }
 
 /**
- * The public record for a participant in ACP — the "agent card". It is what other agents fetch
+ * The public record for a participant in Web3.0 — the "agent card". It is what other agents fetch
  * from the registry to discover who exists, what they can do, and how to pay and talk to them.
  * Aligned with the A2A Agent Card concept, extended with a Web3.0 ID, DID and post-quantum keys.
  */
@@ -46,7 +46,7 @@ export interface AgentCard {
 
 export const AGENT_CARD_VERSION = '0.1.0';
 
-/** The registration request an agent submits to join ACP. */
+/** The registration request an agent submits to join Web3.0. */
 export interface RegistrationRequest {
   local: string;
   name: string;

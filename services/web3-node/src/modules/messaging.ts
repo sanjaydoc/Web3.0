@@ -1,8 +1,8 @@
 import { open } from '@web3/core';
-import type { AcpMessage, SignedEnvelope, Web3Id } from '@web3/core';
+import type { SignedEnvelope, Web3Id, Web3Message } from '@web3/core';
 import { hashJson } from '@web3/crypto';
 import type { WebSocket } from 'ws';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 
 interface HelloPayload {
   web3Id: Web3Id;
@@ -17,12 +17,12 @@ function safeParse(raw: unknown): Record<string, unknown> | null {
 }
 
 /**
- * messaging — the agent-to-agent relay, ACP's answer to "no agent communication protocol".
+ * messaging — the agent-to-agent relay, Web3.0's answer to "no agent communication protocol".
  * Agents open a WebSocket, authenticate by signing a hello (proving they hold the key behind
  * their DID), then exchange signed A2A messages. The node verifies every signature, runs
  * guardrails, records message provenance on the ledger, and routes (or queues) to the recipient.
  */
-export function messagingModule(): AcpModule {
+export function messagingModule(): Web3Module {
   return {
     name: 'messaging',
     version: '0.1.0',
@@ -48,7 +48,7 @@ export function messagingModule(): AcpModule {
             return;
           }
           if (msg.kind === 'send') {
-            handleSend(authed, msg.envelope as SignedEnvelope<AcpMessage>);
+            handleSend(authed, msg.envelope as SignedEnvelope<Web3Message>);
             return;
           }
           send({ kind: 'error', reason: `unknown kind "${msg.kind}"` });
@@ -99,7 +99,7 @@ export function messagingModule(): AcpModule {
           send({ kind: 'ready', web3Id: id, online: connections.online(), drained });
         }
 
-        function handleSend(from: Web3Id, envelope: SignedEnvelope<AcpMessage>): void {
+        function handleSend(from: Web3Id, envelope: SignedEnvelope<Web3Message>): void {
           const result = open(envelope, from);
           if (!result.ok || !result.payload) {
             send({ kind: 'error', reason: `message rejected: ${result.reason}` });

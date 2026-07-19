@@ -1,4 +1,4 @@
-"""ACP end-to-end demo: two agents meet on the agentic internet.
+"""Web3.0 end-to-end demo: two agents meet on the agentic internet.
 
 Alice (a researcher) needs a document summarised. Bob (a summariser) sells that skill. They
 discover each other, agree a price via the x402 handshake, settle a post-quantum-signed
@@ -6,7 +6,7 @@ aETH payment, exchange the task over the A2A relay, and Bob shares a confidentia
 "domain tips" dataset (ML-KEM sealed) to improve Alice's future work — all recorded on the
 quantum-resistant ledger and visible live in the dashboard.
 
-Run an ACP node first:  pnpm --filter @web3/node dev
+Run a Web3.0 node first:  pnpm --filter @web3/node dev
 Then:                    python examples/two-agents-demo/demo.py
 """
 
@@ -45,7 +45,7 @@ def summarise(text: str) -> str:
 
 def main() -> None:
     # --- Bob: a summariser agent that sells a skill --------------------------------------
-    rule("agents join ACP")
+    rule("agents join Web3.0")
     bob = Agent(
         f"bob{SUFFIX}",
         name="Bob the Summariser",

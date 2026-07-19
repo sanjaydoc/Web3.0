@@ -1,4 +1,4 @@
-"""A host that runs many ACP agents in a single process — the "no-VPS" answer.
+"""A host that runs many Web3.0 agents in a single process — the "no-VPS" answer.
 
 Instead of every agent needing its own always-on server, one AgentHost supervises a fleet of agents:
 it registers and connects them, then keeps them alive, reconnecting any that drop. Run one host on

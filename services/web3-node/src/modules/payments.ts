@@ -2,7 +2,7 @@ import { DEFAULT_CURRENCY, formatAmount, isValidWeb3Id, open } from '@web3/core'
 import type { Amount, Currency, SignedEnvelope, Web3Id } from '@web3/core';
 import { randomId } from '@web3/crypto';
 import { InsufficientFundsError } from '@web3/ledger';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 
 /** A signed instruction to move funds. The signature proves the payer authorised it. */
 interface PaymentInstruction {
@@ -20,7 +20,7 @@ interface PaymentInstruction {
  * spend-cap guardrail before it settles. The x402 quote endpoint exposes the standard
  * "HTTP 402 Payment Required" handshake so a service can price a skill before doing the work.
  */
-export function paymentsModule(): AcpModule {
+export function paymentsModule(): Web3Module {
   return {
     name: 'payments',
     version: '0.1.0',

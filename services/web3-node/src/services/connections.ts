@@ -4,7 +4,7 @@ import type { WebSocket } from 'ws';
 /**
  * Tracks live agent WebSocket connections and routes messages to them. If a recipient is
  * offline, messages queue in memory and flush when it reconnects — so an agent doesn't need a
- * 24/7 VPS to receive work (a first step toward ACP's "no VPS required" goal).
+ * 24/7 VPS to receive work (a first step toward Web3.0's "no VPS required" goal).
  */
 export class ConnectionHub {
   private readonly sockets = new Map<Web3Id, WebSocket>();

@@ -1,12 +1,12 @@
 import { formatAmount } from '@web3/core';
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 
 /**
  * observability — the read side that powers the dashboard. Exposes the live event feed (recent
  * buffer + a Server-Sent-Events stream), the ledger with its verification status, and summary
- * stats. ACP's answer to "no observability".
+ * stats. Web3.0's answer to "no observability".
  */
-export function observabilityModule(): AcpModule {
+export function observabilityModule(): Web3Module {
   return {
     name: 'observability',
     version: '0.1.0',

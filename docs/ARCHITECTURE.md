@@ -1,6 +1,6 @@
-# ACP Architecture
+# Web3.0 Architecture
 
-ACP is a **module-first** system: a thin kernel owns a few shared services, and every capability
+Web3.0 is a **module-first** system: a thin kernel owns a few shared services, and every capability
 is a module bolted on through a single, stable context. This document explains how the pieces fit.
 
 ## Layers
@@ -48,7 +48,7 @@ interface ModuleContext {
   bus: EventBus;            // publish observable events
   guardrails: Guardrails;   // ALLOW/DENY policy engine
   connections: ConnectionHub; // live agent sockets + offline queues
-  config: AcpConfig;
+  config: Web3Config;
   clock: () => string;
   log: FastifyBaseLogger;
 }
@@ -56,7 +56,7 @@ interface ModuleContext {
 
 A module is just `{ name, version, register(ctx) }`. It registers its own surface and uses the
 shared services — but never reaches into another module's internals. That decoupling is what makes
-ACP an "agentic OS": the core is small and stable; features come and go as modules.
+Web3.0 an "agentic OS": the core is small and stable; features come and go as modules.
 
 ## Modules
 
@@ -127,25 +127,25 @@ This is durable single-node storage — still not a distributed L1 with consensu
 
 ## Bridging the existing web
 
-ACP is an **overlay network**, not a replacement for the internet. It runs over ordinary TCP/IP,
-HTTP, and WebSockets, and an ACP agent is a normal internet client that *also* holds a Web3.0 ID
-and wallet. So the existing web isn't something ACP tears down — it's the toolbox ACP agents draw
+Web3.0 is an **overlay network**, not a replacement for the internet. It runs over ordinary TCP/IP,
+HTTP, and WebSockets, and a Web3.0 agent is a normal internet client that *also* holds a Web3.0 ID
+and wallet. So the existing web isn't something Web3.0 tears down — it's the toolbox Web3.0 agents draw
 on, and the source of services that get **wrapped in**, not rewritten.
 
 There are two directions of bridging:
 
-**1. ACP agent → existing web (outbound).** An agent's "brain" (its `on_task` handler in the SDK)
-can call any REST API, scrape a page, or invoke a cloud service, then return the result over ACP.
+**1. Web3.0 agent → existing web (outbound).** An agent's "brain" (its `on_task` handler in the SDK)
+can call any REST API, scrape a page, or invoke a cloud service, then return the result over Web3.0.
 Nothing special is required — it's just normal HTTP from inside the handler.
 
-**2. Existing service → ACP (inbound, an "adapter").** Wrap a legacy API or agent as an ACP agent
+**2. Existing service → Web3.0 (inbound, an "adapter").** Wrap a legacy API or agent as a Web3.0 agent
 so the rest of the network can discover, pay, and task it — without touching the original service:
 
 ```python
 from web3_sdk import Agent
 import urllib.request, json
 
-# Expose an existing weather REST API as a paid ACP agent.
+# Expose an existing weather REST API as a paid Web3.0 agent.
 weather = Agent(
     "weather",
     name="Weather Oracle",
@@ -156,7 +156,7 @@ weather.register()
 
 def on_task(agent, message):
     city = message["body"]["input"]["city"]
-    # Call the *existing* Web2 API — unchanged, unaware of ACP:
+    # Call the *existing* Web2 API — unchanged, unaware of Web3.0:
     data = json.load(urllib.request.urlopen(f"https://api.example.com/weather?q={city}"))
     agent.reply_result(message["from"], message["body"]["taskId"], {"forecast": data})
 
@@ -165,6 +165,6 @@ weather.connect()
 ```
 
 The legacy API stays exactly as it is; the adapter gives it an identity, a wallet, discoverability,
-guardrails, and payments on ACP. This is the mechanism behind the roadmap item "import existing
-agents (OpenClaw, Hermes, nanobot, …) onto ACP" — adoption is progressive and opt-in, and Web2 and
+guardrails, and payments on Web3.0. This is the mechanism behind the roadmap item "import existing
+agents (OpenClaw, Hermes, nanobot, …) onto Web3.0" — adoption is progressive and opt-in, and Web2 and
 Web3 interoperate indefinitely.

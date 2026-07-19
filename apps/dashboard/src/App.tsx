@@ -10,13 +10,13 @@ import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
 import {
-  type AcpEvent,
   type AgentCard,
   type Guardrails,
   type LedgerEntry,
   NODE_URL,
   type Stats,
   type Wallet,
+  type Web3Event,
   api,
   formatAmount,
 } from './api.js';
@@ -39,7 +39,7 @@ type View =
   | 'download';
 
 type Role = 'operator' | 'admin';
-const ROLE_KEY = 'acp.role';
+const ROLE_KEY = 'web3.role';
 
 /** Sidebar entries. `operator: true` = shown to node operators too; the rest are admin-only. */
 const NAV: {
@@ -68,7 +68,7 @@ const NAV: {
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
-  events: AcpEvent[];
+  events: Web3Event[];
   wallets: Wallet[];
   entries: LedgerEntry[];
   ledgerVerified: boolean;
@@ -152,7 +152,7 @@ export function App() {
     <div className="app">
       <aside className="side">
         <div className="brand">
-          <span className="badge">A</span> ACP
+          <span className="badge">W</span> Web3.0
         </div>
         <p className="tagline">the agentic internet · console</p>
         <div className="role-toggle" role="group" aria-label="View mode">
@@ -329,7 +329,7 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
   );
 }
 
-function Traffic({ events }: { events: AcpEvent[] }) {
+function Traffic({ events }: { events: Web3Event[] }) {
   return (
     <>
       <div className="page-head">
@@ -345,7 +345,7 @@ function Traffic({ events }: { events: AcpEvent[] }) {
   );
 }
 
-function Feed({ events }: { events: AcpEvent[] }) {
+function Feed({ events }: { events: Web3Event[] }) {
   if (events.length === 0) return <div className="empty">Waiting for activity…</div>;
   return (
     <div className="feed">

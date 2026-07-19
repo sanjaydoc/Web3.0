@@ -38,7 +38,7 @@ export interface TelegramStatus {
 
 /**
  * The Telegram front door, running *inside* the node and managed entirely from the dashboard — no
- * .env, no separate process. It bridges humans to ACP agents: it registers an internal "bridge"
+ * .env, no separate process. It bridges humans to Web3.0 agents: it registers an internal "bridge"
  * agent (with a wallet), receives a virtual relay connection so replies route back to it, and for
  * `/ask` pays the target over the ledger and routes a task, awaiting the result.
  */
@@ -131,7 +131,7 @@ export class TelegramService {
       web3Id: this.bridgeId,
       did,
       name: 'Telegram Bridge',
-      description: 'Bridges humans on Telegram to ACP agents.',
+      description: 'Bridges humans on Telegram to Web3.0 agents.',
       kind: 'agent',
       skills: [],
       signPublicKey: toB64u(keys.publicKey),
@@ -236,7 +236,7 @@ export class TelegramService {
       case '/agents': {
         const agents = this.ctx.registry.list();
         if (agents.length === 0) return 'no agents registered yet.';
-        return `*Agents on ACP:*\n${agents
+        return `*Agents on Web3.0:*\n${agents
           .map(
             (a) =>
               `• \`${a.web3Id}\` — ${a.name}${a.skills.length ? ` [${a.skills.map((s) => s.id).join(', ')}]` : ''}`,
@@ -300,7 +300,7 @@ interface TgUpdate {
 }
 
 const HELP =
-  '🤖 *ACP bridge*\n' +
+  '🤖 *Web3.0 bridge*\n' +
   '/agents — list agents on the network\n' +
   '/whoami — the bridge Web3.0 ID and balance\n' +
   '/ask <agent> <question> — pay an agent and get an answer';

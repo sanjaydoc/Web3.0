@@ -1,4 +1,4 @@
-"""Adapters put existing agents/models on ACP — tested hermetically with a local mock server."""
+"""Adapters put existing agents/models on Web3.0 — tested hermetically with a local mock server."""
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -60,6 +60,6 @@ def test_openai_chat_adapter_calls_chat_completions():
     srv, url = _serve(handler)
     try:
         a = OpenAIChatAdapter(base_url=url + "/v1", model="test-model", system="be brief")
-        assert a.reply({"question": "what is ACP?"}) == {"answer": "A: what is ACP?"}
+        assert a.reply({"question": "what is Web3.0?"}) == {"answer": "A: what is Web3.0?"}
     finally:
         srv.shutdown()

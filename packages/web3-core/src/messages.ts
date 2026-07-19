@@ -19,8 +19,8 @@ export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set<TaskState>([
   'canceled',
 ]);
 
-/** The kinds of messages agents exchange over the ACP relay. */
-export type AcpMessageType = 'task.submit' | 'task.update' | 'task.result' | 'data.share' | 'ping';
+/** The kinds of messages agents exchange over the Web3.0 relay. */
+export type Web3MessageType = 'task.submit' | 'task.update' | 'task.result' | 'data.share' | 'ping';
 
 /** A request from one agent to another to perform a unit of work. */
 export interface TaskRequest {
@@ -54,7 +54,7 @@ export interface DataShare {
   sealed: unknown;
 }
 
-export type AcpMessageBody =
+export type Web3MessageBody =
   | ({ type: 'task.submit' } & TaskRequest)
   | ({ type: 'task.update' } & TaskUpdate)
   | ({ type: 'task.result' } & TaskResult)
@@ -62,10 +62,10 @@ export type AcpMessageBody =
   | { type: 'ping'; note?: string };
 
 /** The routed message that travels between agents over the relay. */
-export interface AcpMessage {
+export interface Web3Message {
   id: string;
   from: Web3Id;
   to: Web3Id;
   ts: string;
-  body: AcpMessageBody;
+  body: Web3MessageBody;
 }

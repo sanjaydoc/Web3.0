@@ -52,12 +52,12 @@ describe('ML-DSA signatures', () => {
 });
 
 describe('DIDs', () => {
-  it('derives a stable did:acp identifier from a public key', () => {
+  it('derives a stable did:web3 identifier from a public key', () => {
     const seed = new Uint8Array(32).fill(7);
     const a = generateKeypair(seed);
     const b = generateKeypair(seed);
     expect(deriveDid(a.publicKey)).toBe(deriveDid(b.publicKey));
-    expect(deriveDid(a.publicKey)).toMatch(/^did:acp:z[1-9A-HJ-NP-Za-km-z]+$/);
+    expect(deriveDid(a.publicKey)).toMatch(/^did:web3:z[1-9A-HJ-NP-Za-km-z]+$/);
   });
 
   it('gives different DIDs to different keys', () => {

@@ -22,37 +22,37 @@ describe('Ledger', () => {
   });
 
   it('registers accounts with opening balances', () => {
-    ledger.register(alice, 'did:acp:za', 1000);
-    ledger.register(bob, 'did:acp:zb', 500);
+    ledger.register(alice, 'did:web3:za', 1000);
+    ledger.register(bob, 'did:web3:zb', 500);
     expect(ledger.balanceOf(alice)).toBe(1000);
     expect(ledger.balanceOf(bob)).toBe(500);
     expect(ledger.size).toBe(2);
   });
 
   it('transfers funds between wallets', () => {
-    ledger.register(alice, 'did:acp:za', 1000);
-    ledger.register(bob, 'did:acp:zb', 0);
+    ledger.register(alice, 'did:web3:za', 1000);
+    ledger.register(bob, 'did:web3:zb', 0);
     ledger.transfer(alice, bob, 250, { memo: 'task:summarise', taskId: 't1' });
     expect(ledger.balanceOf(alice)).toBe(750);
     expect(ledger.balanceOf(bob)).toBe(250);
   });
 
   it('refuses to overdraw a wallet', () => {
-    ledger.register(alice, 'did:acp:za', 100);
-    ledger.register(bob, 'did:acp:zb', 0);
+    ledger.register(alice, 'did:web3:za', 100);
+    ledger.register(bob, 'did:web3:zb', 0);
     expect(() => ledger.transfer(alice, bob, 101)).toThrow(InsufficientFundsError);
     expect(ledger.balanceOf(alice)).toBe(100);
     expect(ledger.balanceOf(bob)).toBe(0);
   });
 
   it('mints faucet credits', () => {
-    ledger.register(alice, 'did:acp:za', 0);
+    ledger.register(alice, 'did:web3:za', 0);
     ledger.mint(alice, 5000);
     expect(ledger.balanceOf(alice)).toBe(5000);
   });
 
   it('records message provenance without content', () => {
-    ledger.register(alice, 'did:acp:za', 0);
+    ledger.register(alice, 'did:web3:za', 0);
     const entry = ledger.recordMessage({
       messageId: 'm1',
       from: alice,
@@ -64,8 +64,8 @@ describe('Ledger', () => {
   });
 
   it('verifies an intact chain', () => {
-    ledger.register(alice, 'did:acp:za', 1000);
-    ledger.register(bob, 'did:acp:zb', 0);
+    ledger.register(alice, 'did:web3:za', 1000);
+    ledger.register(bob, 'did:web3:zb', 0);
     ledger.transfer(alice, bob, 100);
     const report = ledger.verifyChain();
     expect(report.ok).toBe(true);
@@ -74,8 +74,8 @@ describe('Ledger', () => {
   });
 
   it('detects a tampered entry in an exported snapshot (the integrity guarantee)', () => {
-    ledger.register(alice, 'did:acp:za', 1000);
-    ledger.register(bob, 'did:acp:zb', 0);
+    ledger.register(alice, 'did:web3:za', 1000);
+    ledger.register(bob, 'did:web3:zb', 0);
     ledger.transfer(alice, bob, 100);
 
     const snapshot = ledger.toJSON();
@@ -91,8 +91,8 @@ describe('Ledger', () => {
   });
 
   it('persists payments without optional fields as absent, not null (MongoDB round-trip)', () => {
-    ledger.register(alice, 'did:acp:za', 1000);
-    ledger.register(bob, 'did:acp:zb', 0);
+    ledger.register(alice, 'did:web3:za', 1000);
+    ledger.register(bob, 'did:web3:zb', 0);
     // A payment with NO memo/taskId — the case that broke hydrate() after a MongoDB restart,
     // because the driver stored the `undefined` fields as `null` and the reloaded entry no longer
     // hashed to its stored hash.
@@ -119,7 +119,7 @@ describe('Ledger', () => {
   });
 
   it('links every entry to its predecessor', () => {
-    ledger.register(alice, 'did:acp:za', 0);
+    ledger.register(alice, 'did:web3:za', 0);
     ledger.mint(alice, 10);
     const [first, second] = ledger.all();
     expect(second!.prevHash).toBe(first!.hash);

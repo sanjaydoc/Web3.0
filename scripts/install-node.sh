@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Run an ACP (Web3.0) node on any machine — PC, Mac, Linux, server, or Android/Termux.
+# Run a Web3.0 node on any machine — PC, Mac, Linux, server, or Android/Termux.
 # Usage:  curl -fsSL <raw-url>/scripts/install-node.sh | bash
 set -euo pipefail
 
 REPO="${WEB3_REPO:-https://github.com/sanjaydoc/Web3.0.git}"
 DIR="${WEB3_DIR:-web3-node}"
 
-echo "▸ ACP node installer"
+echo "▸ Web3.0 node installer"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -31,7 +31,7 @@ if ! have node; then
   pkg_install nodejs || pkg_install node || { echo "Please install Node 20+: https://nodejs.org"; exit 1; }
 fi
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-[ "${NODE_MAJOR:-0}" -ge 20 ] || echo "⚠ Node ${NODE_MAJOR} found; ACP wants 20+. Upgrade via nvm if it errors: https://github.com/nvm-sh/nvm"
+[ "${NODE_MAJOR:-0}" -ge 20 ] || echo "⚠ Node ${NODE_MAJOR} found; Web3.0 wants 20+. Upgrade via nvm if it errors: https://github.com/nvm-sh/nvm"
 
 if [ ! -d "$DIR" ]; then
   echo "▸ cloning $REPO"

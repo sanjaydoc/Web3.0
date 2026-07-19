@@ -1,7 +1,7 @@
-"""Adapters — import an existing agent or model onto ACP.
+"""Adapters — import an existing agent or model onto Web3.0.
 
 An adapter turns something you already have (an HTTP agent, an OpenAI-compatible chat endpoint, or a
-plain Python function) into an ACP agent: `serve()` registers it, connects it to the relay, and
+plain Python function) into a Web3.0 agent: `serve()` registers it, connects it to the relay, and
 routes each incoming task to the adapter's `reply()`. This is the on-ramp for existing agents.
 
     from web3_sdk.adapters import OpenAIChatAdapter, serve
@@ -23,7 +23,7 @@ class Adapter:
 
     skill_id: str = "ask"
     skill_name: str = "Ask"
-    skill_desc: str = "Imported via an ACP adapter"
+    skill_desc: str = "Imported via a Web3.0 adapter"
 
     def reply(self, payload: dict[str, Any]) -> dict[str, Any]:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -34,7 +34,7 @@ class Adapter:
 
 
 class CallableAdapter(Adapter):
-    """Wrap any `str -> str` Python function as an ACP agent."""
+    """Wrap any `str -> str` Python function as a Web3.0 agent."""
 
     def __init__(self, fn: Callable[[str], str], *, skill_id: str = "ask", skill_name: str = "Ask"):
         self.fn = fn
@@ -78,7 +78,7 @@ class OpenAIChatAdapter(Adapter):
     """Import any OpenAI-compatible chat endpoint — OpenAI, OpenRouter, Ollama, vLLM, LM Studio…
 
     Calls ``{base_url}/chat/completions`` with the standard schema, so a huge range of existing
-    agents/models can be put on ACP with one line."""
+    agents/models can be put on Web3.0 with one line."""
 
     def __init__(
         self,
@@ -124,7 +124,7 @@ def serve(
     description: str = "",
     block: bool = True,
 ):
-    """Register `adapter` as an ACP agent named `local@web3.0` and route tasks to it.
+    """Register `adapter` as a Web3.0 agent named `local@web3.0` and route tasks to it.
 
     Returns the connected `Agent`. With `block=True` (default) it runs until interrupted."""
     from .agent import Agent

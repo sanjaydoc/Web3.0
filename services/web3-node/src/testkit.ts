@@ -1,9 +1,9 @@
 import { seal, web3Id } from '@web3/core';
-import type { AcpMessage, SignedEnvelope, Web3Id } from '@web3/core';
+import type { SignedEnvelope, Web3Id, Web3Message } from '@web3/core';
 import { generateKemKeypair, generateKeypair, toB64u } from '@web3/crypto';
 import type { Keypair } from '@web3/crypto';
 
-/** A minimal in-test agent identity: the key material and helpers to sign ACP payloads. */
+/** A minimal in-test agent identity: the key material and helpers to sign Web3.0 payloads. */
 export interface TestAgent {
   web3Id: Web3Id;
   keys: Keypair;
@@ -51,10 +51,10 @@ export function sealAs<T>(
 export function message(
   agent: TestAgent,
   to: Web3Id,
-  body: AcpMessage['body'],
+  body: Web3Message['body'],
   id = 'msg1',
-): SignedEnvelope<AcpMessage> {
+): SignedEnvelope<Web3Message> {
   const now = new Date().toISOString();
-  const msg: AcpMessage = { id, from: agent.web3Id, to, ts: now, body };
+  const msg: Web3Message = { id, from: agent.web3Id, to, ts: now, body };
   return sealAs(agent, msg, now);
 }

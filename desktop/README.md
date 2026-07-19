@@ -1,4 +1,4 @@
-# ACP Node — desktop app (scaffold)
+# Web3.0 Node — desktop app (scaffold)
 
 A **native desktop shell** (Tauri) that wraps the Web3.0 dashboard in a WebView so an operator can
 **double-click to run and manage a node** — producing real installers: **Windows `.msi`/`.exe`,

@@ -1,5 +1,5 @@
 /**
- * @web3/core — the shared protocol vocabulary of ACP.
+ * @web3/core — the shared protocol vocabulary of Web3.0.
  *
  * Everything the kernel and its modules exchange is defined here: Web3.0 IDs, agent cards,
  * wallets, signed envelopes, the A2A-aligned task lifecycle, and observability events. Keeping

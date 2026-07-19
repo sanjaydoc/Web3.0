@@ -1,13 +1,13 @@
-import type { AcpModule, ModuleContext } from '../context.js';
+import type { ModuleContext, Web3Module } from '../context.js';
 import type { Role } from '../services/accounts.js';
 import { requireRole } from '../services/auth.js';
 
 /**
  * accounts — sign-up + identity. `POST /accounts/signup` mints a human address (`local@web3.0`) and a
- * one-time ACP token; `GET /accounts/me` resolves the caller's account from that token; `GET /accounts`
+ * one-time Web3.0 token; `GET /accounts/me` resolves the caller's account from that token; `GET /accounts`
  * (admin) lists them. This replaces the single shared WEB3_ADMIN_TOKEN with real per-user roles.
  */
-export function accountsModule(): AcpModule {
+export function accountsModule(): Web3Module {
   return {
     name: 'accounts',
     version: '0.1.0',
@@ -43,7 +43,7 @@ export function accountsModule(): AcpModule {
 
       http.get('/accounts/me', async (request, reply) => {
         const acct = accounts.authenticate(
-          (request.headers['x-acp-token'] as string | undefined) ??
+          (request.headers['x-web3-token'] as string | undefined) ??
             (typeof request.headers.authorization === 'string' &&
             request.headers.authorization.startsWith('Bearer ')
               ? request.headers.authorization.slice(7)

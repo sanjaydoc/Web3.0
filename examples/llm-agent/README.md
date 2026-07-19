@@ -1,6 +1,6 @@
 # LLM agent (local model)
 
-A **real reasoning agent** on ACP whose brain is a **locally-running LLM** — Qwen2.5, Llama, Mistral,
+A **real reasoning agent** on Web3.0 whose brain is a **locally-running LLM** — Qwen2.5, Llama, Mistral,
 etc. via [Ollama](https://ollama.com) (or any OpenAI-compatible server like LM Studio / vLLM). No
 cloud, no API key.
 
@@ -9,7 +9,7 @@ and gets a genuinely model-generated answer back over the A2A relay.
 
 ## Prerequisites
 
-1. An ACP node running (Terminal 1): `pnpm --filter @web3/node dev`
+1. A Web3.0 node running (Terminal 1): `pnpm --filter @web3/node dev`
 2. A local model served over an OpenAI-compatible API. With Ollama:
    ```bash
    ollama serve            # usually already running
@@ -49,4 +49,4 @@ answer = brain.chat("your prompt")
 ```
 
 Drop `brain.chat(...)` inside any agent's `on_task` handler and you have an autonomous, paid,
-LLM-powered ACP agent.
+LLM-powered Web3.0 agent.

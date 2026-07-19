@@ -1,7 +1,7 @@
 {
   "name": "@web3/node",
   "version": "0.1.0",
-  "description": "The ACP node: a thin kernel that loads pluggable modules (naming, registry, messaging, payments, guardrails, observability).",
+  "description": "The Web3.0 node: a thin kernel that loads pluggable modules (naming, registry, messaging, payments, guardrails, observability).",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

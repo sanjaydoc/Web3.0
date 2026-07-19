@@ -1,6 +1,6 @@
 import type { Ledger } from '@web3/ledger';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
-import type { AcpConfig } from './config.js';
+import type { Web3Config } from './config.js';
 import type { AccountsService } from './services/accounts.js';
 import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
@@ -14,7 +14,7 @@ import type { Store } from './store/index.js';
 /**
  * The surface every module is handed at load time. A module registers routes/handlers on `http`
  * and uses the shared services — but never reaches into another module's internals. This is what
- * makes ACP module-first: features compose through this context and can be added or removed by
+ * makes Web3.0 module-first: features compose through this context and can be added or removed by
  * editing `config.modules`.
  */
 export interface ModuleContext {
@@ -28,9 +28,9 @@ export interface ModuleContext {
   consensus: ConsensusCoordinator;
   connections: ConnectionHub;
   store: Store;
-  /** Sign-up + authentication: resolves accounts, addresses, and roles from ACP tokens. */
+  /** Sign-up + authentication: resolves accounts, addresses, and roles from Web3.0 tokens. */
   accounts: AccountsService;
-  config: AcpConfig;
+  config: Web3Config;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;
   /** Epoch-ms the node process started (for uptime). */
@@ -39,8 +39,8 @@ export interface ModuleContext {
   log: FastifyBaseLogger;
 }
 
-/** A pluggable ACP capability. */
-export interface AcpModule {
+/** A pluggable Web3.0 capability. */
+export interface Web3Module {
   name: string;
   version: string;
   register(ctx: ModuleContext): void | Promise<void>;

@@ -7,7 +7,7 @@ interface Window {
 }
 
 /**
- * The guardrails engine — ACP's answer to "no observability or guardrails". Every sensitive
+ * The guardrails engine — Web3.0's answer to "no observability or guardrails". Every sensitive
  * action passes a policy check that returns an explicit ALLOW/DENY verdict, which the node
  * records as an event. Policies are intentionally simple and composable for the MVP.
  */

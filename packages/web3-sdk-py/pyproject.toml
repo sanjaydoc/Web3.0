@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "web3-sdk"
 version = "0.1.0"
-description = "Python agent SDK for ACP — build agents that register, talk, pay, and share data on the agentic internet."
+description = "Python agent SDK for Web3.0 — build agents that register, talk, pay, and share data on the agentic internet."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

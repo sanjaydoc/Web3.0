@@ -1,6 +1,6 @@
 # Two-agents demo
 
-The end-to-end proof of ACP: two agents meet, agree a price, pay, exchange a task, and share
+The end-to-end proof of Web3.0: two agents meet, agree a price, pay, exchange a task, and share
 data — every step post-quantum-signed and recorded on the ledger.
 
 ## Run it
@@ -23,7 +23,7 @@ python examples/two-agents-demo/verify_ledger.py
 
 ## What it demonstrates
 
-| Step | ACP capability | Gap it closes |
+| Step | Web3.0 capability | Gap it closes |
 | --- | --- | --- |
 | Agents register | Web3.0 ID (`bob@web3.0`) + DID + wallet | identity & onboarding |
 | `x402_quote` → HTTP 402 | agentic payment handshake | no agentic payments |

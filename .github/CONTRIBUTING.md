@@ -1,6 +1,6 @@
-# Contributing to ACP
+# Contributing to Web3.0
 
-Thanks for your interest in building the agentic internet. ACP is **module-first**:
+Thanks for your interest in building the agentic internet. Web3.0 is **module-first**:
 every capability is a module you can add or remove. New features should almost
 always arrive as a new module or a change scoped to an existing one.
 
@@ -23,7 +23,7 @@ ruff check packages/web3-sdk-py examples
 Boot the stack locally:
 
 ```bash
-pnpm --filter @web3/node dev        # ACP kernel + modules on :8787
+pnpm --filter @web3/node dev        # Web3.0 kernel + modules on :8787
 pnpm --filter @web3/dashboard dev   # observability console on :5173
 python examples/two-agents-demo/demo.py
 ```

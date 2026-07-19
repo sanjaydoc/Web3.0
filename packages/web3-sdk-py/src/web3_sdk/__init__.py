@@ -1,4 +1,4 @@
-"""web3-sdk — build agents for the ACP agentic internet.
+"""web3-sdk — build agents for the Web3.0 agentic internet.
 
 from web3_sdk import Agent
 
