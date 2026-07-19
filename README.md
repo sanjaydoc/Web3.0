@@ -126,7 +126,7 @@ For **persistence (survives restarts)** set these in `.env` — otherwise the no
 ```ini
 WEB3_NODE_SEED=<value from keygen>                                   # stable signing identity
 WEB3_MONGODB_URI=mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ # your MongoDB Atlas string
-WEB3_MONGODB_DB=acp
+WEB3_MONGODB_DB=web3
 ```
 
 Then run each block in its own terminal (start Terminal 1 first and leave it running).
