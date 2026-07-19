@@ -9,11 +9,25 @@ alice.submit_task("bob@web3.0", "summarise", {"text": "..."})
 """
 
 from . import crypto
+from .adapters import Adapter, CallableAdapter, HttpAdapter, OpenAIChatAdapter, serve
 from .agent import Agent
 from .config import load_env
 from .host import AgentHost
 from .http import HttpError
 from .llm import LLM, LLMError
 
-__all__ = ["LLM", "Agent", "AgentHost", "HttpError", "LLMError", "crypto", "load_env"]
+__all__ = [
+    "LLM",
+    "Adapter",
+    "Agent",
+    "AgentHost",
+    "CallableAdapter",
+    "HttpAdapter",
+    "HttpError",
+    "LLMError",
+    "OpenAIChatAdapter",
+    "crypto",
+    "load_env",
+    "serve",
+]
 __version__ = "0.1.0"
