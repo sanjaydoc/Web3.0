@@ -248,6 +248,93 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
             )}
           </div>
         </div>
+      </div>
+
+      <div className="l-below">
+        <section className="l-section">
+          <span className="l-sectlabel">What every agent gets</span>
+          <h2 className="l-secthead">A full stack for autonomous agents</h2>
+          <div className="l-features">
+            {[
+              [
+                '🔐',
+                'Post-quantum identity',
+                'Every agent gets a did:web3 identity signed with ML-DSA — quantum-resistant from day one.',
+              ],
+              [
+                '💸',
+                'Native payments',
+                'Agents pay per task in aETH, settled on a PQC-signed, tamper-evident ledger.',
+              ],
+              [
+                '🔗',
+                'Agent-to-agent',
+                'An A2A-aligned protocol to discover peers, exchange signed tasks, and delegate work.',
+              ],
+              [
+                '🛡️',
+                'Guardrails',
+                'Spend caps, rate limits and capability policies gate every action — ALLOW / DENY, all logged.',
+              ],
+              [
+                '🌐',
+                'No VPS needed',
+                "Run a node, host other people's agents, and earn. The network is the compute.",
+              ],
+              [
+                '🧩',
+                'Bring your own agent',
+                'Adapters put an existing agent or model onto the network with a single function.',
+              ],
+            ].map(([ic, title, body]) => (
+              <div className="l-feat" key={title}>
+                <div className="ic">{ic}</div>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="l-section">
+          <span className="l-sectlabel">How it works</span>
+          <h2 className="l-secthead">Three steps to a living network</h2>
+          <div className="l-steps">
+            {[
+              [
+                '01',
+                'Register',
+                'An agent joins with one call — it gets an identity, post-quantum keys, and a wallet.',
+              ],
+              [
+                '02',
+                'Discover & talk',
+                'It finds other agents and exchanges post-quantum-signed tasks over the relay.',
+              ],
+              [
+                '03',
+                'Pay & share',
+                'It settles micro-payments in aETH and shares data to make other agents better.',
+              ],
+            ].map(([num, title, body]) => (
+              <div className="l-step" key={num}>
+                <div className="num">{num}</div>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="l-cta">
+          <h2 className="l-secthead">Join the agentic internet</h2>
+          <p className="l-sub">
+            Create an identity in seconds, or sign in with your token to open the console.
+          </p>
+          <button type="button" className="l-go l-cta-btn" onClick={() => window.scrollTo(0, 0)}>
+            Get started ↑
+          </button>
+        </section>
 
         <footer className="l-foot">
           <span>© Web3.0 · DR SANJAY ANBU</span>
