@@ -5,6 +5,7 @@ import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
 import { HostedDapps } from './HostedDapps.js';
+import { Landing } from './Landing.js';
 import { Network } from './Network.js';
 import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
@@ -19,6 +20,7 @@ import {
   type Web3Event,
   api,
   formatAmount,
+  getWeb3Token,
 } from './api.js';
 
 type View =
@@ -104,6 +106,28 @@ export function App() {
   const [role, setRole] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
   );
+  // Auth gate: null = still checking, true = signed in, false = show the landing.
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [guest, setGuest] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!getWeb3Token()) {
+        if (active) setAuthed(false);
+        return;
+      }
+      try {
+        await api.me();
+        if (active) setAuthed(true);
+      } catch {
+        if (active) setAuthed(false); // stale/invalid token → back to landing
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const visibleNav = NAV.filter((n) => role === 'admin' || n.operator);
 
@@ -147,6 +171,12 @@ export function App() {
       clearInterval(timer);
     };
   }, []);
+
+  // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
+  if (authed === null) return <div className="landing" aria-busy="true" />;
+  if (!authed && !guest) {
+    return <Landing onEnter={() => setAuthed(true)} onGuest={() => setGuest(true)} />;
+  }
 
   return (
     <div className="app">

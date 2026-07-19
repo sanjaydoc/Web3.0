@@ -84,7 +84,8 @@ export function Account() {
     setMe(null);
     setFreshToken(null);
     setRevealed(false);
-    setMsg({ kind: 'ok', text: 'Signed out.' });
+    // Drop back to the landing gate (App re-checks auth on load).
+    window.location.reload();
   }
 
   const token = me ? getWeb3Token() : null;
