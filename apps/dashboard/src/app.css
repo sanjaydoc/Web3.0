@@ -824,7 +824,7 @@ button.connector:not(:disabled):hover {
   overflow-y: auto;
   background: #05060a;
   color: #e8ecf4;
-  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: "Hanken Grotesk", system-ui, sans-serif;
 }
 .landing-bg {
   position: fixed;
@@ -835,8 +835,7 @@ button.connector:not(:disabled):hover {
 .l-aurora {
   position: absolute;
   inset: -20%;
-  background:
-    radial-gradient(40% 40% at 20% 20%, rgba(34, 227, 167, 0.22), transparent 70%),
+  background: radial-gradient(40% 40% at 20% 20%, rgba(34, 227, 167, 0.22), transparent 70%),
     radial-gradient(45% 45% at 80% 25%, rgba(77, 124, 255, 0.2), transparent 70%),
     radial-gradient(50% 50% at 60% 85%, rgba(124, 108, 255, 0.18), transparent 70%);
   filter: blur(30px);
@@ -903,7 +902,7 @@ button.connector:not(:disabled):hover {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-size: 1.4rem;
   font-weight: 500;
 }
@@ -916,7 +915,7 @@ button.connector:not(:disabled):hover {
   background: linear-gradient(135deg, #22e3a7, #4d7cff);
   color: #05060a;
   font-weight: 800;
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: "Hanken Grotesk", sans-serif;
   box-shadow: 0 0 18px rgba(34, 227, 167, 0.5);
 }
 .l-doclink {
@@ -953,7 +952,7 @@ button.connector:not(:disabled):hover {
   font-weight: 700;
 }
 .l-title {
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-weight: 500;
   font-size: clamp(2.8rem, 7vw, 5rem);
   line-height: 1.02;
@@ -982,7 +981,7 @@ button.connector:not(:disabled):hover {
   flex-direction: column;
 }
 .l-stats b {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   color: #e8ecf4;
   font-size: 1.05rem;
 }
@@ -1054,7 +1053,7 @@ button.connector:not(:disabled):hover {
 }
 .l-field em {
   font-style: normal;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 0.78rem;
   color: #6b7690;
 }
@@ -1111,7 +1110,7 @@ button.connector:not(:disabled):hover {
   text-decoration: underline;
 }
 .l-cardhead {
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-size: 1.3rem;
 }
 .l-sub {
@@ -1134,7 +1133,7 @@ button.connector:not(:disabled):hover {
   min-width: 0;
   overflow: auto;
   white-space: nowrap;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 0.82rem;
   color: #22e3a7;
 }
@@ -1186,7 +1185,7 @@ button.connector:not(:disabled):hover {
   font-weight: 700;
 }
 .l-secthead {
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-weight: 500;
   font-size: clamp(1.8rem, 3.5vw, 2.6rem);
   color: #e8ecf4;
@@ -1214,7 +1213,7 @@ button.connector:not(:disabled):hover {
 }
 .l-feat h3 {
   margin: 0.7rem 0 0.4rem;
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-weight: 500;
   font-size: 1.15rem;
   color: #e8ecf4;
@@ -1235,14 +1234,14 @@ button.connector:not(:disabled):hover {
   border-left: 2px solid rgba(34, 227, 167, 0.4);
 }
 .l-step .num {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   color: #22e3a7;
   font-size: 0.8rem;
   font-weight: 700;
 }
 .l-step h3 {
   margin: 0.5rem 0 0.4rem;
-  font-family: 'Newsreader', serif;
+  font-family: "Newsreader", serif;
   font-weight: 500;
   font-size: 1.2rem;
   color: #e8ecf4;
