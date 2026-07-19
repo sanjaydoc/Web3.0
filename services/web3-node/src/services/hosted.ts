@@ -24,6 +24,8 @@ export interface HostedAgentConfig {
   webhookUrl?: string;
   /** Who published this (a free-text publisher/creator label — there is no user auth). */
   createdBy?: string;
+  /** Names of the connectors this agent is allowed to use (from the Connectors catalogue). */
+  connectors?: string[];
   /** ISO timestamp set by the node when the agent is first launched. */
   createdAt?: string;
 }
@@ -43,6 +45,8 @@ export interface HostedAgentStatus {
   running: boolean;
   /** Publisher/creator label, or 'unknown' if none was given. */
   createdBy: string;
+  /** Connectors this agent is configured to use. */
+  connectors: string[];
   /** When it was first launched (ISO). */
   createdAt: string;
   /** The dApp's HTTP endpoint (webhook kind only). Never includes secrets. */
@@ -105,6 +109,7 @@ export class HostedAgentService {
         hasKey: Boolean(config.apiKey),
         running,
         createdBy: config.createdBy?.trim() || 'unknown',
+        connectors: config.connectors ?? [],
         createdAt: config.createdAt ?? card?.createdAt ?? '',
         webhookUrl: config.webhookUrl,
         did: card?.did ?? '',

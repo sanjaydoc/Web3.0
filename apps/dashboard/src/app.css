@@ -1302,3 +1302,34 @@ button.connector:not(:disabled):hover {
   gap: 8px;
   margin-bottom: 4px;
 }
+
+/* Chip multi-select (Genesis connector picker) */
+.chip-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-toggle {
+  border: 1px solid var(--hair);
+  background: var(--paper);
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip-toggle:hover {
+  border-color: var(--ink);
+}
+.chip-toggle.on {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.field-lbl {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
+}

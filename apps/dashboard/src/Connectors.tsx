@@ -102,6 +102,9 @@ const CATALOGUE: { category: string; items: Builtin[] }[] = [
 
 const total = CATALOGUE.reduce((n, g) => n + g.items.length, 0);
 
+/** Flat list of built-in connector names, for pickers elsewhere (e.g. Genesis). */
+export const BUILTIN_CONNECTORS: string[] = CATALOGUE.flatMap((g) => g.items.map((i) => i.name));
+
 export function Connectors({ go }: { go?: (view: string) => void }) {
   const [tg, setTg] = useState<TelegramStatus | null>(null);
   const [settle, setSettle] = useState<SettlementInfo | null>(null);

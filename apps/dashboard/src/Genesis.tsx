@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type HostedAgent, NODE_URL, api } from './api.js';
+import { BUILTIN_CONNECTORS } from './Connectors.js';
+import { type CustomConnector, type HostedAgent, NODE_URL, api } from './api.js';
 
 const ADMIN_KEY = 'web3.adminToken';
 
@@ -40,8 +41,20 @@ export function Genesis() {
   const [launchMsg, setLaunchMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [hosted, setHosted] = useState<HostedAgent[]>([]);
   const [adminRequired, setAdminRequired] = useState(false);
+  const [connectors, setConnectors] = useState<string[]>([]);
+  const [customConns, setCustomConns] = useState<CustomConnector[]>([]);
 
   const current = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
+
+  // Connectors the operator can assign to the agent: built-in catalogue + any custom ones.
+  const connectorOptions = useMemo(
+    () => [...BUILTIN_CONNECTORS, ...customConns.map((c) => c.name)],
+    [customConns],
+  );
+  const toggleConnector = (nameStr: string) =>
+    setConnectors((cur) =>
+      cur.includes(nameStr) ? cur.filter((c) => c !== nameStr) : [...cur, nameStr],
+    );
 
   const refreshHosted = useCallback(async () => {
     try {
@@ -59,6 +72,13 @@ export function Genesis() {
     const t = setInterval(refreshHosted, 5000);
     return () => clearInterval(t);
   }, [refreshHosted]);
+
+  useEffect(() => {
+    api
+      .connectors()
+      .then((r) => setCustomConns(r.connectors))
+      .catch(() => setCustomConns([]));
+  }, []);
 
   const rememberAdmin = (value: string) => {
     setAdmin(value);
@@ -84,6 +104,7 @@ export function Genesis() {
           apiKey: apiKey || undefined,
           system,
           createdBy: createdBy.trim() || undefined,
+          connectors,
         },
         admin,
       );
@@ -289,6 +310,24 @@ while True:
             <label htmlFor="g-system">System prompt (the agent's persona)</label>
             <textarea id="g-system" value={system} onChange={(e) => setSystem(e.target.value)} />
           </div>
+          <div className="field wide">
+            <span className="field-lbl">Connectors this agent uses</span>
+            <div className="chip-pick">
+              {connectorOptions.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  className={`chip-toggle ${connectors.includes(c) ? 'on' : ''}`}
+                  onClick={() => toggleConnector(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <span className="hint">
+              {connectors.length} selected — click to add/remove. Add more in the Connectors tab.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -329,6 +368,11 @@ while True:
                   <span className={`chip ${h.running ? 'allow' : 'deny'}`}>
                     {h.running ? 'running' : 'stopped'}
                   </span>
+                  {h.connectors && h.connectors.length > 0 && (
+                    <span className="muted" style={{ marginLeft: 6, fontSize: '0.8rem' }}>
+                      · connectors: {h.connectors.join(', ')}
+                    </span>
+                  )}
                 </span>
                 {h.running && (
                   <button

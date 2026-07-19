@@ -84,6 +84,7 @@ export interface HostedAgent {
   hasKey: boolean;
   running: boolean;
   createdBy: string;
+  connectors: string[];
   createdAt: string;
   webhookUrl?: string;
   did: string;
@@ -104,6 +105,7 @@ export interface HostedLaunchConfig {
   system?: string;
   webhookUrl?: string;
   createdBy?: string;
+  connectors?: string[];
 }
 
 export interface NodeInfo {
