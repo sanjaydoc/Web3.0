@@ -56,7 +56,7 @@ const NAV: {
   { id: 'telegram', label: 'Telegram bot', operator: true },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
   { id: 'agents', label: 'Agents', badge: 'agents' },
-  { id: 'skills', label: 'Skills' },
+  { id: 'skills', label: 'Skills', operator: true },
   { id: 'traffic', label: 'Live traffic', badge: 'events' },
   { id: 'guardrails', label: 'Guardrails' },
   { id: 'developers', label: 'Developers', operator: true },
