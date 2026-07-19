@@ -15,6 +15,17 @@ export function Account() {
   const [freshToken, setFreshToken] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
+  const copyToken = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      },
+      () => undefined,
+    );
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!getWeb3Token()) {
@@ -42,6 +53,7 @@ export function Account() {
       const res = await api.signup(local.trim(), role);
       setWeb3Token(res.token);
       setFreshToken(res.token);
+      setRevealed(true); // show it immediately in the signed-in view
       // remember the creator name for dApp scoping too
       localStorage.setItem('web3.creatorName', res.address);
       await refresh();
@@ -71,8 +83,11 @@ export function Account() {
     setWeb3Token('');
     setMe(null);
     setFreshToken(null);
+    setRevealed(false);
     setMsg({ kind: 'ok', text: 'Signed out.' });
   }
+
+  const token = me ? getWeb3Token() : null;
 
   return (
     <>
@@ -94,6 +109,37 @@ export function Account() {
             <dt>Since</dt>
             <dd>{new Date(me.createdAt).toLocaleString()}</dd>
           </dl>
+
+          {token && (
+            <>
+              <div className="section-title" style={{ marginTop: 18 }}>
+                Your token
+              </div>
+              <div className="term" style={{ marginBottom: 8 }}>
+                <div className="term-body">
+                  <div className="term-cmd">
+                    <code>{revealed ? token : `web3_${'•'.repeat(28)}`}</code>
+                    <button type="button" className="copy" onClick={() => setRevealed((r) => !r)}>
+                      {revealed ? 'Hide' : 'Reveal'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`copy ${copied ? 'copied' : ''}`}
+                      onClick={() => copyToken(token)}
+                    >
+                      {copied ? 'copied ✓' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="hint">
+                {freshToken
+                  ? 'New token — copy it now and store it safely. This is the only place it’s shown.'
+                  : 'Your API token. Copy it to sign in on another device, or use it as the x-web3-token header in agent scripts. Store it like a password.'}
+              </p>
+            </>
+          )}
+
           <div className="gen-actions">
             <button type="button" className="btn ghost" onClick={signout}>
               Sign out
