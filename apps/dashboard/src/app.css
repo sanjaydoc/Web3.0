@@ -444,13 +444,91 @@ button.connector:not(:disabled):hover {
   min-height: 460px;
   border-radius: 16px;
   overflow: hidden;
-  background: #070b12;
   border: 1px solid rgba(120, 160, 190, 0.18);
+  background: radial-gradient(120% 100% at 50% 45%, #0a2740 0%, #06182a 55%, #030d18 100%);
 }
 .netmap canvas {
   position: absolute;
   inset: 0;
   display: block;
+}
+.netmap-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.netmap-svg:active {
+  cursor: grabbing;
+}
+.netmap-svg .world path {
+  fill: none;
+  stroke: #28ff5a;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 1.5px #2bff5e) drop-shadow(0 0 4px #14d64a);
+}
+.netmap-svg .net-agent {
+  fill: #59ffa0;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 2px #42ff96);
+}
+.netmap-svg .net-node {
+  fill: #ff2f48;
+  filter: drop-shadow(0 0 3px #ff2f48) drop-shadow(0 0 7px #ff2f48);
+}
+.netmap-svg .net-ring {
+  fill: none;
+  stroke: #ff3a54;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: netpulse 1.8s ease-out infinite;
+}
+.netmap-svg .net-label {
+  fill: #dbe7f5;
+  font-family: var(--mono, ui-monospace, monospace);
+  paint-order: stroke;
+  stroke: rgba(3, 13, 24, 0.8);
+  stroke-width: 2px;
+}
+@keyframes netpulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.net-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+.net-zoom button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 160, 190, 0.28);
+  background: rgba(8, 14, 22, 0.72);
+  color: #cdd6e4;
+  font-size: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.net-zoom button:hover {
+  border-color: #28ff5a;
+  color: #fff;
 }
 .net-hud {
   position: absolute;
