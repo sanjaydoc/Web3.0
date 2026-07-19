@@ -10,6 +10,10 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
+    # Needed so the release-attach step can create/update the GitHub Release for the tag.
+    # Without this the GITHUB_TOKEN is read-only and softprops/action-gh-release returns 403.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
