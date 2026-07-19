@@ -51,7 +51,7 @@ const NAV: {
   { id: 'network', label: 'Network', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
   { id: 'connectors', label: 'Connectors', operator: true },
-  { id: 'ledger', label: 'Payments & ledger', badge: 'entries', operator: true },
+  { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
   { id: 'telegram', label: 'Telegram bot', operator: true },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
