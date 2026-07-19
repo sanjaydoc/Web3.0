@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
 import { type HostedAgent, api, formatAmount } from './api.js';
 
-const ADMIN_KEY = 'web3.adminToken';
-const CREATOR_KEY = 'web3.creatorName';
-
 /**
- * HostedDapps — the catalogue of dApps/agents running inside this node. Scoped by ownership: the
- * node owner (holds the admin token, or runs an open single-user node) sees every developer's
- * dApps; a regular developer sees only the ones they published (matched by their creator name).
+ * HostedDapps — the catalogue of dApps/agents running inside this node. Ownership is by account
+ * address: the node server scopes a non-admin to only the dApps they published (returns `scopedTo`);
+ * an admin receives every developer's dApps and can toggle between All developers and just their own.
  */
 export function HostedDapps({ admin = false }: { admin?: boolean }) {
   const [items, setItems] = useState<HostedAgent[]>([]);
+  const [scopedTo, setScopedTo] = useState<string | null>(null);
+  const [myAddress, setMyAddress] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
-  const [adminRequired, setAdminRequired] = useState(false);
-  const [me, setMe] = useState(() => localStorage.getItem(CREATOR_KEY) ?? '');
   const [scope, setScope] = useState<'all' | 'mine'>('all');
+
+  useEffect(() => {
+    api
+      .me()
+      .then((m) => setMyAddress(m.address))
+      .catch(() => setMyAddress(''));
+  }, []);
 
   useEffect(() => {
     const load = () => {
@@ -23,7 +27,7 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
         .hosted()
         .then((r) => {
           setItems(r.agents);
-          setAdminRequired(r.adminRequired);
+          setScopedTo(r.scopedTo ?? null);
           setOnline(true);
         })
         .catch(() => setOnline(false));
@@ -33,22 +37,19 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
     return () => clearInterval(t);
   }, []);
 
-  // Owner = holds the admin token, or the node requires no admin (your own single-user node).
-  // Only Admin mode may view every developer's dApps; Operators always see just their own.
-  const isOwner = !adminRequired || Boolean(localStorage.getItem(ADMIN_KEY));
-  const canSeeAll = admin && isOwner;
-  const effectiveScope = canSeeAll ? scope : 'mine';
-  const mine = (h: HostedAgent) => Boolean(me) && h.createdBy.toLowerCase() === me.toLowerCase();
-  const shown = effectiveScope === 'all' ? items : items.filter(mine);
+  // The server already scopes a non-admin to their own dApps (scopedTo set) — show those as-is.
+  // An admin receives everything and may filter to just their own by address.
+  const serverScoped = scopedTo !== null;
+  const canToggle = admin && !serverScoped;
+  const mine = (h: HostedAgent) =>
+    Boolean(myAddress) && h.createdBy.toLowerCase() === myAddress.toLowerCase();
+  const shown = canToggle && scope === 'mine' ? items.filter(mine) : items;
+  const showingMine = serverScoped || (canToggle && scope === 'mine');
 
   const active = shown.find((i) => i.web3Id === selected) ?? null;
   const dapps = shown.filter((i) => i.kind === 'webhook').length;
   const agents = shown.filter((i) => i.kind === 'llm').length;
   const toggle = (id: string) => setSelected((cur) => (cur === id ? null : id));
-  const saveMe = (v: string) => {
-    setMe(v);
-    localStorage.setItem(CREATOR_KEY, v);
-  };
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '—');
 
   return (
@@ -58,13 +59,13 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
         <span className="muted">
           {shown.length} shown · {dapps} dApp{dapps === 1 ? '' : 's'} · {agents} agent
           {agents === 1 ? '' : 's'}
-          {effectiveScope === 'all' ? ' — all developers' : ' — yours only'}
+          {showingMine ? ' — yours only' : ' — all developers'}
         </span>
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="scope-bar">
-          {canSeeAll ? (
+          {canToggle ? (
             <div className="role-toggle" role="group" aria-label="Scope">
               <button
                 type="button"
@@ -84,14 +85,8 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
           ) : (
             <span className="chip">My apps</span>
           )}
-          <div className="field" style={{ margin: 0, minWidth: 220 }}>
-            <input
-              value={me}
-              onChange={(e) => saveMe(e.target.value)}
-              placeholder="You are (creator name) — e.g. Dr. Sanjay Anbu"
-            />
-          </div>
-          {canSeeAll && <span className="chip allow">admin view</span>}
+          {myAddress && <span className="chip">{myAddress}</span>}
+          {canToggle && <span className="chip allow">admin view</span>}
         </div>
       </div>
 
@@ -100,11 +95,9 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
           <div className="empty">Node offline — can't reach /hosted.</div>
         ) : shown.length === 0 ? (
           <div className="empty">
-            {effectiveScope === 'mine' && !me
-              ? 'Enter your creator name above to see the dApps you published.'
-              : effectiveScope === 'mine'
-                ? `No hosted dApps created by "${me}" yet.`
-                : 'Nothing hosted yet. Publish a dApp in Developers or launch an agent in Genesis.'}
+            {showingMine
+              ? `No hosted dApps published by ${myAddress || 'you'} yet — create one in Developers or Genesis.`
+              : 'Nothing hosted yet. Publish a dApp in Developers or launch an agent in Genesis.'}
           </div>
         ) : (
           <table className="rows-click">

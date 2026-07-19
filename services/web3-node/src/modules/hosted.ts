@@ -29,10 +29,10 @@ export function hostedModule(): Web3Module {
       ctx.http.post('/hosted/launch', async (request, reply) => {
         // Any signed-in account may publish; an open node (no accounts) allows it too.
         if (!requireAuthed(request, reply, ctx.accounts)) return;
-        // A signed-in non-admin's address becomes the dApp's owner (real, not free-text).
+        // The publishing account's address becomes the dApp's owner (authoritative, not free-text).
         const acct = currentAccount(request, ctx.accounts);
         const body = request.body as HostedAgentConfig;
-        if (acct && acct.role !== 'admin') body.createdBy = acct.address;
+        if (acct) body.createdBy = acct.address;
         try {
           return await svc.launch(body);
         } catch (err) {

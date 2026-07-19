@@ -227,7 +227,8 @@ export const api = {
   ) => post<TelegramStatus>('/telegram/config', patch, adminToken),
   telegramStart: (adminToken?: string) => post<TelegramStatus>('/telegram/start', {}, adminToken),
   telegramStop: (adminToken?: string) => post<TelegramStatus>('/telegram/stop', {}, adminToken),
-  hosted: () => get<{ agents: HostedAgent[]; adminRequired: boolean }>('/hosted'),
+  hosted: () =>
+    get<{ agents: HostedAgent[]; adminRequired: boolean; scopedTo: string | null }>('/hosted'),
   hostedLaunch: (config: HostedLaunchConfig, adminToken?: string) =>
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
