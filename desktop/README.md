@@ -1,44 +1,55 @@
-# Web3.0 Node — desktop app (scaffold)
+# Web3.0 desktop (Electron)
 
-A **native desktop shell** (Tauri) that wraps the Web3.0 dashboard in a WebView so an operator can
-**double-click to run and manage a node** — producing real installers: **Windows `.msi`/`.exe`,
-macOS `.dmg`, Linux `.AppImage`/`.deb`**.
+A native desktop app that **runs a Web3.0 node and shows the dashboard** in one window — double-click,
+no terminal. Produces a Windows **`.msi`** and **`.exe`** installer.
 
-> **Status: scaffold.** These files are the starting point for the roadmap "Desktop node app" item.
-> Building the installers needs a native toolchain (Rust + each OS's build tools + code-signing),
-> which can't run in the project's CI Linux sandbox — so this is built on your own machine.
+## How it works
+- `src/main.js` — the Electron main process. On launch it spawns the bundled node
+  (`utilityProcess`), waits for `/health`, then loads the dashboard in a `BrowserWindow`. It keeps a
+  stable node identity (`WEB3_NODE_SEED`) in the app's userData and shuts the node down on quit.
+- `build/esbuild.mjs` — bundles the whole node service (`@web3/node` + its workspace packages + npm
+  deps) into a single `dist/node-bundle.cjs`, and the main process into `dist/main.cjs`. This
+  sidesteps the pnpm-workspace symlinks entirely — there are no `node_modules` to package.
+- `electron-builder.yml` — packages `dist/` (main + node bundle + dashboard) into installers.
 
-## What's here
-- `src-tauri/tauri.conf.json` — app + bundle config; `frontendDist` points at the dashboard build,
-  and `beforeBuildCommand` builds the dashboard first. Bundle targets: `msi, nsis, dmg, appimage, deb`.
-- `src-tauri/src/main.rs` — the WebView shell (loads the bundled dashboard).
-- `src-tauri/Cargo.toml`, `build.rs` — Rust/Tauri build.
-- `package.json` — `pnpm dev` / `pnpm build` via the Tauri CLI.
+The node runs **in-memory by default** in the desktop app (no Mongo). To persist, set
+`WEB3_MONGODB_URI` in the environment before launching, or run the standalone node instead.
 
-## Build the installers (on the target OS)
-Prereqs: **Rust** (`rustup`), **Node 20+/pnpm**, and Tauri's OS deps (see tauri.app → Prerequisites;
-on Windows that's the WebView2 runtime + MSVC build tools).
+## Build the installer
+
+### The easy way — GitHub Actions (no toolchain needed)
+Push a version tag and the `desktop` workflow builds the `.msi` + `.exe` on a Windows runner and
+attaches them to a GitHub Release:
 
 ```bash
-cd desktop
-pnpm install
-pnpm build          # → src-tauri/target/release/bundle/{msi,nsis,dmg,appimage,deb}/...
-# or run it live:  pnpm dev
+git tag v0.1.0
+git push origin v0.1.0
 ```
-The `.msi` (Windows), `.dmg` (macOS), and `.AppImage`/`.deb` (Linux) land under
-`src-tauri/target/release/bundle/`.
+Then download the installers from the release. You can also trigger it manually from the Actions tab
+("Run workflow").
 
-## Making it truly one-click (next packaging step)
-The shell shows the dashboard; the **node** still needs to run. Two ways to bundle it:
-1. **Sidecar binary** — compile the node to a single executable (e.g. with `pkg`/`bun build`),
-   add it to `tauri.conf.json` → `bundle.externalBin`, and spawn it on startup from `main.rs`
-   via `tauri-plugin-shell` (already a dependency). The WebView then talks to `127.0.0.1:8787`.
-2. **Embedded runtime** — ship Node + the node service inside the app resources and launch with a
-   bundled `node`.
+### Locally on Windows
+Prereqs: Node 20+, pnpm, and (for a custom icon) nothing extra — electron-builder handles the rest.
 
-Both are deliberately left out of the default scaffold so it compiles cleanly without the heavier
-packaging work. Wire one of them to reach the full "no terminal, double-click" experience.
+```bash
+pnpm install            # once, at the repo root (for the dashboard build)
+cd desktop
+npm install             # electron, electron-builder, esbuild
+npm run dist            # → desktop/release/*.msi and *.exe
+```
 
-## Icon
-Add `src-tauri/icons/icon.png` (1024×1024). Generate the platform icon set with
-`pnpm tauri icon path/to/icon.png`.
+Run it live without packaging:
+```bash
+cd desktop
+npm install
+npm run dev             # builds, bundles, and launches the app
+```
+
+## Icon (optional)
+Drop a 256×256 `assets/icon.ico` to brand the app and installer; otherwise the default Electron icon
+is used.
+
+## Signing
+The installers are **unsigned** — Windows SmartScreen shows an "unknown publisher" prompt (click
+"More info → Run anyway"). To sign later, add a certificate (Microsoft Store, Azure Trusted Signing,
+or an OV/EV cert) — it's a final step layered on top of the same build.

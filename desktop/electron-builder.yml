@@ -1,0 +1,30 @@
+appId: com.web3.desktop
+productName: Web3.0
+copyright: © DR SANJAY ANBU
+
+directories:
+  output: release
+  buildResources: assets
+
+# Everything the app needs is pre-bundled into dist/ (main.cjs, node-bundle.cjs, dashboard/),
+# so there are no runtime node_modules to package.
+files:
+  - dist/**/*
+  - package.json
+
+win:
+  # Produces both a .msi and an .exe (NSIS) installer.
+  target:
+    - msi
+    - nsis
+  # Add build/icon.ico (256x256) for a custom icon; otherwise the default Electron icon is used.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+msi:
+  oneClick: false
