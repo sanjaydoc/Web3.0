@@ -93,8 +93,8 @@ function inside(lon: number, lat: number, poly: [number, number][]): boolean {
 }
 
 const landDots: [number, number][] = [];
-for (let lon = -180; lon <= 180; lon += 3.4) {
-  for (let lat = 74; lat >= -56; lat -= 3.4) {
+for (let lon = -180; lon <= 180; lon += 2.6) {
+  for (let lat = 74; lat >= -56; lat -= 2.6) {
     if (CONTINENTS.some((p) => inside(lon, lat, p))) {
       landDots.push([(lon + 180) / 360, (90 - lat) / 180]);
     }
@@ -142,6 +142,9 @@ export function Network() {
     const canvas = canvasRef.current!;
     const wrap = wrapRef.current!;
     const ctx = canvas.getContext('2d')!;
+    // Cache the glowing green landmass to an offscreen layer (glow is expensive per-frame).
+    const land = document.createElement('canvas');
+    const lctx = land.getContext('2d')!;
     let raf = 0;
     let W = 0;
     let H = 0;
@@ -149,6 +152,22 @@ export function Network() {
     let my = 0;
     let mw = 0;
     let mh = 0;
+
+    const P = (u: number, v: number) => [mx + u * mw, my + v * mh] as const;
+
+    const drawLand = () => {
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      land.width = W * dpr;
+      land.height = H * dpr;
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      lctx.clearRect(0, 0, W, H);
+      lctx.shadowColor = 'rgba(46,255,130,0.95)';
+      lctx.shadowBlur = 5;
+      lctx.fillStyle = 'rgba(66,255,150,0.92)';
+      for (const [u, v] of landDots) {
+        lctx.fillRect(mx + u * mw, my + v * mh, 1.7, 1.7);
+      }
+    };
 
     const resize = () => {
       const dpr = Math.min(2, devicePixelRatio || 1);
@@ -164,94 +183,123 @@ export function Network() {
       mh = mw / 2;
       mx = (W - mw) / 2;
       my = (H - mh) / 2 + 8;
+      drawLand();
     };
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
     resize();
 
-    const P = (u: number, v: number) => [mx + u * mw, my + v * mh] as const;
     let t = 0;
 
     const frame = () => {
       t += 0.016;
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#070b12';
+
+      // background — deep navy vignette
+      const bg = ctx.createRadialGradient(
+        W / 2,
+        H * 0.46,
+        0,
+        W / 2,
+        H * 0.46,
+        Math.max(W, H) * 0.8,
+      );
+      bg.addColorStop(0, '#0a1a2b');
+      bg.addColorStop(0.55, '#06101b');
+      bg.addColorStop(1, '#03060c');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      // soft green bloom behind the map
+      const bloom = ctx.createRadialGradient(
+        mx + mw / 2,
+        my + mh / 2,
+        0,
+        mx + mw / 2,
+        my + mh / 2,
+        mw * 0.55,
+      );
+      bloom.addColorStop(0, 'rgba(30,230,120,0.12)');
+      bloom.addColorStop(1, 'rgba(30,230,120,0)');
+      ctx.fillStyle = bloom;
       ctx.fillRect(0, 0, W, H);
 
-      // land dots
-      for (const [u, v] of landDots) {
-        const [x, y] = P(u, v);
-        ctx.fillStyle = 'rgba(90,150,170,0.20)';
-        ctx.fillRect(x, y, 1.6, 1.6);
-      }
-
-      // sweep line
-      const sweep = ((t * 0.06) % 1) * mw;
-      const g = ctx.createLinearGradient(mx + sweep - 60, 0, mx + sweep + 60, 0);
-      g.addColorStop(0, 'rgba(60,208,208,0)');
-      g.addColorStop(0.5, 'rgba(60,208,208,0.10)');
-      g.addColorStop(1, 'rgba(60,208,208,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(mx + sweep - 60, my, 120, mh);
+      // glowing green landmass (cached)
+      ctx.drawImage(land, 0, 0, land.width, land.height, 0, 0, W, H);
 
       const { authorities, agents } = dataRef.current;
       const auth = cityUV.slice(0, Math.min(authorities, cityUV.length));
 
-      // consensus arcs between authorities
+      // consensus arcs between nodes — green glow
+      ctx.save();
+      ctx.shadowColor = 'rgba(46,255,130,0.7)';
+      ctx.shadowBlur = 6;
       ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(70,255,150,0.32)';
+      ctx.setLineDash([2, 6]);
+      ctx.lineDashOffset = -t * 26;
       for (let i = 0; i < auth.length; i++) {
         for (let j = i + 1; j < auth.length; j++) {
           const [ax, ay] = P(auth[i]!.u, auth[i]!.v);
           const [bx, by] = P(auth[j]!.u, auth[j]!.v);
           const midx = (ax + bx) / 2;
           const midy = (ay + by) / 2 - Math.abs(ax - bx) * 0.18;
-          ctx.strokeStyle = 'rgba(230,184,85,0.28)';
-          ctx.setLineDash([2, 6]);
-          ctx.lineDashOffset = -t * 26;
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.quadraticCurveTo(midx, midy, bx, by);
           ctx.stroke();
         }
       }
+      ctx.restore();
       ctx.setLineDash([]);
 
-      // agent swarm — violet dots scattered near cities
+      // agent swarm — small green dots near cities
+      ctx.save();
+      ctx.shadowColor = 'rgba(46,255,130,0.6)';
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = 'rgba(110,255,170,0.6)';
       const shown = Math.min(agents, 60);
       for (let i = 0; i < shown; i++) {
         const c = cityUV[(i * 3) % cityUV.length]!;
         const a = i * 2.399;
         const rad = 0.008 + ((i * 37) % 20) / 900;
         const [x, y] = P(c.u + Math.cos(a) * rad, c.v + Math.sin(a) * rad * 2);
-        ctx.fillStyle = 'rgba(148,156,255,0.85)';
         ctx.beginPath();
-        ctx.arc(x, y, 1.6, 0, 7);
+        ctx.arc(x, y, 1.5, 0, 7);
         ctx.fill();
       }
+      ctx.restore();
 
-      // authority / node markers with pulsing rings
+      // node markers — RED neon pulsing dots
+      const col = '255,58,84';
       auth.forEach((c, i) => {
         const [x, y] = P(c.u, c.v);
         const isHome = i === 0;
-        const col = '230,184,85';
-        const pr = 6 + (Math.sin(t * 2 + i) * 0.5 + 0.5) * 10;
-        ctx.strokeStyle = `rgba(${col},${0.5 - pr / 40})`;
-        ctx.lineWidth = 1.2;
+        const pr = 6 + (Math.sin(t * 2 + i) * 0.5 + 0.5) * 11;
+        ctx.save();
+        ctx.shadowColor = `rgba(${col},0.95)`;
+        ctx.shadowBlur = 12;
+        // pulse ring
+        ctx.strokeStyle = `rgba(${col},${Math.max(0, 0.55 - pr / 40)})`;
+        ctx.lineWidth = 1.3;
         ctx.beginPath();
         ctx.arc(x, y, pr, 0, 7);
         ctx.stroke();
-        const gr = ctx.createRadialGradient(x, y, 0, x, y, 16);
-        gr.addColorStop(0, `rgba(${col},0.9)`);
+        // bloom
+        const gr = ctx.createRadialGradient(x, y, 0, x, y, 15);
+        gr.addColorStop(0, `rgba(${col},0.95)`);
         gr.addColorStop(1, `rgba(${col},0)`);
         ctx.fillStyle = gr;
         ctx.beginPath();
-        ctx.arc(x, y, 16, 0, 7);
+        ctx.arc(x, y, 15, 0, 7);
         ctx.fill();
+        // core
         ctx.fillStyle = `rgb(${col})`;
         ctx.beginPath();
         ctx.arc(x, y, isHome ? 4 : 3, 0, 7);
         ctx.fill();
-        ctx.fillStyle = 'rgba(230,235,245,0.85)';
+        ctx.restore();
+        // label
+        ctx.fillStyle = 'rgba(220,235,245,0.9)';
         ctx.font = '10px ui-monospace, monospace';
         ctx.fillText(`${c.n}${isHome ? ' · you' : ''}`, x + 9, y + 3);
       });
@@ -305,10 +353,10 @@ export function Network() {
 
         <div className="net-hud net-bl net-legend">
           <span>
-            <i style={{ background: '#e6b855' }} /> authority / node
+            <i style={{ background: '#ff3a54' }} /> active node
           </span>
           <span>
-            <i style={{ background: '#949cff' }} /> agent
+            <i style={{ background: '#42ff96' }} /> agent
           </span>
           <span className={stats?.ledgerVerified ? 'v-ok' : 'v-bad'}>
             chain {stats?.ledgerVerified ? 'verified ✓' : '—'}
