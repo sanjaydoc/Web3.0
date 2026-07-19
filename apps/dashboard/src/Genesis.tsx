@@ -46,7 +46,8 @@ export function Genesis() {
   const refreshHosted = useCallback(async () => {
     try {
       const res = await api.hosted();
-      setHosted(res.agents);
+      // Genesis manages agents (LLM brains) only — webhook dApps live in Developers / Hosted dApps.
+      setHosted(res.agents.filter((a) => a.kind === 'llm'));
       setAdminRequired(res.adminRequired);
     } catch {
       /* node may be offline */
