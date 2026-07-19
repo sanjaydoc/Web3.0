@@ -1284,3 +1284,21 @@ button.connector:not(:disabled):hover {
   padding-left: 28px;
   padding-right: 28px;
 }
+
+/* Connector catalogue tiles */
+.conn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.conn-tile {
+  padding: 14px 16px;
+}
+.conn-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}

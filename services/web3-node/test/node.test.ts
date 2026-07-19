@@ -6,6 +6,7 @@ process.env.WEB3_LOG_LEVEL = 'silent';
 import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
 import { AccountsService } from '../src/services/accounts.js';
+import { ConnectorsService } from '../src/services/connectors.js';
 import { HostedAgentService } from '../src/services/hosted.js';
 import { SkillsService } from '../src/services/skills.js';
 import { TelegramService } from '../src/services/telegram.js';
@@ -366,6 +367,7 @@ function ctxOf(k: Kernel) {
     store: k.store,
     accounts: new AccountsService(k.store, () => new Date().toISOString()),
     skills: new SkillsService(k.store, () => new Date().toISOString()),
+    connectors: new ConnectorsService(k.store, () => new Date().toISOString()),
     config: k.config,
     treasuryId: k.treasuryId,
     clock: () => new Date().toISOString(),
@@ -908,6 +910,52 @@ describe('skill catalogue', () => {
       skills: { id: string }[];
     };
     expect(list.skills.map((s) => s.id)).toContain('summarize');
+    await k.close();
+  });
+});
+
+describe('connector registry', () => {
+  it('adds custom connectors (auth required) and lists them; admin can delete', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { token: string; address: string });
+    const admin = await signup('boss', 'admin');
+    const op = await signup('opsmith', 'operator');
+
+    const add = (payload: Record<string, unknown>, token?: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/connectors',
+        headers: token ? { 'x-web3-token': token } : undefined,
+        payload,
+      });
+
+    expect((await add({ id: 'my-crm', name: 'My CRM' })).statusCode).toBe(401); // anon blocked
+    const ok = await add({ id: 'my-crm', name: 'My CRM', category: 'Custom' }, op.token);
+    expect(ok.statusCode).toBe(201);
+    expect((ok.json() as { createdBy: string }).createdBy).toBe(op.address);
+
+    const list = (await k.http
+      .inject({ method: 'GET', url: '/connectors' })
+      .then((r) => r.json())) as { connectors: { id: string }[] };
+    expect(list.connectors.map((c) => c.id)).toContain('my-crm');
+
+    // an operator cannot delete; an admin can
+    const opDel = await k.http.inject({
+      method: 'DELETE',
+      url: '/connectors/my-crm',
+      headers: { 'x-web3-token': op.token },
+    });
+    expect(opDel.statusCode).toBe(403);
+    const adminDel = await k.http.inject({
+      method: 'DELETE',
+      url: '/connectors/my-crm',
+      headers: { 'x-web3-token': admin.token },
+    });
+    expect(adminDel.statusCode).toBe(200);
     await k.close();
   });
 });

@@ -4,6 +4,7 @@ import type { Web3Config } from './config.js';
 import type { AccountsService } from './services/accounts.js';
 import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
+import type { ConnectorsService } from './services/connectors.js';
 import type { ConsensusCoordinator } from './services/consensus.js';
 import type { Guardrails } from './services/guardrails.js';
 import type { Registry } from './services/registry.js';
@@ -33,6 +34,8 @@ export interface ModuleContext {
   accounts: AccountsService;
   /** Skill catalogue: named capabilities node operators register for agents to advertise. */
   skills: SkillsService;
+  /** Custom connector registry (on top of the dashboard's built-in catalogue). */
+  connectors: ConnectorsService;
   config: Web3Config;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;

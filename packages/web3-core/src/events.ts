@@ -15,6 +15,7 @@ export type EventKind =
   | 'agent.registered'
   | 'account.created'
   | 'skill.created'
+  | 'connector.created'
   | 'message.routed'
   | 'task.updated'
   | 'payment.settled'

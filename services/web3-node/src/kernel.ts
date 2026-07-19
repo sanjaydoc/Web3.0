@@ -13,6 +13,7 @@ import { MODULE_FACTORIES } from './modules/index.js';
 import { AccountsService } from './services/accounts.js';
 import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
+import { ConnectorsService } from './services/connectors.js';
 import { ConsensusCoordinator } from './services/consensus.js';
 import { Guardrails } from './services/guardrails.js';
 import { RateLimiter } from './services/ratelimit.js';
@@ -148,6 +149,8 @@ export class Kernel {
     await accounts.load();
     const skills = new SkillsService(this.store, clock);
     await skills.load();
+    const connectors = new ConnectorsService(this.store, clock);
+    await connectors.load();
 
     const ctx: ModuleContext = {
       http: this.http,
@@ -162,6 +165,7 @@ export class Kernel {
       store: this.store,
       accounts,
       skills,
+      connectors,
       config: this.config,
       treasuryId: this.treasuryId,
       startedAt: this.startedAt,

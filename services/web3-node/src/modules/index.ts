@@ -1,6 +1,7 @@
 import type { ModuleName } from '../config.js';
 import type { Web3Module } from '../context.js';
 import { accountsModule } from './accounts.js';
+import { connectorsModule } from './connectors.js';
 import { consensusModule } from './consensus.js';
 import { guardrailsModule } from './guardrails.js';
 import { hostedModule } from './hosted.js';
@@ -18,6 +19,7 @@ export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
   naming: namingModule,
   accounts: accountsModule,
   skills: skillsModule,
+  connectors: connectorsModule,
   registry: registryModule,
   messaging: messagingModule,
   payments: paymentsModule,
