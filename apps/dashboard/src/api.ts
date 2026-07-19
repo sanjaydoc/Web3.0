@@ -146,6 +146,18 @@ export interface NodeOperator {
   limits: NodeLimits;
 }
 
+export type Role = 'admin' | 'operator' | 'developer';
+export interface Account {
+  address: string;
+  role: Role;
+  createdAt: string;
+}
+export interface SignupResult {
+  address: string;
+  role: Role;
+  token: string;
+}
+
 export interface ConsensusInfo {
   mode: string;
   enabled: boolean;
@@ -157,14 +169,28 @@ export interface ConsensusInfo {
   peers: string[];
 }
 
+// ── account token (an `acp_…` API token from sign-up), stored in this browser ──
+const TOKEN_KEY = 'acp.token';
+export function getAcpToken(): string {
+  return localStorage.getItem(TOKEN_KEY) ?? '';
+}
+export function setAcpToken(token: string): void {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+function authHeaders(base: Record<string, string> = {}): Record<string, string> {
+  const t = getAcpToken();
+  return t ? { ...base, 'x-acp-token': t } : base;
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${NODE_URL}${path}`);
+  const res = await fetch(`${NODE_URL}${path}`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown, adminToken?: string): Promise<T> {
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  const headers = authHeaders({ 'content-type': 'application/json' });
   if (adminToken) headers['x-admin-token'] = adminToken;
   const res = await fetch(`${NODE_URL}${path}`, {
     method: 'POST',
@@ -206,6 +232,9 @@ export const api = {
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
+  signup: (local: string, role: Role) => post<SignupResult>('/accounts/signup', { local, role }),
+  me: () => get<Account>('/accounts/me'),
+  accounts: () => get<{ accounts: Account[] }>('/accounts'),
   node: () => get<NodeOperator>('/node'),
   nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
     post<NodeLimits>('/node/limits', patch, adminToken),

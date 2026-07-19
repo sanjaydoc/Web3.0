@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Account } from './Account.js';
 import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
@@ -34,6 +35,7 @@ type View =
   | 'hosteddapps'
   | 'telegram'
   | 'developers'
+  | 'account'
   | 'download';
 
 type Role = 'operator' | 'admin';
@@ -47,6 +49,7 @@ const NAV: {
   operator?: boolean;
 }[] = [
   { id: 'overview', label: 'Overview', operator: true },
+  { id: 'account', label: 'Account', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
   { id: 'network', label: 'Network' },
@@ -206,6 +209,7 @@ export function App() {
         {view === 'genesis' && <Genesis />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
+        {view === 'account' && <Account />}
         {view === 'download' && <Download />}
         {view === 'telegram' && <Telegram />}
       </main>

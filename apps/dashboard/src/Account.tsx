@@ -1,0 +1,219 @@
+import { useCallback, useEffect, useState } from 'react';
+import { type Account as Acct, type Role, api, getAcpToken, setAcpToken } from './api.js';
+
+/**
+ * Account — sign up (mint an address + one-time ACP token) or sign in (paste a token). The token is
+ * stored in this browser and sent as `x-acp-token` on every request, so the node scopes what you see
+ * and can do by your role. This is the GUI front for the accounts/auth backend.
+ */
+export function Account() {
+  const [me, setMe] = useState<Acct | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [local, setLocal] = useState('');
+  const [role, setRole] = useState<Role>('developer');
+  const [tokenInput, setTokenInput] = useState('');
+  const [freshToken, setFreshToken] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!getAcpToken()) {
+      setMe(null);
+      setChecked(true);
+      return;
+    }
+    try {
+      setMe(await api.me());
+    } catch {
+      setMe(null); // stale/invalid token
+    } finally {
+      setChecked(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function signup() {
+    setMsg(null);
+    setFreshToken(null);
+    try {
+      const res = await api.signup(local.trim(), role);
+      setAcpToken(res.token);
+      setFreshToken(res.token);
+      // remember the creator name for dApp scoping too
+      localStorage.setItem('acp.creatorName', res.address);
+      await refresh();
+      setMsg({ kind: 'ok', text: `Account created: ${res.address} (${res.role})` });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  async function signin() {
+    setMsg(null);
+    setFreshToken(null);
+    setAcpToken(tokenInput.trim());
+    try {
+      const acct = await api.me();
+      setMe(acct);
+      localStorage.setItem('acp.creatorName', acct.address);
+      setTokenInput('');
+      setMsg({ kind: 'ok', text: `Signed in as ${acct.address}` });
+    } catch {
+      setAcpToken('');
+      setMsg({ kind: 'err', text: 'That token is not valid on this node.' });
+    }
+  }
+
+  function signout() {
+    setAcpToken('');
+    setMe(null);
+    setFreshToken(null);
+    setMsg({ kind: 'ok', text: 'Signed out.' });
+  }
+
+  return (
+    <>
+      <div className="page-head">
+        <h1>Account</h1>
+        <span className="muted">your ACP identity — an address + a token, with a role</span>
+      </div>
+
+      {me ? (
+        <div className="card">
+          <div className="section-title">Signed in</div>
+          <dl className="kv">
+            <dt>Address</dt>
+            <dd className="mono-hash">{me.address}</dd>
+            <dt>Role</dt>
+            <dd>
+              <span className="chip allow">{me.role}</span>
+            </dd>
+            <dt>Since</dt>
+            <dd>{new Date(me.createdAt).toLocaleString()}</dd>
+          </dl>
+          <div className="gen-actions">
+            <button type="button" className="btn ghost" onClick={signout}>
+              Sign out
+            </button>
+          </div>
+          <p className="hint">
+            Your token is sent as <code>x-acp-token</code> on every request — the node scopes Hosted
+            dApps and management to your role.
+          </p>
+        </div>
+      ) : (
+        <>
+          {freshToken && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <div className="section-title">Save your token — shown only once</div>
+              <div className="term" style={{ marginBottom: 10 }}>
+                <div className="term-body">
+                  <div className="term-cmd">
+                    <code>{freshToken}</code>
+                    <button
+                      type="button"
+                      className={`copy ${copied ? 'copied' : ''}`}
+                      onClick={() => {
+                        navigator.clipboard.writeText(freshToken).then(
+                          () => {
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 1800);
+                          },
+                          () => undefined,
+                        );
+                      }}
+                    >
+                      {copied ? 'copied ✓' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="hint">
+                It's saved in this browser now. Keep a copy — it's your API token and it won't be
+                shown again.
+              </p>
+            </div>
+          )}
+
+          <div className="grid-2">
+            <div className="card">
+              <div className="section-title">Sign up</div>
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="a-local">Handle</label>
+                  <input
+                    id="a-local"
+                    value={local}
+                    onChange={(e) => setLocal(e.target.value)}
+                    placeholder="sanjay"
+                  />
+                  <span className="hint">{local || '…'}@web3.0</span>
+                </div>
+                <div className="field">
+                  <label htmlFor="a-role">Role</label>
+                  <select
+                    id="a-role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as Role)}
+                  >
+                    <option value="developer">developer</option>
+                    <option value="operator">operator</option>
+                    <option value="admin">admin</option>
+                  </select>
+                  <span className="hint">first admin bootstraps free; more need admin</span>
+                </div>
+              </div>
+              <div className="gen-actions">
+                <button type="button" className="btn act" disabled={!local.trim()} onClick={signup}>
+                  Create account
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="section-title">Sign in</div>
+              <div className="field wide">
+                <label htmlFor="a-token">ACP token</label>
+                <input
+                  id="a-token"
+                  type="password"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="acp_…"
+                />
+                <span className="hint">paste a token you saved earlier</span>
+              </div>
+              <div className="gen-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!tokenInput.trim()}
+                  onClick={signin}
+                >
+                  Sign in
+                </button>
+              </div>
+            </div>
+          </div>
+          {checked && !me && !freshToken && (
+            <p className="hint" style={{ marginTop: 12 }}>
+              On an open node (no accounts yet) you can use the dashboard without signing in. Create
+              an account to get a real role-scoped identity.
+            </p>
+          )}
+        </>
+      )}
+      {msg && (
+        <div
+          className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}
+          style={{ marginTop: 14 }}
+        >
+          {msg.text}
+        </div>
+      )}
+    </>
+  );
+}
