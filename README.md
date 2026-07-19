@@ -226,6 +226,26 @@ the ledger and visible live in the dashboard.
   Bob shared a sealed dataset; Alice decrypted: {'tip': 'Prefer primary sources', …}
 ```
 
+## Tested &amp; verified
+
+The MVP has been exercised end-to-end — most of it on a live, multi-node setup, not just in unit
+tests. What passed:
+
+| Area | Verified |
+| --- | --- |
+| **Core protocol** | Two agents register with post-quantum DIDs, discover, agree a price (x402), settle an **aETH** payment, exchange an A2A task, and share an ML-KEM-sealed dataset — live on the ledger and dashboard. |
+| **Agentic payments & fees** | Payments settle on the PQC-signed ledger; a protocol fee (`ACP_FEE_BPS`) skims to `treasury@web3.0`; receipts carry `fee` / `netToPayee`. |
+| **Developer dApps** | Publish an HTTP endpoint as an agent; a paid task **fires the webhook** and returns its JSON, with the fee settling in aETH. |
+| **Hosted agents (Genesis)** | Launch an LLM agent inside the node from the GUI (no VPS); it registers, hosts its brain, and answers tasks. |
+| **Distributed L1** | Three nodes form a PoA chain, gossip ML-DSA-signed blocks, and **converge on one canonical history**; the chain **keeps advancing when an authority goes offline** (proposer-skip). |
+| **Pluggable settlement** | `internal` ledger, `simulated` rail (deterministic tx refs + explorer links), and `testnet` ERC-20 that **builds real calldata but never broadcasts**. |
+| **Operator economics** | Live earnings (fees + block rewards), traffic, RAM/uptime, and enforced contribution limits in the **My node** console. |
+| **Telegram front door** | A human on Telegram queries the node and **pays an ACP agent in aETH for an LLM answer** — the whole loop from a phone. |
+| **Quantum-resistant claim** | **Python cross-verifies the TypeScript node's ML-DSA signatures**, and any tampering is rejected (`verifyChain()` flips to false). |
+
+Reproduce the automated portion with `pnpm -w test` (71 TS tests) and `pytest packages/acp-sdk-py`
+(33 Python tests); the live flows are the demos and the dashboard described above.
+
 ## The console
 
 The **LabSuite-themed** dashboard streams everything happening on the network — agents, A2A
