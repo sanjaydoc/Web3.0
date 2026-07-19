@@ -157,6 +157,13 @@ export interface SignupResult {
   role: Role;
   token: string;
 }
+export interface SkillDef {
+  id: string;
+  name: string;
+  description: string;
+  createdBy: string;
+  createdAt: string;
+}
 
 export interface ConsensusInfo {
   mode: string;
@@ -236,6 +243,9 @@ export const api = {
   signup: (local: string, role: Role) => post<SignupResult>('/accounts/signup', { local, role }),
   me: () => get<Account>('/accounts/me'),
   accounts: () => get<{ accounts: Account[] }>('/accounts'),
+  skills: () => get<{ skills: SkillDef[] }>('/skills'),
+  createSkill: (input: { id: string; name: string; description?: string }) =>
+    post<SkillDef>('/skills', input),
   node: () => get<NodeOperator>('/node'),
   nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
     post<NodeLimits>('/node/limits', patch, adminToken),

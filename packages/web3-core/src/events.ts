@@ -14,6 +14,7 @@ export interface GuardrailDecision {
 export type EventKind =
   | 'agent.registered'
   | 'account.created'
+  | 'skill.created'
   | 'message.routed'
   | 'task.updated'
   | 'payment.settled'

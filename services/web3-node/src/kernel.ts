@@ -19,6 +19,7 @@ import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
 import { ReplayGuard } from './services/replay.js';
 import { type SettlementProvider, createSettlement } from './services/settlement.js';
+import { SkillsService } from './services/skills.js';
 import { type Store, createStore } from './store/index.js';
 
 /**
@@ -145,6 +146,8 @@ export class Kernel {
     const clock = () => new Date().toISOString();
     const accounts = new AccountsService(this.store, clock);
     await accounts.load();
+    const skills = new SkillsService(this.store, clock);
+    await skills.load();
 
     const ctx: ModuleContext = {
       http: this.http,
@@ -158,6 +161,7 @@ export class Kernel {
       connections: this.connections,
       store: this.store,
       accounts,
+      skills,
       config: this.config,
       treasuryId: this.treasuryId,
       startedAt: this.startedAt,

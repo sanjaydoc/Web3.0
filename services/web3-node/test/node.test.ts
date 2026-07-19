@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
 import { AccountsService } from '../src/services/accounts.js';
 import { HostedAgentService } from '../src/services/hosted.js';
+import { SkillsService } from '../src/services/skills.js';
 import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
 import { makeAgent, message, sealAs } from '../src/testkit.js';
@@ -364,6 +365,7 @@ function ctxOf(k: Kernel) {
     connections: k.connections,
     store: k.store,
     accounts: new AccountsService(k.store, () => new Date().toISOString()),
+    skills: new SkillsService(k.store, () => new Date().toISOString()),
     config: k.config,
     treasuryId: k.treasuryId,
     clock: () => new Date().toISOString(),
@@ -865,6 +867,47 @@ describe('hosted dApp ownership scoping', () => {
       },
     });
     expect(anon.statusCode).toBe(401); // once accounts exist, anonymous publish is blocked
+    await k.close();
+  });
+});
+
+describe('skill catalogue', () => {
+  it('registers skills (auth required), rejects dupes/bad ids, and lists them', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const op = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'opsmith', role: 'operator' },
+      })
+      .then((r) => r.json())) as { token: string; address: string };
+
+    const create = (payload: Record<string, unknown>, token?: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/skills',
+        headers: token ? { 'x-web3-token': token } : undefined,
+        payload,
+      });
+
+    // anonymous create is blocked once accounts exist
+    expect((await create({ id: 'summarize', name: 'Summarize' })).statusCode).toBe(401);
+    // a signed-in operator can create; createdBy is stamped with their address
+    const ok = await create(
+      { id: 'summarize', name: 'Summarize', description: 'shorten text' },
+      op.token,
+    );
+    expect(ok.statusCode).toBe(201);
+    expect((ok.json() as { createdBy: string }).createdBy).toBe(op.address);
+    // duplicate id and a bad id are rejected
+    expect((await create({ id: 'summarize', name: 'Dup' }, op.token)).statusCode).toBe(400);
+    expect((await create({ id: 'Bad Id!', name: 'X' }, op.token)).statusCode).toBe(400);
+
+    const list = (await k.http.inject({ method: 'GET', url: '/skills' }).then((r) => r.json())) as {
+      skills: { id: string }[];
+    };
+    expect(list.skills.map((s) => s.id)).toContain('summarize');
     await k.close();
   });
 });

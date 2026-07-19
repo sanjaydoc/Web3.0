@@ -9,6 +9,7 @@ import type { Guardrails } from './services/guardrails.js';
 import type { Registry } from './services/registry.js';
 import type { ReplayGuard } from './services/replay.js';
 import type { SettlementProvider } from './services/settlement.js';
+import type { SkillsService } from './services/skills.js';
 import type { Store } from './store/index.js';
 
 /**
@@ -30,6 +31,8 @@ export interface ModuleContext {
   store: Store;
   /** Sign-up + authentication: resolves accounts, addresses, and roles from Web3.0 tokens. */
   accounts: AccountsService;
+  /** Skill catalogue: named capabilities node operators register for agents to advertise. */
+  skills: SkillsService;
   config: Web3Config;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;

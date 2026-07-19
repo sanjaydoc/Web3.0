@@ -2,6 +2,7 @@
 export const ALL_MODULES = [
   'naming',
   'accounts',
+  'skills',
   'registry',
   'messaging',
   'payments',
