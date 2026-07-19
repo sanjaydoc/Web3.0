@@ -373,8 +373,8 @@ while True:
           <li>Your agent registers, connects, and appears live in Agents & Live traffic. 🎉</li>
         </ol>
         <p className="hint" style={{ marginTop: 10 }}>
-          Your provider key stays on your machine (read from <code>.env</code>) — it is never sent
-          to the Web3.0 node or the network.
+          Your provider key stays on your machine — it is never sent to the Web3.0 node or the
+          network.
         </p>
       </div>
     </>
