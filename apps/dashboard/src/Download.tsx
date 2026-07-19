@@ -8,6 +8,8 @@ const DESKTOP_VERSION = '0.1.0';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DESKTOP_EXE = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
 const DESKTOP_MSI = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.${DESKTOP_VERSION}.msi`;
+// Linux artifact filenames vary by arch (x86_64 / amd64), so point at the release page.
+const DESKTOP_LINUX = DESKTOP_RELEASE;
 
 const INSTALL_SCRIPT = `#!/usr/bin/env bash
 # Run a Web3.0 node on macOS or Linux.
@@ -367,7 +369,21 @@ const W3Logo = () => (
   </svg>
 );
 
-/** The featured one-click Windows desktop app (.exe / .msi) — the no-terminal install. */
+const LinuxLogo = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M12 2c-2.2 0-3.5 1.8-3.5 4.2 0 1.6.3 2.4-.6 3.7-1 1.4-2.9 3.3-2.9 6 0 1.6.7 2.6 1.6 3.6.5.6.3 1 .9 1.4.6.4 1.6.3 2.3.6.7.3 1.2.6 1.7.6h1c.5 0 1-.3 1.7-.6.7-.3 1.7-.2 2.3-.6.6-.4.4-.8.9-1.4.9-1 1.6-2 1.6-3.6 0-2.7-1.9-4.6-2.9-6-.9-1.3-.6-2.1-.6-3.7C15.5 3.8 14.2 2 12 2z"
+      fill="#f2c14e"
+      stroke="#0d0d0f"
+      strokeWidth="0.8"
+    />
+    <ellipse cx="10.2" cy="7" rx="1" ry="1.3" fill="#0d0d0f" />
+    <ellipse cx="13.8" cy="7" rx="1" ry="1.3" fill="#0d0d0f" />
+    <path d="M10.8 9.2 12 10l1.2-.8-1.2-1z" fill="#e95420" />
+  </svg>
+);
+
+/** The featured one-click desktop app (Windows .exe/.msi, Linux .AppImage/.deb) — no-terminal install. */
 function DesktopApp() {
   const btns = [
     {
@@ -383,6 +399,20 @@ function DesktopApp() {
       accent: '#7c5cff',
       icon: <WindowsLogo />,
       href: DESKTOP_MSI,
+    },
+    {
+      label: 'Linux (AppImage)',
+      sub: 'any distro · double-click',
+      accent: '#f2c14e',
+      icon: <LinuxLogo />,
+      href: DESKTOP_LINUX,
+    },
+    {
+      label: 'Linux (.deb)',
+      sub: 'Debian · Ubuntu',
+      accent: '#e95420',
+      icon: <UbuntuLogo />,
+      href: DESKTOP_LINUX,
     },
     {
       label: 'All releases',
@@ -419,11 +449,12 @@ function DesktopApp() {
         ))}
       </div>
       <p className="hint" style={{ margin: '10px 2px 0' }}>
-        Installs <b>Web3.0</b> (W3 icon) with desktop + Start-menu shortcuts. Launch it and it boots a
-        node in the background and opens this dashboard in its own window — no Node.js, pnpm, or
-        terminal needed. The build is <b>unsigned</b>, so Windows SmartScreen shows “unknown
-        publisher” → click <b>More info → Run anyway</b>. Runs in-memory by default; set{' '}
-        <code>WEB3_MONGODB_URI</code> to persist.
+        Installs <b>Web3.0</b> (W3 icon) with app shortcuts. Launch it and it boots a node in the
+        background and opens this dashboard in its own window — no Node.js, pnpm, or terminal needed.
+        On <b>Windows</b> the build is unsigned, so SmartScreen shows “unknown publisher” →{' '}
+        <b>More info → Run anyway</b>. On <b>Linux</b>, either <code>chmod +x</code> the{' '}
+        <b>.AppImage</b> and double-click it, or <code>sudo apt install ./Web3.0*.deb</code>. Runs
+        in-memory by default; set <code>WEB3_MONGODB_URI</code> to persist.
       </p>
     </div>
   );

@@ -108,17 +108,19 @@ citizens on top of it.
 
 ### Just want the app? Download it (no terminal)
 
-The **Windows desktop app** runs a node and opens the dashboard in one window — a double-click, no
+The **desktop app** runs a node and opens the dashboard in one window — a double-click, no
 Node.js/pnpm/terminal required:
 
 | Download | |
 | --- | --- |
 | **[Windows installer (.exe)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | recommended — one-click setup |
 | **[Windows (.msi)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | for managed / MSI deployments |
+| **[Linux (.AppImage)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | any distro — `chmod +x` and run |
+| **[Linux (.deb)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | Debian / Ubuntu — `sudo apt install ./Web3.0*.deb` |
 | **[All releases](https://github.com/sanjaydoc/Web3.0/releases)** | changelog · checksums |
 
-It installs as **Web3.0** (W3 icon) with desktop + Start-menu shortcuts. The build is **unsigned**, so
-Windows SmartScreen shows "unknown publisher" → click **More info → Run anyway**. It runs in-memory by
+It installs as **Web3.0** (W3 icon) with app shortcuts. On Windows the build is **unsigned**, so
+SmartScreen shows "unknown publisher" → click **More info → Run anyway**. It runs in-memory by
 default; set `WEB3_MONGODB_URI` to persist. Build details: [`desktop/README.md`](desktop/README.md).
 
 > Prefer running from source, or on macOS/Linux/server/phone? Use the developer setup below (or the
@@ -462,9 +464,10 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
 - ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
   real ERC-20 transfers; the node holds no key and never broadcasts by default.
-- ✅ **Desktop app (Windows `.msi` / `.exe`)** — an **Electron** app in `desktop/` that bundles the
-  node and the dashboard into one double-click install (no terminal). Built on a Windows CI runner and
-  attached to each [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
+- ✅ **Desktop app (Windows `.msi`/`.exe` · Linux `.AppImage`/`.deb`)** — an **Electron** app in
+  `desktop/` that bundles the node and the dashboard into one double-click install (no terminal). Built
+  on Windows + Linux CI runners and attached to each
+  [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
   [`desktop/README.md`](desktop/README.md) has the build details.
 
 Still ahead:

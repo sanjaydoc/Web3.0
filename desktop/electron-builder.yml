@@ -28,3 +28,17 @@ nsis:
 
 msi:
   oneClick: false
+
+linux:
+  # AppImage runs on any distro (double-click, no install); .deb for Debian/Ubuntu apt.
+  target:
+    - AppImage
+    - deb
+  icon: assets/icon.png
+  category: Network
+  synopsis: Run a Web3.0 node and open the dashboard in one window
+  # .deb requires a maintainer with an email; use the GitHub noreply address (no personal email in-repo).
+  maintainer: DR SANJAY ANBU <sanjaydoc@users.noreply.github.com>
+  vendor: DR SANJAY ANBU
+  desktop:
+    StartupWMClass: Web3.0

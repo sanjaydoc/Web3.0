@@ -1,7 +1,7 @@
 # Web3.0 desktop (Electron)
 
 A native desktop app that **runs a Web3.0 node and shows the dashboard** in one window — double-click,
-no terminal. Produces a Windows **`.msi`** and **`.exe`** installer.
+no terminal. Produces a Windows **`.msi`** + **`.exe`** installer and a Linux **`.AppImage`** + **`.deb`**.
 
 ## How it works
 - `src/main.js` — the Electron main process. On launch it spawns the bundled node
@@ -18,8 +18,9 @@ The node runs **in-memory by default** in the desktop app (no Mongo). To persist
 ## Build the installer
 
 ### The easy way — GitHub Actions (no toolchain needed)
-Push a version tag and the `desktop` workflow builds the `.msi` + `.exe` on a Windows runner and
-attaches them to a GitHub Release:
+Push a version tag and the `desktop` workflow builds the Windows `.msi` + `.exe` (on a Windows runner)
+**and** the Linux `.AppImage` + `.deb` (on an Ubuntu runner), then attaches all four to a GitHub
+Release:
 
 ```bash
 git tag v0.1.0
@@ -35,7 +36,8 @@ Prereqs: Node 20+, pnpm, and (for a custom icon) nothing extra — electron-buil
 pnpm install            # once, at the repo root (for the dashboard build)
 cd desktop
 npm install             # electron, electron-builder, esbuild
-npm run dist            # → desktop/release/*.msi and *.exe
+npm run dist            # Windows → desktop/release/*.msi and *.exe
+npm run dist:linux      # Linux   → desktop/release/*.AppImage and *.deb
 ```
 
 Run it live without packaging:
@@ -45,9 +47,9 @@ npm install
 npm run dev             # builds, bundles, and launches the app
 ```
 
-## Icon (optional)
-Drop a 256×256 `assets/icon.ico` to brand the app and installer; otherwise the default Electron icon
-is used.
+## Icon
+`assets/icon.ico` brands the Windows app/installer; `assets/icon.png` (512×512) brands the Linux app.
+Both are the monochrome **W3** mark from the dashboard theme.
 
 ## Signing
 The installers are **unsigned** — Windows SmartScreen shows an "unknown publisher" prompt (click
