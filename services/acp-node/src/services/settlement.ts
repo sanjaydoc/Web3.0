@@ -35,6 +35,27 @@ export interface SettlementProvider {
 }
 
 /**
+ * A signer broadcasts a prepared ERC-20 transfer and returns its tx hash. This is the seam an
+ * operator plugs their own funded key into to go from "testnet, never broadcasts" to real settlement.
+ * The node ships WITHOUT an implementation — it never holds a private key by default. Provide one
+ * explicitly (e.g. wrapping ethers/viem + a key from your own secrets) to enable broadcasting.
+ */
+export interface Erc20TransferRequest {
+  tokenAddress: string;
+  to: string;
+  /** ERC-20 transfer(address,uint256) calldata, 0x-prefixed. */
+  calldata: string;
+  /** Value in the token's base units. */
+  value: bigint;
+  rpcUrl?: string;
+  network: string;
+}
+export interface Signer {
+  /** Broadcast the transfer and return its on-chain tx hash. */
+  sendErc20Transfer(req: Erc20TransferRequest): Promise<{ txHash: string }>;
+}
+
+/**
  * internal — the ACP ledger IS the settlement. The transfer has already been recorded on the
  * PQC-signed ledger by the time we're called; we just surface its hash as the tx reference. This is
  * the default and keeps the MVP self-contained.
@@ -82,9 +103,17 @@ export class SimulatedSettlement implements SettlementProvider {
  */
 export class TestnetSettlement implements SettlementProvider {
   readonly mode = 'testnet' as const;
-  constructor(private readonly config: SettlementConfig) {}
+  constructor(
+    private readonly config: SettlementConfig,
+    /** Optional funded signer. Absent by default → prepares calldata but never broadcasts. */
+    private readonly signer?: Signer,
+  ) {}
   get network(): string {
     return this.config.network;
+  }
+
+  private explorer(txHash: string): string | undefined {
+    return this.config.explorerBaseUrl ? `${this.config.explorerBaseUrl}${txHash}` : undefined;
   }
 
   async settle(intent: SettlementIntent): Promise<SettlementResult> {
@@ -97,10 +126,37 @@ export class TestnetSettlement implements SettlementProvider {
       };
     }
     // Build the real ERC-20 transfer(address,uint256) calldata for this payment.
-    const calldata = encodeErc20Transfer(
-      intent.to,
-      toTokenUnits(intent.amount, this.config.decimals),
-    );
+    const value = toTokenUnits(intent.amount, this.config.decimals);
+    const calldata = encodeErc20Transfer(intent.to, value);
+
+    // If (and only if) an operator has plugged in a funded signer, broadcast it — this is the
+    // mainnet/testnet-live step. The node never holds a key itself, so by default `signer` is unset.
+    if (this.signer) {
+      try {
+        const { txHash } = await this.signer.sendErc20Transfer({
+          tokenAddress: token,
+          to: intent.to,
+          calldata,
+          value,
+          rpcUrl: this.config.rpcUrl,
+          network: this.network,
+        });
+        return {
+          network: this.network,
+          status: 'pending', // broadcast; confirmations tracked out of band
+          txRef: txHash,
+          explorerUrl: this.explorer(txHash),
+          detail: `broadcast ERC-20 transfer to ${token} via signer`,
+        };
+      } catch (err) {
+        return {
+          network: this.network,
+          status: 'failed',
+          detail: `signer broadcast failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    }
+
     let chainDetail = 'RPC not configured — calldata prepared but not verified against a chain';
     if (this.config.rpcUrl) {
       const chainId = await this.rpcChainId(this.config.rpcUrl).catch((e) => `error: ${e.message}`);
@@ -131,13 +187,16 @@ export class TestnetSettlement implements SettlementProvider {
   }
 }
 
-/** Choose the settlement provider from config. This is the one place rails are wired. */
-export function createSettlement(config: SettlementConfig): SettlementProvider {
+/**
+ * Choose the settlement provider from config. This is the one place rails are wired. An operator can
+ * pass a `signer` to enable real broadcasting on the testnet rail; omitted by default (safe).
+ */
+export function createSettlement(config: SettlementConfig, signer?: Signer): SettlementProvider {
   switch (config.mode) {
     case 'simulated':
       return new SimulatedSettlement(config);
     case 'testnet':
-      return new TestnetSettlement(config);
+      return new TestnetSettlement(config, signer);
     default:
       return new InternalSettlement();
   }

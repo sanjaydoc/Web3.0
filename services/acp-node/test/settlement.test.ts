@@ -58,6 +58,48 @@ describe('settlement providers', () => {
     expect(r.status).toBe('failed');
   });
 
+  it('broadcasts via a plugged-in signer, returning a tx hash + explorer link', async () => {
+    const cfg = {
+      ...base,
+      mode: 'testnet' as const,
+      network: 'base-sepolia',
+      tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      decimals: 6,
+      explorerBaseUrl: 'https://sepolia.basescan.org/tx/',
+    };
+    const seen: { calldata?: string; value?: bigint } = {};
+    const signer = {
+      async sendErc20Transfer(req: { calldata: string; value: bigint }) {
+        seen.calldata = req.calldata;
+        seen.value = req.value;
+        return { txHash: '0xdeadbeef' };
+      },
+    };
+    const r = await new TestnetSettlement(cfg, signer).settle(intent);
+    expect(r.status).toBe('pending');
+    expect(r.txRef).toBe('0xdeadbeef');
+    expect(r.explorerUrl).toBe('https://sepolia.basescan.org/tx/0xdeadbeef');
+    expect(seen.calldata?.startsWith('0xa9059cbb')).toBe(true);
+    expect(seen.value).toBe(12_500_000n); // 12.50 aETH → 6-decimal token base units
+  });
+
+  it('reports a clean failure if the signer throws', async () => {
+    const cfg = {
+      ...base,
+      mode: 'testnet' as const,
+      tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      decimals: 6,
+    };
+    const signer = {
+      async sendErc20Transfer() {
+        throw new Error('insufficient gas');
+      },
+    };
+    const r = await new TestnetSettlement(cfg, signer).settle(intent);
+    expect(r.status).toBe('failed');
+    expect(r.detail).toContain('insufficient gas');
+  });
+
   it('encodes ERC-20 transfer calldata and scales minor units to token decimals', () => {
     // 12.50 aETH (1250 minor units) in a 6-decimal token → 12_500_000 base units.
     expect(toTokenUnits(1250, 6)).toBe(12_500_000n);
