@@ -410,6 +410,15 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
 
 Still ahead:
 
+- **Desktop node app (MSI / one-click installer)** — wrap the node + dashboard in a native
+  installer (Windows MSI, macOS `.dmg`, Linux `.AppImage`) with a **WebView** UI, so an operator
+  double-clicks to install and run a node — no terminal, no Node.js/git prerequisites. The bundled
+  WebView loads the existing dashboard against the local node.
+- **Accounts & authentication (admin / operator / developer)** — a real **sign-up** flow that mints
+  each user an ACP identity: an **`ACP_TOKEN`** (their signing key / API token) and a human address
+  like **`sanjay@web3.0`**. Roles (admin, operator, developer) become enforced server-side, turning
+  today's UI-only Operator/Admin toggle and dApp scoping into a real authorization boundary. Replaces
+  the single shared `ACP_ADMIN_TOKEN` with per-user accounts.
 - **Real mainnet settlement** — add a funded signer to the testnet rail (deliberately out of the box)
 - **BFT/PoS validators + state-machine replication** — beyond round-robin PoA and a replicated log
 - **Per-developer authentication & multi-tenant scoping** — today the dashboard scopes the *Hosted
