@@ -792,6 +792,75 @@ describe('accounts & authentication', () => {
   });
 });
 
+describe('hosted dApp ownership scoping', () => {
+  it('scopes /hosted to the signed-in developer; admin sees all; anon launch rejected', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { address: string; token: string });
+    const admin = await signup('adm', 'admin');
+    const dev1 = await signup('devone', 'developer');
+    const dev2 = await signup('devtwo', 'developer');
+
+    const launch = (token: string, handle: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/hosted/launch',
+        headers: { 'x-acp-token': token },
+        payload: {
+          handle,
+          name: 'D',
+          description: '',
+          skillId: 'ask',
+          skillName: 'Ask',
+          skillDesc: '',
+          price: 100,
+          provider: 'http',
+          model: 'webhook',
+          webhookUrl: 'http://127.0.0.1:1/x',
+        },
+      });
+    expect((await launch(dev1.token, 'appone')).statusCode).toBe(200);
+
+    const hosted = (token?: string) =>
+      k.http
+        .inject({
+          method: 'GET',
+          url: '/hosted',
+          headers: token ? { 'x-acp-token': token } : undefined,
+        })
+        .then((r) => r.json() as { agents: { web3Id: string; createdBy: string }[] });
+
+    const asDev1 = await hosted(dev1.token);
+    expect(asDev1.agents.map((a) => a.web3Id)).toContain('appone@web3.0');
+    expect(asDev1.agents.every((a) => a.createdBy === 'devone@web3.0')).toBe(true);
+
+    expect((await hosted(dev2.token)).agents.length).toBe(0); // dev2 sees none of dev1's
+    expect((await hosted(admin.token)).agents.map((a) => a.web3Id)).toContain('appone@web3.0');
+
+    const anon = await k.http.inject({
+      method: 'POST',
+      url: '/hosted/launch',
+      payload: {
+        handle: 'nope',
+        name: '',
+        description: '',
+        skillId: 'ask',
+        skillName: '',
+        skillDesc: '',
+        price: 0,
+        provider: 'http',
+        model: 'webhook',
+        webhookUrl: 'http://x/y',
+      },
+    });
+    expect(anon.statusCode).toBe(401); // once accounts exist, anonymous publish is blocked
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }
