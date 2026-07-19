@@ -53,12 +53,12 @@ const NAV: {
   { id: 'connectors', label: 'Connectors', operator: true },
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries', operator: true },
   { id: 'telegram', label: 'Telegram bot', operator: true },
+  { id: 'genesis', label: 'Genesis · new agent', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'agents', label: 'Agents', badge: 'agents' },
   { id: 'skills', label: 'Skills' },
   { id: 'traffic', label: 'Live traffic', badge: 'events' },
   { id: 'guardrails', label: 'Guardrails' },
-  { id: 'genesis', label: 'Genesis · new agent' },
   { id: 'developers', label: 'Developers' },
 ];
 
