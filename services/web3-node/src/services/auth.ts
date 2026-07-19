@@ -31,6 +31,24 @@ export function hasRole(request: FastifyRequest, accounts: AccountsService, role
   return !accounts.hasAccounts() && !adminToken;
 }
 
+/**
+ * Guard: allow the request if it carries ANY authenticated account (operator, developer, admin),
+ * the legacy admin token, or the node is open (no accounts configured). Replies 401 otherwise.
+ * Use for actions any signed-in user may take (e.g. publishing a dApp), regardless of specific role.
+ */
+export function requireAuthed(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  accounts: AccountsService,
+): boolean {
+  if (currentAccount(request, accounts)) return true;
+  const adminToken = process.env.WEB3_ADMIN_TOKEN;
+  if (adminToken && request.headers['x-admin-token'] === adminToken) return true;
+  if (!accounts.hasAccounts() && !adminToken) return true; // open single-operator dev node
+  reply.code(401).send({ error: 'authentication required' });
+  return false;
+}
+
 /** Guard: allow the request if it satisfies `role`, else reply 401/403 and return false. */
 export function requireRole(
   request: FastifyRequest,

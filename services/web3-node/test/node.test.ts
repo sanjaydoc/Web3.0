@@ -840,6 +840,14 @@ describe('hosted dApp ownership scoping', () => {
     expect((await hosted(dev2.token)).agents.length).toBe(0); // dev2 sees none of dev1's
     expect((await hosted(admin.token)).agents.map((a) => a.web3Id)).toContain('appone@web3.0');
 
+    // a 'node operator' account (the default non-admin role) may publish and is scoped the same way
+    const op = await signup('opp', 'operator');
+    expect((await launch(op.token, 'opapp')).statusCode).toBe(200);
+    const asOp = await hosted(op.token);
+    expect(asOp.agents.map((a) => a.web3Id)).toContain('opapp@web3.0');
+    expect(asOp.agents.some((a) => a.web3Id === 'appone@web3.0')).toBe(false); // not dev1's
+    expect(asOp.agents.every((a) => a.createdBy === 'opp@web3.0')).toBe(true);
+
     const anon = await k.http.inject({
       method: 'POST',
       url: '/hosted/launch',

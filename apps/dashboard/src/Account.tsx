@@ -10,7 +10,7 @@ export function Account() {
   const [me, setMe] = useState<Acct | null>(null);
   const [checked, setChecked] = useState(false);
   const [local, setLocal] = useState('');
-  const [role, setRole] = useState<Role>('developer');
+  const [role, setRole] = useState<Role>('operator');
   const [tokenInput, setTokenInput] = useState('');
   const [freshToken, setFreshToken] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -206,8 +206,7 @@ export function Account() {
                     value={role}
                     onChange={(e) => setRole(e.target.value as Role)}
                   >
-                    <option value="developer">developer</option>
-                    <option value="operator">operator</option>
+                    <option value="operator">node operator</option>
                     <option value="admin">admin</option>
                   </select>
                   <span className="hint">first admin bootstraps free; more need admin</span>

@@ -1,6 +1,6 @@
 import type { ModuleContext, Web3Module } from '../context.js';
 import { adminRequired, checkAdmin } from '../services/admin.js';
-import { currentAccount, requireRole } from '../services/auth.js';
+import { currentAccount, requireAuthed } from '../services/auth.js';
 import { type HostedAgentConfig, HostedAgentService } from '../services/hosted.js';
 
 /**
@@ -18,22 +18,21 @@ export function hostedModule(): Web3Module {
       ctx.http.get('/hosted', (request) => {
         const acct = currentAccount(request, ctx.accounts);
         const all = svc.status();
-        // A signed-in developer (not admin) sees only the dApps they created; admins/open see all.
-        const agents =
-          acct && acct.role === 'developer'
-            ? all.filter((a) => a.createdBy.toLowerCase() === acct.address.toLowerCase())
-            : all;
-        return { agents, adminRequired: adminRequired(), scopedTo: acct?.address ?? null };
+        // A signed-in non-admin (node operator) sees only the dApps they created; admins/open see all.
+        const scoped = acct !== null && acct.role !== 'admin';
+        const agents = scoped
+          ? all.filter((a) => a.createdBy.toLowerCase() === acct.address.toLowerCase())
+          : all;
+        return { agents, adminRequired: adminRequired(), scopedTo: scoped ? acct.address : null };
       });
 
       ctx.http.post('/hosted/launch', async (request, reply) => {
-        // Developers (and admins) may publish; an open node with no accounts allows it too.
-        // requireRole encodes all of that (account role / legacy admin token / open dev node).
-        if (!requireRole(request, reply, ctx.accounts, 'developer')) return;
-        // A signed-in developer's address becomes the dApp's owner (real, not free-text).
+        // Any signed-in account may publish; an open node (no accounts) allows it too.
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        // A signed-in non-admin's address becomes the dApp's owner (real, not free-text).
         const acct = currentAccount(request, ctx.accounts);
         const body = request.body as HostedAgentConfig;
-        if (acct && acct.role === 'developer') body.createdBy = acct.address;
+        if (acct && acct.role !== 'admin') body.createdBy = acct.address;
         try {
           return await svc.launch(body);
         } catch (err) {

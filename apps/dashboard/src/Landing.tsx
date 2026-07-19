@@ -94,7 +94,7 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [token, setToken] = useState('');
   const [local, setLocal] = useState('');
-  const [role, setRole] = useState<Role>('developer');
+  const [role, setRole] = useState<Role>('operator');
   const [fresh, setFresh] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -282,8 +282,7 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
                     <label className="l-field">
                       <span>Role</span>
                       <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                        <option value="developer">developer</option>
-                        <option value="operator">operator</option>
+                        <option value="operator">node operator</option>
                         <option value="admin">admin</option>
                       </select>
                     </label>

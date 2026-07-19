@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Account } from './Account.js';
 import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
@@ -11,6 +11,7 @@ import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
 import {
+  type Account as Acct,
   type AgentCard,
   type Guardrails,
   type LedgerEntry,
@@ -103,40 +104,53 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
-  const [role, setRole] = useState<Role>(() =>
+  // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
+  const [rolePref, setRolePref] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
   );
   // Auth gate: null = still checking, true = signed in, false = show the landing.
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [guest, setGuest] = useState(false);
+  const [account, setAccount] = useState<Acct | null>(null);
+
+  const checkAuth = useCallback(async () => {
+    if (!getWeb3Token()) {
+      setAccount(null);
+      setAuthed(false);
+      return;
+    }
+    try {
+      const me = await api.me();
+      setAccount(me);
+      setAuthed(true);
+    } catch {
+      setAccount(null);
+      setAuthed(false); // stale/invalid token → back to landing
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      if (!getWeb3Token()) {
-        if (active) setAuthed(false);
-        return;
-      }
-      try {
-        await api.me();
-        if (active) setAuthed(true);
-      } catch {
-        if (active) setAuthed(false); // stale/invalid token → back to landing
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+    checkAuth();
+  }, [checkAuth]);
+
+  // The signed-in account's real role governs access: only an admin account sees admin sections
+  // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
+  const isAdmin = account?.role === 'admin';
+  const role: Role = isAdmin ? rolePref : 'operator';
 
   const visibleNav = NAV.filter((n) => role === 'admin' || n.operator);
 
   const changeRole = (r: Role) => {
-    setRole(r);
+    setRolePref(r);
     localStorage.setItem(ROLE_KEY, r);
     // If the current page isn't in the new role's menu, fall back to Overview.
     if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView('overview');
   };
+
+  // Never leave a non-admin sitting on an admin-only view (e.g. after switching accounts).
+  useEffect(() => {
+    if (role === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView('overview');
+  }, [role, view]);
 
   useEffect(() => {
     let active = true;
@@ -175,7 +189,7 @@ export function App() {
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
   if (!authed && !guest) {
-    return <Landing onEnter={() => setAuthed(true)} onGuest={() => setGuest(true)} />;
+    return <Landing onEnter={() => checkAuth()} onGuest={() => setGuest(true)} />;
   }
 
   return (
@@ -185,22 +199,24 @@ export function App() {
           <span className="badge">W</span> Web3.0
         </div>
         <p className="tagline">the agentic internet · console</p>
-        <div className="role-toggle" role="group" aria-label="View mode">
-          <button
-            type="button"
-            className={role === 'operator' ? 'active' : ''}
-            onClick={() => changeRole('operator')}
-          >
-            Operator
-          </button>
-          <button
-            type="button"
-            className={role === 'admin' ? 'active' : ''}
-            onClick={() => changeRole('admin')}
-          >
-            Admin
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="role-toggle" role="group" aria-label="View mode">
+            <button
+              type="button"
+              className={role === 'operator' ? 'active' : ''}
+              onClick={() => changeRole('operator')}
+            >
+              Operator
+            </button>
+            <button
+              type="button"
+              className={role === 'admin' ? 'active' : ''}
+              onClick={() => changeRole('admin')}
+            >
+              Admin
+            </button>
+          </div>
+        )}
         {visibleNav.map((n) => (
           <NavItem
             key={n.id}
