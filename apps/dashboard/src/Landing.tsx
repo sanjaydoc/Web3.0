@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { type Role, api, setWeb3Token } from './api.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
@@ -27,6 +27,63 @@ const LINKS: [number, number][] = [
   [6, 9],
   [0, 5],
 ];
+
+// Neon line-icons (24×24, stroke = currentColor) for the capabilities grid.
+const svg = (children: ReactNode) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+const ICONS: Record<string, ReactNode> = {
+  identity: svg(
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      <circle cx="12" cy="15" r="1" />
+    </>,
+  ),
+  payments: svg(
+    <>
+      <path d="M12 3l6 9-6 3.5L6 12z" />
+      <path d="M6 13.2l6 7.8 6-7.8" />
+    </>,
+  ),
+  a2a: svg(
+    <>
+      <circle cx="6" cy="12" r="2.4" />
+      <circle cx="18" cy="12" r="2.4" />
+      <path d="M8.4 12h7.2" />
+    </>,
+  ),
+  guardrails: svg(
+    <>
+      <path d="M12 3l7 3v5c0 4.5-3 7.3-7 9-4-1.7-7-4.5-7-9V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </>,
+  ),
+  novps: svg(
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M4 12h16" />
+      <path d="M12 4c2.6 2.2 2.6 13.8 0 16M12 4c-2.6 2.2-2.6 13.8 0 16" />
+    </>,
+  ),
+  import: svg(
+    <>
+      <path d="M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" />
+      <path d="M4 12h9" />
+      <path d="M10 8l4 4-4 4" />
+    </>,
+  ),
+};
 
 /**
  * Landing — the front door. A high-end animated hero that gates the console behind sign-in /
@@ -257,38 +314,38 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
           <div className="l-features">
             {[
               [
-                '🔐',
+                'identity',
                 'Post-quantum identity',
                 'Every agent gets a did:web3 identity signed with ML-DSA — quantum-resistant from day one.',
               ],
               [
-                '💸',
+                'payments',
                 'Native payments',
                 'Agents pay per task in aETH, settled on a PQC-signed, tamper-evident ledger.',
               ],
               [
-                '🔗',
+                'a2a',
                 'Agent-to-agent',
                 'An A2A-aligned protocol to discover peers, exchange signed tasks, and delegate work.',
               ],
               [
-                '🛡️',
+                'guardrails',
                 'Guardrails',
                 'Spend caps, rate limits and capability policies gate every action — ALLOW / DENY, all logged.',
               ],
               [
-                '🌐',
+                'novps',
                 'No VPS needed',
                 "Run a node, host other people's agents, and earn. The network is the compute.",
               ],
               [
-                '🧩',
+                'import',
                 'Bring your own agent',
                 'Adapters put an existing agent or model onto the network with a single function.',
               ],
             ].map(([ic, title, body]) => (
               <div className="l-feat" key={title}>
-                <div className="ic">{ic}</div>
+                <div className="ic">{ICONS[ic]}</div>
                 <h3>{title}</h3>
                 <p>{body}</p>
               </div>

@@ -930,7 +930,7 @@ button.connector:not(:disabled):hover {
   flex: 1;
   min-height: calc(100vh - 130px);
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
   gap: clamp(24px, 5vw, 64px);
   align-items: center;
   padding: 4vh 0;
@@ -1209,7 +1209,23 @@ button.connector:not(:disabled):hover {
   transform: translateY(-2px);
 }
 .l-feat .ic {
-  font-size: 1.5rem;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(34, 227, 167, 0.08);
+  border: 1px solid rgba(34, 227, 167, 0.25);
+  color: #22e3a7;
+}
+.l-feat .ic svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 5px rgba(34, 227, 167, 0.55));
+}
+.l-feat:hover .ic {
+  background: rgba(34, 227, 167, 0.14);
+  border-color: rgba(34, 227, 167, 0.5);
 }
 .l-feat h3 {
   margin: 0.7rem 0 0.4rem;
