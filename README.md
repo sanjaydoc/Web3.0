@@ -115,13 +115,15 @@ Node.js/pnpm/terminal required:
 | --- | --- |
 | **[Windows installer (.exe)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | recommended — one-click setup |
 | **[Windows (.msi)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | for managed / MSI deployments |
+| **[macOS (.dmg)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | universal — Apple Silicon + Intel |
 | **[Linux (.AppImage)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | any distro — `chmod +x` and run |
-| **[Linux (.deb)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | Debian / Ubuntu — `sudo apt install ./Web3.0*.deb` |
+| **[Linux (.deb)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | Debian / Ubuntu — `sudo apt install ./web3_*.deb` |
 | **[All releases](https://github.com/sanjaydoc/Web3.0/releases)** | changelog · checksums |
 
-It installs as **Web3.0** (W3 icon) with app shortcuts. On Windows the build is **unsigned**, so
-SmartScreen shows "unknown publisher" → click **More info → Run anyway**. It runs in-memory by
-default; set `WEB3_MONGODB_URI` to persist. Build details: [`desktop/README.md`](desktop/README.md).
+It installs as **Web3.0** (W3 icon) with app shortcuts. The build is **unsigned**: on Windows,
+SmartScreen shows "unknown publisher" → **More info → Run anyway**; on macOS, right-click → **Open**
+the first time (or `xattr -cr /Applications/Web3.0.app`). It runs in-memory by default; set
+`WEB3_MONGODB_URI` to persist. Build details: [`desktop/README.md`](desktop/README.md).
 
 > Prefer running from source, or on macOS/Linux/server/phone? Use the developer setup below (or the
 > **Run a node** tab in the dashboard for one-click installer scripts).
@@ -464,9 +466,9 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
 - ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
   real ERC-20 transfers; the node holds no key and never broadcasts by default.
-- ✅ **Desktop app (Windows `.msi`/`.exe` · Linux `.AppImage`/`.deb`)** — an **Electron** app in
-  `desktop/` that bundles the node and the dashboard into one double-click install (no terminal). Built
-  on Windows + Linux CI runners and attached to each
+- ✅ **Desktop app (Windows `.msi`/`.exe` · macOS `.dmg` · Linux `.AppImage`/`.deb`)** — an
+  **Electron** app in `desktop/` that bundles the node and the dashboard into one double-click install
+  (no terminal). Built on Windows + macOS + Linux CI runners and attached to each
   [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
   [`desktop/README.md`](desktop/README.md) has the build details.
 

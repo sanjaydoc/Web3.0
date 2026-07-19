@@ -212,7 +212,8 @@ SIZES.forEach((sz, i) => {
 });
 writeFileSync(resolve(assets, 'icon.ico'), Buffer.concat([dir, ...dibs]));
 
-// Linux app icon — a clean 512 PNG straight from Chromium.
-writeFileSync(resolve(assets, 'icon.png'), renderPng(512));
+// Linux + macOS app icon — a clean 1024 PNG (electron-builder derives .icns / Linux sizes from it;
+// macOS retina wants 1024).
+writeFileSync(resolve(assets, 'icon.png'), renderPng(1024));
 
-console.log(`✓ wrote assets/icon.ico (${SIZES.join(', ')}) and assets/icon.png (512)`);
+console.log(`✓ wrote assets/icon.ico (${SIZES.join(', ')}) and assets/icon.png (1024)`);

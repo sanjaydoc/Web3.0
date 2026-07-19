@@ -47,3 +47,15 @@ deb:
   # The npm package is scoped ("@web3/desktop") — not a valid Debian package name (no @ or /).
   # Give the .deb a clean lowercase name → web3_<version>_amd64.deb.
   packageName: web3
+
+mac:
+  # Universal .dmg runs on both Apple Silicon and Intel. Unsigned (no Developer ID) — the workflow
+  # sets CSC_IDENTITY_AUTO_DISCOVERY=false so electron-builder ad-hoc signs instead of hunting a cert.
+  target:
+    - target: dmg
+      arch: universal
+  icon: assets/icon.png
+  category: public.app-category.developer-tools
+
+dmg:
+  title: Web3.0 ${version}

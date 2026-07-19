@@ -2,7 +2,7 @@ name: desktop
 
 # Builds the desktop installers. Runs on a version tag (attaches the installers to a GitHub Release)
 # or on demand via "Run workflow".
-#   Windows → .msi + .exe   |   Linux → .AppImage + .deb
+#   Windows → .msi + .exe   |   Linux → .AppImage + .deb   |   macOS → .dmg (universal)
 on:
   push:
     tags: ['v*']
@@ -97,3 +97,44 @@ jobs:
           files: |
             desktop/release/*.AppImage
             desktop/release/*.deb
+
+  macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    # Unsigned build — don't let electron-builder hunt for a Developer ID cert (it ad-hoc signs instead).
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+
+      # Builds the dashboard, bundles the node, then packages the universal .dmg.
+      - name: Build installer
+        working-directory: desktop
+        run: npm run dist:mac
+
+      - name: Upload installer (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: web3-desktop-macos
+          path: desktop/release/*.dmg
+
+      - name: Attach installer to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/release/*.dmg

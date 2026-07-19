@@ -13,6 +13,7 @@
     "dev": "npm run prepare:app && electron dist/main.cjs",
     "dist": "npm run prepare:app && electron-builder --win",
     "dist:linux": "npm run prepare:app && electron-builder --linux",
+    "dist:mac": "npm run prepare:app && electron-builder --mac",
     "dist:all": "npm run prepare:app && electron-builder -mwl"
   },
   "devDependencies": {

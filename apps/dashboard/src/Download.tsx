@@ -401,6 +401,13 @@ function DesktopApp() {
       href: DESKTOP_MSI,
     },
     {
+      label: 'macOS (.dmg)',
+      sub: 'Apple Silicon + Intel',
+      accent: '#a0a0a0',
+      icon: <AppleLogo />,
+      href: DESKTOP_LINUX,
+    },
+    {
       label: 'Linux (AppImage)',
       sub: 'any distro · double-click',
       accent: '#f2c14e',
@@ -451,10 +458,12 @@ function DesktopApp() {
       <p className="hint" style={{ margin: '10px 2px 0' }}>
         Installs <b>Web3.0</b> (W3 icon) with app shortcuts. Launch it and it boots a node in the
         background and opens this dashboard in its own window — no Node.js, pnpm, or terminal needed.
-        On <b>Windows</b> the build is unsigned, so SmartScreen shows “unknown publisher” →{' '}
-        <b>More info → Run anyway</b>. On <b>Linux</b>, either <code>chmod +x</code> the{' '}
-        <b>.AppImage</b> and double-click it, or <code>sudo apt install ./Web3.0*.deb</code>. Runs
-        in-memory by default; set <code>WEB3_MONGODB_URI</code> to persist.
+        The build is <b>unsigned</b>. On <b>Windows</b>, SmartScreen shows “unknown publisher” →{' '}
+        <b>More info → Run anyway</b>. On <b>macOS</b>, right-click the app → <b>Open</b> the first
+        time (or run <code>xattr -cr /Applications/Web3.0.app</code>). On <b>Linux</b>, either{' '}
+        <code>chmod +x</code> the <b>.AppImage</b> and double-click it, or{' '}
+        <code>sudo apt install ./web3_*.deb</code>. Runs in-memory by default; set{' '}
+        <code>WEB3_MONGODB_URI</code> to persist.
       </p>
     </div>
   );
