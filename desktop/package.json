@@ -4,6 +4,7 @@
   "description": "Web3.0 desktop — an Electron app that runs a node and shows the dashboard.",
   "private": true,
   "author": "DR SANJAY ANBU",
+  "homepage": "https://github.com/sanjaydoc/Web3.0",
   "main": "dist/main.cjs",
   "scripts": {
     "build:dashboard": "pnpm --dir .. --filter @web3/dashboard build",

@@ -42,3 +42,8 @@ linux:
   vendor: DR SANJAY ANBU
   desktop:
     StartupWMClass: Web3.0
+
+deb:
+  # The npm package is scoped ("@web3/desktop") — not a valid Debian package name (no @ or /).
+  # Give the .deb a clean lowercase name → web3_<version>_amd64.deb.
+  packageName: web3
