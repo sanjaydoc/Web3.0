@@ -9,7 +9,7 @@ const CREATOR_KEY = 'acp.creatorName';
  * node owner (holds the admin token, or runs an open single-user node) sees every developer's
  * dApps; a regular developer sees only the ones they published (matched by their creator name).
  */
-export function HostedDapps() {
+export function HostedDapps({ admin = false }: { admin?: boolean }) {
   const [items, setItems] = useState<HostedAgent[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
@@ -34,8 +34,10 @@ export function HostedDapps() {
   }, []);
 
   // Owner = holds the admin token, or the node requires no admin (your own single-user node).
+  // Only Admin mode may view every developer's dApps; Operators always see just their own.
   const isOwner = !adminRequired || Boolean(localStorage.getItem(ADMIN_KEY));
-  const effectiveScope = isOwner ? scope : 'mine';
+  const canSeeAll = admin && isOwner;
+  const effectiveScope = canSeeAll ? scope : 'mine';
   const mine = (h: HostedAgent) => Boolean(me) && h.createdBy.toLowerCase() === me.toLowerCase();
   const shown = effectiveScope === 'all' ? items : items.filter(mine);
 
@@ -62,7 +64,7 @@ export function HostedDapps() {
 
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="scope-bar">
-          {isOwner ? (
+          {canSeeAll ? (
             <div className="role-toggle" role="group" aria-label="Scope">
               <button
                 type="button"
@@ -80,7 +82,7 @@ export function HostedDapps() {
               </button>
             </div>
           ) : (
-            <span className="chip">Showing your dApps only</span>
+            <span className="chip">My apps</span>
           )}
           <div className="field" style={{ margin: 0, minWidth: 220 }}>
             <input
@@ -89,7 +91,7 @@ export function HostedDapps() {
               placeholder="You are (creator name) — e.g. Dr. Sanjay Anbu"
             />
           </div>
-          {isOwner && <span className="chip allow">owner view</span>}
+          {canSeeAll && <span className="chip allow">admin view</span>}
         </div>
       </div>
 

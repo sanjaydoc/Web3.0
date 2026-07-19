@@ -204,7 +204,7 @@ export function App() {
         {view === 'ledger' && <LedgerView snap={snap} />}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
-        {view === 'hosteddapps' && <HostedDapps />}
+        {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'download' && <Download />}
         {view === 'telegram' && <Telegram />}
