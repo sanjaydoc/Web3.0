@@ -367,8 +367,9 @@ export function Download() {
         </span>
       </div>
 
-      <NodeTerminal />
       <NodeClients />
+      <div style={{ height: 18 }} />
+      <NodeTerminal />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
         The installers <b>set up Node.js 20+ and git for you</b> if missing, then clone, install,
