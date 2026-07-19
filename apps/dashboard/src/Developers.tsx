@@ -112,6 +112,7 @@ export function Developers() {
         },
         admin,
       );
+      if (createdBy.trim()) localStorage.setItem('acp.creatorName', createdBy.trim());
       setMsg({
         kind: 'ok',
         text: `Published ${handle}@web3.0 — tasks now forward to your endpoint.`,

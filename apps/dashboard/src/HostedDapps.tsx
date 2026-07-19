@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
 import { type HostedAgent, api, formatAmount } from './api.js';
 
+const ADMIN_KEY = 'acp.adminToken';
+const CREATOR_KEY = 'acp.creatorName';
+
 /**
- * HostedDapps — the catalogue of everything running *inside* this node: developer dApps (webhook
- * endpoints) and Genesis LLM agents. A list view shows who created each one; clicking a row opens
- * the full record (identity, endpoint/brain, pricing, wallet, timestamps).
+ * HostedDapps — the catalogue of dApps/agents running inside this node. Scoped by ownership: the
+ * node owner (holds the admin token, or runs an open single-user node) sees every developer's
+ * dApps; a regular developer sees only the ones they published (matched by their creator name).
  */
 export function HostedDapps() {
   const [items, setItems] = useState<HostedAgent[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
+  const [adminRequired, setAdminRequired] = useState(false);
+  const [me, setMe] = useState(() => localStorage.getItem(CREATOR_KEY) ?? '');
+  const [scope, setScope] = useState<'all' | 'mine'>('all');
 
   useEffect(() => {
     const load = () => {
@@ -17,6 +23,7 @@ export function HostedDapps() {
         .hosted()
         .then((r) => {
           setItems(r.agents);
+          setAdminRequired(r.adminRequired);
           setOnline(true);
         })
         .catch(() => setOnline(false));
@@ -26,11 +33,20 @@ export function HostedDapps() {
     return () => clearInterval(t);
   }, []);
 
-  const active = items.find((i) => i.web3Id === selected) ?? null;
-  const dapps = items.filter((i) => i.kind === 'webhook').length;
-  const agents = items.filter((i) => i.kind === 'llm').length;
-  const toggle = (id: string) => setSelected((cur) => (cur === id ? null : id));
+  // Owner = holds the admin token, or the node requires no admin (your own single-user node).
+  const isOwner = !adminRequired || Boolean(localStorage.getItem(ADMIN_KEY));
+  const effectiveScope = isOwner ? scope : 'mine';
+  const mine = (h: HostedAgent) => Boolean(me) && h.createdBy.toLowerCase() === me.toLowerCase();
+  const shown = effectiveScope === 'all' ? items : items.filter(mine);
 
+  const active = shown.find((i) => i.web3Id === selected) ?? null;
+  const dapps = shown.filter((i) => i.kind === 'webhook').length;
+  const agents = shown.filter((i) => i.kind === 'llm').length;
+  const toggle = (id: string) => setSelected((cur) => (cur === id ? null : id));
+  const saveMe = (v: string) => {
+    setMe(v);
+    localStorage.setItem(CREATOR_KEY, v);
+  };
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '—');
 
   return (
@@ -38,18 +54,55 @@ export function HostedDapps() {
       <div className="page-head">
         <h1>Hosted dApps</h1>
         <span className="muted">
-          {items.length} hosted · {dapps} dApp{dapps === 1 ? '' : 's'} · {agents} agent
-          {agents === 1 ? '' : 's'} — running inside this node
+          {shown.length} shown · {dapps} dApp{dapps === 1 ? '' : 's'} · {agents} agent
+          {agents === 1 ? '' : 's'}
+          {effectiveScope === 'all' ? ' — all developers' : ' — yours only'}
         </span>
+      </div>
+
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="scope-bar">
+          {isOwner ? (
+            <div className="role-toggle" role="group" aria-label="Scope">
+              <button
+                type="button"
+                className={scope === 'all' ? 'active' : ''}
+                onClick={() => setScope('all')}
+              >
+                All developers
+              </button>
+              <button
+                type="button"
+                className={scope === 'mine' ? 'active' : ''}
+                onClick={() => setScope('mine')}
+              >
+                Only mine
+              </button>
+            </div>
+          ) : (
+            <span className="chip">Showing your dApps only</span>
+          )}
+          <div className="field" style={{ margin: 0, minWidth: 220 }}>
+            <input
+              value={me}
+              onChange={(e) => saveMe(e.target.value)}
+              placeholder="You are (creator name) — e.g. Dr. Sanjay Anbu"
+            />
+          </div>
+          {isOwner && <span className="chip allow">owner view</span>}
+        </div>
       </div>
 
       <div className="card">
         {!online ? (
           <div className="empty">Node offline — can't reach /hosted.</div>
-        ) : items.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="empty">
-            Nothing hosted yet. Publish a dApp in <b>Developers</b> or launch an agent in{' '}
-            <b>Genesis</b>.
+            {effectiveScope === 'mine' && !me
+              ? 'Enter your creator name above to see the dApps you published.'
+              : effectiveScope === 'mine'
+                ? `No hosted dApps created by "${me}" yet.`
+                : 'Nothing hosted yet. Publish a dApp in Developers or launch an agent in Genesis.'}
           </div>
         ) : (
           <table className="rows-click">
@@ -64,7 +117,7 @@ export function HostedDapps() {
               </tr>
             </thead>
             <tbody>
-              {items.map((h) => (
+              {shown.map((h) => (
                 <tr
                   key={h.web3Id}
                   className={`clickable ${selected === h.web3Id ? 'sel' : ''}`}

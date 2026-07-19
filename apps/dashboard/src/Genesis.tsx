@@ -86,6 +86,7 @@ export function Genesis() {
         },
         admin,
       );
+      if (createdBy.trim()) localStorage.setItem('acp.creatorName', createdBy.trim());
       setLaunchMsg({ kind: 'ok', text: `Launched ${agent.web3Id} — live on the node.` });
       setApiKey('');
       refreshHosted();

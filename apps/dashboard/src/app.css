@@ -397,6 +397,16 @@ body {
   border-top: 1px solid var(--hair);
   padding-top: 5px;
 }
+.scope-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.scope-bar .role-toggle {
+  margin: 0;
+  min-width: 220px;
+}
 table.rows-click tbody tr.clickable {
   cursor: pointer;
   transition: background 0.12s ease;
