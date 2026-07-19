@@ -17,7 +17,7 @@ win:
   target:
     - msi
     - nsis
-  # Add build/icon.ico (256x256) for a custom icon; otherwise the default Electron icon is used.
+  icon: assets/icon.ico
 
 nsis:
   oneClick: false
