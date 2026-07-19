@@ -48,7 +48,7 @@ const NAV: {
 }[] = [
   { id: 'overview', label: 'Overview', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
-  { id: 'network', label: 'Network', operator: true },
+  { id: 'network', label: 'Network' },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
   { id: 'connectors', label: 'Connectors', operator: true },
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
