@@ -412,6 +412,10 @@ Still ahead:
 
 - **Real mainnet settlement** — add a funded signer to the testnet rail (deliberately out of the box)
 - **BFT/PoS validators + state-machine replication** — beyond round-robin PoA and a replicated log
+- **Per-developer authentication & multi-tenant scoping** — today the dashboard scopes the *Hosted
+  dApps* view by ownership in the UI (owner sees all; a developer sees only what they published), but
+  the read APIs are still open. A real boundary needs each developer to authenticate (a signed
+  identity / API key) so the node can enforce "you only see and manage your own dApps" server-side.
 - **Decentralized compute marketplace** — agents earn hosting by joining the network
 - **Adapters** to import existing agents onto ACP
 - **Quantum research track** — clearly labelled forward-looking work

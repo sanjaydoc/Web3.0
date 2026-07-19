@@ -57,6 +57,14 @@ devices — PCs, phones, tablets, servers. Onboarding is: download the node, run
 or censor. Mitigations today are curation (few, accountable authorities) and diversity. The durable
 fix is the PoS/BFT migration on the roadmap.
 
+**Access control, stated plainly:** write actions on a node (launching agents, publishing dApps,
+changing settings) are gated by an **admin token** (`ACP_ADMIN_TOKEN`); read APIs are open. The
+dashboard adds ownership *scoping* in the UI — the node owner sees every developer's hosted dApps, a
+developer sees only the ones they published — but because the read APIs are open, this is a
+convenience boundary, **not** a hard multi-tenant wall. A real per-developer boundary (each developer
+authenticates with a signed identity / key, and the node enforces "you only see and manage your own"
+server-side) is on the roadmap.
+
 ## Changing the rules
 
 Until on-chain governance exists, protocol and parameter changes (the authority set, fees, block
