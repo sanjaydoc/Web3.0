@@ -24,7 +24,7 @@ interface Platform {
 
 const PLATFORMS: Platform[] = [
   {
-    name: 'PC · Mac · Linux',
+    name: 'Windows · Mac · Linux',
     tag: 'Node.js',
     steps: `git clone ${REPO}.git
 cd Web3.0

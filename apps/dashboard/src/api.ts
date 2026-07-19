@@ -75,6 +75,7 @@ export interface HostedAgent {
   handle: string;
   web3Id: string;
   name: string;
+  description: string;
   skill: string;
   price: number;
   provider: string;
@@ -82,6 +83,11 @@ export interface HostedAgent {
   kind: 'llm' | 'webhook';
   hasKey: boolean;
   running: boolean;
+  createdBy: string;
+  createdAt: string;
+  webhookUrl?: string;
+  did: string;
+  walletBalance: number;
 }
 
 export interface HostedLaunchConfig {
@@ -97,6 +103,7 @@ export interface HostedLaunchConfig {
   apiKey?: string;
   system?: string;
   webhookUrl?: string;
+  createdBy?: string;
 }
 
 export interface NodeInfo {

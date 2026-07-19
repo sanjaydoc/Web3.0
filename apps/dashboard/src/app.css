@@ -373,6 +373,17 @@ body {
   border-top: 1px solid var(--hair);
   padding-top: 5px;
 }
+table.rows-click tbody tr.clickable {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+table.rows-click tbody tr.clickable:hover {
+  background: var(--hair);
+}
+table.rows-click tbody tr.clickable.sel {
+  background: var(--hair);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
 button.connector {
   text-align: left;
   cursor: pointer;

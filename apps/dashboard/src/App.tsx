@@ -3,6 +3,7 @@ import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
+import { HostedDapps } from './HostedDapps.js';
 import { Network } from './Network.js';
 import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
@@ -30,6 +31,7 @@ type View =
   | 'ledger'
   | 'guardrails'
   | 'genesis'
+  | 'hosteddapps'
   | 'telegram'
   | 'developers'
   | 'download';
@@ -134,6 +136,7 @@ export function App() {
         />
         <NavItem id="guardrails" label="Guardrails" view={view} set={setView} />
         <NavItem id="genesis" label="Genesis · new agent" view={view} set={setView} />
+        <NavItem id="hosteddapps" label="Hosted dApps" view={view} set={setView} />
         <NavItem id="developers" label="Developers" view={view} set={setView} />
         <NavItem id="download" label="Run a node" view={view} set={setView} />
         <NavItem id="telegram" label="Telegram bot" view={view} set={setView} />
@@ -155,6 +158,7 @@ export function App() {
         {view === 'ledger' && <LedgerView snap={snap} />}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
+        {view === 'hosteddapps' && <HostedDapps />}
         {view === 'developers' && <Developers />}
         {view === 'download' && <Download />}
         {view === 'telegram' && <Telegram />}

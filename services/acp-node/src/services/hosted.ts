@@ -22,12 +22,17 @@ export interface HostedAgentConfig {
    * JSON response ({ answer } or any object) is returned. Lets developers publish any web service
    * as an agent on Web3.0. */
   webhookUrl?: string;
+  /** Who published this (a free-text publisher/creator label — there is no user auth). */
+  createdBy?: string;
+  /** ISO timestamp set by the node when the agent is first launched. */
+  createdAt?: string;
 }
 
 export interface HostedAgentStatus {
   handle: string;
   web3Id: string;
   name: string;
+  description: string;
   skill: string;
   price: number;
   provider: string;
@@ -36,6 +41,16 @@ export interface HostedAgentStatus {
   kind: 'llm' | 'webhook';
   hasKey: boolean;
   running: boolean;
+  /** Publisher/creator label, or 'unknown' if none was given. */
+  createdBy: string;
+  /** When it was first launched (ISO). */
+  createdAt: string;
+  /** The dApp's HTTP endpoint (webhook kind only). Never includes secrets. */
+  webhookUrl?: string;
+  /** The agent's DID, once registered. */
+  did: string;
+  /** Live wallet balance in aETH minor units. */
+  walletBalance: number;
 }
 
 type ChatFn = (config: LlmConfig, prompt: string) => Promise<string>;
@@ -74,18 +89,28 @@ export class HostedAgentService {
   }
 
   status(): HostedAgentStatus[] {
-    return [...this.agents.values()].map(({ config, running }) => ({
-      handle: config.handle,
-      web3Id: makeWeb3Id(config.handle),
-      name: config.name,
-      skill: config.skillId,
-      price: config.price,
-      provider: config.provider,
-      model: config.model,
-      kind: config.webhookUrl ? 'webhook' : 'llm',
-      hasKey: Boolean(config.apiKey),
-      running,
-    }));
+    return [...this.agents.values()].map(({ config, running }) => {
+      const id = makeWeb3Id(config.handle);
+      const card = this.ctx.registry.get(id);
+      return {
+        handle: config.handle,
+        web3Id: id,
+        name: config.name,
+        description: config.description,
+        skill: config.skillId,
+        price: config.price,
+        provider: config.provider,
+        model: config.model,
+        kind: config.webhookUrl ? 'webhook' : 'llm',
+        hasKey: Boolean(config.apiKey),
+        running,
+        createdBy: config.createdBy?.trim() || 'unknown',
+        createdAt: config.createdAt ?? card?.createdAt ?? '',
+        webhookUrl: config.webhookUrl,
+        did: card?.did ?? '',
+        walletBalance: this.ctx.ledger.balanceOf(id),
+      };
+    });
   }
 
   async launch(config: HostedAgentConfig, persist = true): Promise<HostedAgentStatus> {
@@ -99,9 +124,14 @@ export class HostedAgentService {
     if (limits?.maxAgents && running >= limits.maxAgents && !this.agents.has(id)) {
       throw new Error(`node is at its hosting capacity (${limits.maxAgents} agents)`);
     }
-    this.ensureRegistered(id, config);
-    this.agents.set(id, { config, running: true });
-    this.bindHandler(id, config);
+    // Stamp the creation time on first launch (kept across restarts via the persisted config).
+    const stamped: HostedAgentConfig = {
+      ...config,
+      createdAt: config.createdAt ?? this.ctx.clock(),
+    };
+    this.ensureRegistered(id, stamped);
+    this.agents.set(id, { config: stamped, running: true });
+    this.bindHandler(id, stamped);
     if (persist) await this.persist();
     return this.status().find((s) => s.web3Id === id)!;
   }

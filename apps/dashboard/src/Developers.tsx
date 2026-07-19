@@ -54,6 +54,7 @@ export function Developers() {
   const [skillId, setSkillId] = useState('ask');
   const [price, setPrice] = useState('1.00');
   const [endpoint, setEndpoint] = useState('https://your-service.example/acp');
+  const [createdBy, setCreatedBy] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -107,6 +108,7 @@ export function Developers() {
           provider: 'http',
           model: 'webhook',
           webhookUrl: endpoint,
+          createdBy: createdBy.trim() || undefined,
         },
         admin,
       );
@@ -219,6 +221,15 @@ curl ${NODE_URL}/settlement`;
           <div className="field">
             <label htmlFor="d-price">Price / task (aETH)</label>
             <input id="d-price" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="d-creator">Created by (your name / team)</label>
+            <input
+              id="d-creator"
+              value={createdBy}
+              onChange={(e) => setCreatedBy(e.target.value)}
+              placeholder="e.g. Dr. Sanjay Anbu"
+            />
           </div>
           <div className="field wide">
             <label htmlFor="d-endpoint">Endpoint URL (receives POST with the task input)</label>

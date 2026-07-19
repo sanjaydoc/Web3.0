@@ -27,6 +27,7 @@ export function Genesis() {
   const [skillName, setSkillName] = useState('Ask');
   const [skillDesc, setSkillDesc] = useState('Answer a question');
   const [price, setPrice] = useState('3.00');
+  const [createdBy, setCreatedBy] = useState('');
   const [provider, setProvider] = useState('local');
   const [model, setModel] = useState('qwen2.5:7b');
   const [system, setSystem] = useState(
@@ -81,6 +82,7 @@ export function Genesis() {
           model,
           apiKey: apiKey || undefined,
           system,
+          createdBy: createdBy.trim() || undefined,
         },
         admin,
       );
@@ -255,6 +257,15 @@ while True:
           <div className="field">
             <label htmlFor="g-price">Price per task (aETH)</label>
             <input id="g-price" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="g-creator">Created by (your name / team)</label>
+            <input
+              id="g-creator"
+              value={createdBy}
+              onChange={(e) => setCreatedBy(e.target.value)}
+              placeholder="e.g. Dr. Sanjay Anbu"
+            />
           </div>
           <div className="field">
             <label htmlFor="g-skill-name">Skill name</label>

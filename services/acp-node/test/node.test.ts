@@ -544,8 +544,15 @@ describe('hosted agents (Genesis launch on node)', () => {
       provider: 'http',
       model: 'webhook',
       webhookUrl: `http://127.0.0.1:${port}`,
+      createdBy: 'Dr. Sanjay Anbu',
     });
     expect(status.kind).toBe('webhook');
+    // Catalogue metadata surfaces for the Hosted dApps view.
+    expect(status.createdBy).toBe('Dr. Sanjay Anbu');
+    expect(status.createdAt).not.toBe('');
+    expect(status.webhookUrl).toBe(`http://127.0.0.1:${port}`);
+    expect(status.did).not.toBe('');
+    expect(typeof status.walletBalance).toBe('number');
 
     const senderId = 'caller@web3.0';
     const got = new Promise<{ output: { answer?: string } }>((resolve) => {
