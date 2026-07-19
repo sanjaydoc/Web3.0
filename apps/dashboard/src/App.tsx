@@ -47,6 +47,7 @@ const NAV: {
   operator?: boolean;
 }[] = [
   { id: 'overview', label: 'Overview', operator: true },
+  { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
   { id: 'network', label: 'Network' },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
@@ -54,7 +55,6 @@ const NAV: {
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
   { id: 'telegram', label: 'Telegram bot', operator: true },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
-  { id: 'download', label: 'Run a node', operator: true },
   { id: 'agents', label: 'Agents', badge: 'agents' },
   { id: 'skills', label: 'Skills' },
   { id: 'traffic', label: 'Live traffic', badge: 'events' },
