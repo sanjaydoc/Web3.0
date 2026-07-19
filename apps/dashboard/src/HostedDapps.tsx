@@ -26,7 +26,8 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
       api
         .hosted()
         .then((r) => {
-          setItems(r.agents);
+          // This view lists dApps (webhooks) only — LLM agents live in Genesis.
+          setItems(r.agents.filter((a) => a.kind === 'webhook'));
           setScopedTo(r.scopedTo ?? null);
           setOnline(true);
         })
@@ -47,8 +48,6 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
   const showingMine = serverScoped || (canToggle && scope === 'mine');
 
   const active = shown.find((i) => i.web3Id === selected) ?? null;
-  const dapps = shown.filter((i) => i.kind === 'webhook').length;
-  const agents = shown.filter((i) => i.kind === 'llm').length;
   const toggle = (id: string) => setSelected((cur) => (cur === id ? null : id));
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '—');
 
@@ -57,8 +56,7 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
       <div className="page-head">
         <h1>Hosted dApps</h1>
         <span className="muted">
-          {shown.length} shown · {dapps} dApp{dapps === 1 ? '' : 's'} · {agents} agent
-          {agents === 1 ? '' : 's'}
+          {shown.length} dApp{shown.length === 1 ? '' : 's'}
           {showingMine ? ' — yours only' : ' — all developers'}
         </span>
       </div>
