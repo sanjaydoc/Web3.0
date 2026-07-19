@@ -1,0 +1,12 @@
+[package]
+name = "acp-node-desktop"
+version = "0.1.0"
+edition = "2021"
+description = "ACP Node desktop shell (Web3.0)"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
