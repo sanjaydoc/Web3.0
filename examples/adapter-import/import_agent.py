@@ -1,15 +1,15 @@
 """Import an existing agent/model onto ACP with an adapter.
 
 Pick one adapter and `serve()` it — the node registers it, and it answers paid tasks like any
-native ACP agent. Run an ACP node first (`pnpm --filter @acp/node dev`), then:
+native ACP agent. Run an ACP node first (`pnpm --filter @web3/node dev`), then:
 
     python examples/adapter-import/import_agent.py
 """
 import os
 
-from acp_sdk.adapters import CallableAdapter, OpenAIChatAdapter, serve
+from web3_sdk.adapters import CallableAdapter, OpenAIChatAdapter, serve  # noqa: F401  (OpenAIChatAdapter used in commented Option A)
 
-BASE_URL = os.environ.get("ACP_URL", "http://127.0.0.1:8787")
+BASE_URL = os.environ.get("WEB3_URL", "http://127.0.0.1:8787")
 
 # --- Option A: wrap any OpenAI-compatible endpoint (OpenAI, OpenRouter, Ollama, vLLM, LM Studio) ---
 # adapter = OpenAIChatAdapter(

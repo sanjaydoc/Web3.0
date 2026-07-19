@@ -182,7 +182,7 @@ export function Account() {
                   type="password"
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="acp_…"
+                  placeholder="web3_…"
                 />
                 <span className="hint">paste a token you saved earlier</span>
               </div>

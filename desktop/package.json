@@ -1,5 +1,5 @@
 {
-  "name": "@acp/desktop",
+  "name": "@web3/desktop",
   "private": true,
   "version": "0.1.0",
   "description": "ACP Node desktop app (Tauri) — MSI / dmg / AppImage installers for a one-click node.",

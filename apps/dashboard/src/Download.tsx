@@ -6,8 +6,8 @@ const INSTALL_SCRIPT = `#!/usr/bin/env bash
 # Run an ACP (Web3.0) node on macOS or Linux.
 # Installs Node.js 20+ and git automatically if they're missing.
 set -euo pipefail
-REPO="\${ACP_REPO:-${REPO}.git}"
-DIR="\${ACP_DIR:-acp-node}"
+REPO="\${WEB3_REPO:-${REPO}.git}"
+DIR="\${WEB3_DIR:-web3-node}"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -39,15 +39,15 @@ cd "$DIR"
 corepack enable >/dev/null 2>&1 || npm install -g pnpm
 pnpm install
 [ -f .env ] || cp .env.example .env
-pnpm --filter @acp/node start
+pnpm --filter @web3/node start
 `;
 
 const INSTALL_PS1 = `# Run an ACP (Web3.0) node on Windows (PowerShell).
 # Installs Node.js 20+ and git automatically (via winget) if they're missing.
-# Usage:  powershell -ExecutionPolicy Bypass -File install-acp-node.ps1
+# Usage:  powershell -ExecutionPolicy Bypass -File install-web3-node.ps1
 $ErrorActionPreference = "Stop"
-$Repo = if ($env:ACP_REPO) { $env:ACP_REPO } else { "${REPO}.git" }
-$Dir  = if ($env:ACP_DIR)  { $env:ACP_DIR }  else { "acp-node" }
+$Repo = if ($env:WEB3_REPO) { $env:WEB3_REPO } else { "${REPO}.git" }
+$Dir  = if ($env:WEB3_DIR)  { $env:WEB3_DIR }  else { "web3-node" }
 function Have($cmd) { [bool](Get-Command $cmd -ErrorAction SilentlyContinue) }
 
 if (-not (Have git) -or -not (Have node)) {
@@ -68,7 +68,7 @@ corepack enable 2>$null
 if ($LASTEXITCODE -ne 0) { npm install -g pnpm }
 pnpm install
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-pnpm --filter '@acp/node' start
+pnpm --filter '@web3/node' start
 `;
 
 interface Platform {
@@ -92,21 +92,21 @@ git clone ${REPO}.git
 cd Web3.0
 npm install -g pnpm && pnpm install
 cp .env.example .env
-pnpm --filter @acp/node start`,
-    note: 'The one-click installers above set up Node.js 20+ and git for you. The dashboard runs with `pnpm --filter @acp/dashboard dev`.',
+pnpm --filter @web3/node start`,
+    note: 'The one-click installers above set up Node.js 20+ and git for you. The dashboard runs with `pnpm --filter @web3/dashboard dev`.',
   },
   {
     name: 'Server',
     tag: 'Docker',
     steps: `# No Node.js or git needed on the host — only Docker.
 # Node 20 runs inside the image; build straight from the repo:
-docker build -t acp-node ${REPO}.git
-docker run -p 8787:8787 -e ACP_MONGODB_URI=... acp-node
+docker build -t web3-node ${REPO}.git
+docker run -p 8787:8787 -e WEB3_MONGODB_URI=... web3-node
 
 # (or with git, to edit .env locally first)
 # git clone ${REPO}.git && cd Web3.0
-# docker build -t acp-node . && docker run -p 8787:8787 --env-file .env acp-node`,
-    note: 'The host needs only Docker — Node.js is inside the container. Set ACP_MONGODB_URI (Atlas) to persist; put it behind a reverse proxy for TLS.',
+# docker build -t web3-node . && docker run -p 8787:8787 --env-file .env web3-node`,
+    note: 'The host needs only Docker — Node.js is inside the container. Set WEB3_MONGODB_URI (Atlas) to persist; put it behind a reverse proxy for TLS.',
   },
   {
     name: 'Android phone · tablet',
@@ -114,7 +114,7 @@ docker run -p 8787:8787 -e ACP_MONGODB_URI=... acp-node
     steps: `pkg install nodejs git
 git clone ${REPO}.git && cd Web3.0
 npm install -g pnpm && pnpm install
-pnpm --filter @acp/node start`,
+pnpm --filter @web3/node start`,
     note: 'Install Termux from F-Droid. A relay/host node runs comfortably on a phone.',
   },
   {
@@ -184,8 +184,8 @@ const NODE_CMDS = [
   `git clone ${REPO}.git && cd Web3.0`,
   'python -m venv .venv && source .venv/bin/activate',
   'pnpm install',
-  'pip install -e packages/acp-sdk-py',
-  'pnpm --filter @acp/node start',
+  'pip install -e packages/web3-sdk-py',
+  'pnpm --filter @web3/node start',
 ];
 
 /** The macOS-style terminal window: copy-able setup commands + a live boot readout. */
@@ -196,7 +196,7 @@ function NodeTerminal() {
         <div className="term-dot" style={{ background: '#ff5f57' }} />
         <div className="term-dot" style={{ background: '#ffbd2e' }} />
         <div className="term-dot" style={{ background: '#28c840' }} />
-        <span className="term-name">acp-node — terminal</span>
+        <span className="term-name">web3-node — terminal</span>
       </div>
       <div className="term-body">
         {NODE_CMDS.map((c) => (
@@ -272,21 +272,21 @@ function NodeClients() {
       sub: '.ps1 installer',
       accent: '#00adef',
       icon: <WindowsLogo />,
-      onClick: () => download('install-acp-node.ps1', INSTALL_PS1),
+      onClick: () => download('install-web3-node.ps1', INSTALL_PS1),
     },
     {
       label: 'macOS',
       sub: '.command installer',
       accent: '#a0a0a0',
       icon: <AppleLogo />,
-      onClick: () => download('install-acp-node.command', INSTALL_SCRIPT),
+      onClick: () => download('install-web3-node.command', INSTALL_SCRIPT),
     },
     {
       label: 'Ubuntu',
       sub: '.sh · Linux',
       accent: '#e95420',
       icon: <UbuntuLogo />,
-      onClick: () => download('install-acp-node.sh', INSTALL_SCRIPT),
+      onClick: () => download('install-web3-node.sh', INSTALL_SCRIPT),
     },
     {
       label: 'Docker',
@@ -406,11 +406,11 @@ export function Download() {
             check.
           </li>
           <li>
-            To join a shared chain, set <code>ACP_CONSENSUS=poa</code>, <code>ACP_AUTHORITIES</code>
-            , and <code>ACP_PEERS</code> in <code>.env</code>.
+            To join a shared chain, set <code>WEB3_CONSENSUS=poa</code>, <code>WEB3_AUTHORITIES</code>
+            , and <code>WEB3_PEERS</code> in <code>.env</code>.
           </li>
           <li>
-            To earn, set <code>ACP_FEE_BPS</code> and/or <code>ACP_BLOCK_REWARD</code> — earnings
+            To earn, set <code>WEB3_FEE_BPS</code> and/or <code>WEB3_BLOCK_REWARD</code> — earnings
             land in <code>treasury@web3.0</code>, visible in the dashboard.
           </li>
         </ol>

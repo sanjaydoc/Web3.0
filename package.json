@@ -15,8 +15,8 @@
     "test": "turbo run test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "node": "pnpm --filter @acp/node dev",
-    "dashboard": "pnpm --filter @acp/dashboard dev"
+    "node": "pnpm --filter @web3/node dev",
+    "dashboard": "pnpm --filter @web3/dashboard dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

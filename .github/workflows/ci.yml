@@ -35,6 +35,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e "packages/acp-sdk-py[dev]"
-      - run: ruff check packages/acp-sdk-py examples
-      - run: pytest packages/acp-sdk-py -q
+      - run: pip install -e "packages/web3-sdk-py[dev]"
+      - run: ruff check packages/web3-sdk-py examples
+      - run: pytest packages/web3-sdk-py -q

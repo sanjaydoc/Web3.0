@@ -6,7 +6,7 @@ aETH payment, exchange the task over the A2A relay, and Bob shares a confidentia
 "domain tips" dataset (ML-KEM sealed) to improve Alice's future work — all recorded on the
 quantum-resistant ledger and visible live in the dashboard.
 
-Run an ACP node first:  pnpm --filter @acp/node dev
+Run an ACP node first:  pnpm --filter @web3/node dev
 Then:                    python examples/two-agents-demo/demo.py
 """
 
@@ -17,11 +17,11 @@ import threading
 import time
 from typing import Any
 
-from acp_sdk import Agent
+from web3_sdk import Agent
 
-BASE_URL = os.environ.get("ACP_URL", "http://127.0.0.1:8787")
+BASE_URL = os.environ.get("WEB3_URL", "http://127.0.0.1:8787")
 SUFFIX = os.environ.get(
-    "ACP_DEMO_SUFFIX", ""
+    "WEB3_DEMO_SUFFIX", ""
 )  # lets the demo re-run without handle clashes
 
 DOCUMENT = (

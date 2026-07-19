@@ -4,13 +4,13 @@
 
 ## Which module(s)?
 
-<!-- e.g. acp-crypto, acp-core, acp-ledger, acp-node (naming/registry/messaging/payments/guardrails), acp-sdk-py, dashboard, docs -->
+<!-- e.g. web3-crypto, web3-core, web3-ledger, web3-node (naming/registry/messaging/payments/guardrails), web3-sdk-py, dashboard, docs -->
 
-- [ ] acp-crypto
-- [ ] acp-core
-- [ ] acp-ledger
-- [ ] acp-node
-- [ ] acp-sdk-py
+- [ ] web3-crypto
+- [ ] web3-core
+- [ ] web3-ledger
+- [ ] web3-node
+- [ ] web3-sdk-py
 - [ ] dashboard
 - [ ] docs
 

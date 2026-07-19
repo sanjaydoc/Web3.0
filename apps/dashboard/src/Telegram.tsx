@@ -82,7 +82,7 @@ export function Telegram() {
               placeholder="required to change settings"
             />
             <span className="hint">
-              Set by the operator via ACP_ADMIN_TOKEN · stored in this browser only
+              Set by the operator via WEB3_ADMIN_TOKEN · stored in this browser only
             </span>
           </div>
         )}

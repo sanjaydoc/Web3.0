@@ -5,7 +5,7 @@ discovers Sage, pays for a question over the x402 rail, and gets a genuinely mod
 back over the A2A relay. This is "agents are built using a prompt", running on your own machine.
 
 Prerequisites:
-  - An ACP node running (Terminal 1):        pnpm --filter @acp/node dev
+  - An ACP node running (Terminal 1):        pnpm --filter @web3/node dev
   - A local LLM serving an OpenAI-compatible API. With Ollama:
         ollama serve            (usually already running)
         ollama pull qwen2.5:7b  (once)
@@ -20,12 +20,12 @@ import os
 import threading
 from typing import Any
 
-from acp_sdk import LLM, Agent, LLMError, load_env
+from web3_sdk import LLM, Agent, LLMError, load_env
 
 load_env()  # read LLM_BASE_URL / LLM_MODEL from .env if present
 
-BASE_URL = os.environ.get("ACP_URL", "http://127.0.0.1:8787")
-SUFFIX = os.environ.get("ACP_DEMO_SUFFIX", "")
+BASE_URL = os.environ.get("WEB3_URL", "http://127.0.0.1:8787")
+SUFFIX = os.environ.get("WEB3_DEMO_SUFFIX", "")
 QUESTION = (
     "In two sentences, what makes an 'agentic internet' different from today's web?"
 )

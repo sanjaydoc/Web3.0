@@ -5,7 +5,7 @@
   "identifier": "com.web3.acpnode",
   "build": {
     "frontendDist": "../../apps/dashboard/dist",
-    "beforeBuildCommand": "pnpm --dir ../.. --filter @acp/dashboard build"
+    "beforeBuildCommand": "pnpm --dir ../.. --filter @web3/dashboard build"
   },
   "app": {
     "windows": [

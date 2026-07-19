@@ -1,0 +1,21 @@
+{
+  "name": "@web3/ledger",
+  "version": "0.1.0",
+  "description": "Quantum-resistant append-only ledger for ACP: PQC-signed, Merkle-linked entries with wallets and payments.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@web3/core": "workspace:*",
+    "@web3/crypto": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

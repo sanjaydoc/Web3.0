@@ -4,9 +4,9 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@acp/crypto": ["packages/acp-crypto/src/index.ts"],
-      "@acp/core": ["packages/acp-core/src/index.ts"],
-      "@acp/ledger": ["packages/acp-ledger/src/index.ts"]
+      "@web3/crypto": ["packages/web3-crypto/src/index.ts"],
+      "@web3/core": ["packages/web3-core/src/index.ts"],
+      "@web3/ledger": ["packages/web3-ledger/src/index.ts"]
     }
   },
   "include": [

@@ -53,12 +53,12 @@ can add or remove via config.
 ```
 Web3.0/
 ├── packages/
-│   ├── acp-crypto     # post-quantum primitives: ML-DSA signatures, ML-KEM sealed boxes, DIDs
-│   ├── acp-core       # protocol types: Web3.0 IDs, agent cards, wallets, signed envelopes, A2A tasks
-│   ├── acp-ledger     # quantum-resistant append-only ledger: PQC-signed, hash-linked, with payments
-│   └── acp-sdk-py     # Python agent SDK (interoperable ML-DSA / ML-KEM)
+│   ├── web3-crypto     # post-quantum primitives: ML-DSA signatures, ML-KEM sealed boxes, DIDs
+│   ├── web3-core       # protocol types: Web3.0 IDs, agent cards, wallets, signed envelopes, A2A tasks
+│   ├── web3-ledger     # quantum-resistant append-only ledger: PQC-signed, hash-linked, with payments
+│   └── web3-sdk-py     # Python agent SDK (interoperable ML-DSA / ML-KEM)
 ├── services/
-│   └── acp-node       # the kernel + modules: naming · registry · messaging · payments · guardrails · observability
+│   └── web3-node       # the kernel + modules: naming · registry · messaging · payments · guardrails · observability
 ├── apps/
 │   └── dashboard      # LabSuite-themed observability & guardrails console (React + Vite)
 ├── examples/
@@ -120,13 +120,13 @@ npm install -g pnpm
 need. All settings are optional; without a `.env` the node runs in-memory on the defaults.
 ```bash
 cp .env.example .env        # Windows: copy .env.example .env
-pnpm --filter @acp/node keygen   # prints ACP_NODE_SEED=… — paste it into .env
+pnpm --filter @web3/node keygen   # prints WEB3_NODE_SEED=… — paste it into .env
 ```
 For **persistence (survives restarts)** set these in `.env` — otherwise the node is in-memory:
 ```ini
-ACP_NODE_SEED=<value from keygen>                                   # stable signing identity
-ACP_MONGODB_URI=mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ # your MongoDB Atlas string
-ACP_MONGODB_DB=acp
+WEB3_NODE_SEED=<value from keygen>                                   # stable signing identity
+WEB3_MONGODB_URI=mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ # your MongoDB Atlas string
+WEB3_MONGODB_DB=acp
 ```
 
 Then run each block in its own terminal (start Terminal 1 first and leave it running).
@@ -134,12 +134,12 @@ Then run each block in its own terminal (start Terminal 1 first and leave it run
 **Terminal 1 — the ACP node**
 ```bash
 pnpm install
-pnpm --filter @acp/node dev        # reads .env → listening on http://127.0.0.1:8787
+pnpm --filter @web3/node dev        # reads .env → listening on http://127.0.0.1:8787
 ```
 
 **Terminal 2 — the dashboard** (optional)
 ```bash
-pnpm --filter @acp/dashboard dev   # → console on http://127.0.0.1:5173
+pnpm --filter @web3/dashboard dev   # → console on http://127.0.0.1:5173
 ```
 
 **Terminal 3 — Python agents** (in an isolated virtualenv)
@@ -149,7 +149,7 @@ pnpm --filter @acp/dashboard dev   # → console on http://127.0.0.1:5173
 python3 -m venv .venv && source .venv/bin/activate
 # Windows (CMD):         py -3.12 -m venv .venv   then   .venv\Scripts\activate
 # Windows (PowerShell):  py -3.12 -m venv .venv ;  .venv\Scripts\Activate.ps1
-pip install -e "packages/acp-sdk-py[dev]"
+pip install -e "packages/web3-sdk-py[dev]"
 
 # Every run after that — just activate and go:
 #   macOS/Linux:  source .venv/bin/activate
@@ -162,9 +162,9 @@ python examples/two-agents-demo/verify_ledger.py
 > specifically. On Windows the demo commands use backslashes (`examples\two-agents-demo\demo.py`).
 > The `venv` keeps the SDK's post-quantum dependencies isolated from your system Python; leave it
 > later with `deactivate`. Re-running `demo.py` reuses the `bob`/`alice` handles — set
-> `ACP_DEMO_SUFFIX` (e.g. `set ACP_DEMO_SUFFIX=2` on Windows) for a fresh pair, or restart the node.
+> `WEB3_DEMO_SUFFIX` (e.g. `set WEB3_DEMO_SUFFIX=2` on Windows) for a fresh pair, or restart the node.
 
-Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/acp-sdk-py` (8 Python tests).
+Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/web3-sdk-py` (8 Python tests).
 
 > **Tip — avoid spaces in the path.** Clone into a path *without spaces* (e.g. `C:\Web3.0`, not
 > `C:\Users\me\All Apps\Web3.0`). The node, dashboard, and demos run fine with spaces, but Vitest
@@ -179,7 +179,7 @@ First-time setup:
 cd Web3.0
 python -m venv .venv
 .venv\Scripts\activate.bat
-pip install -e packages\acp-sdk-py
+pip install -e packages\web3-sdk-py
 ```
 
 Terminal 1
@@ -187,7 +187,7 @@ Terminal 1
 ```bat
 cd Web3.0
 .venv\Scripts\activate.bat
-pnpm --filter @acp/node dev
+pnpm --filter @web3/node dev
 ```
 
 Terminal 2
@@ -195,7 +195,7 @@ Terminal 2
 ```bat
 cd Web3.0
 .venv\Scripts\activate.bat
-pnpm --filter @acp/dashboard dev
+pnpm --filter @web3/dashboard dev
 ```
 
 Terminal 3
@@ -234,7 +234,7 @@ tests. What passed:
 | Area | Verified |
 | --- | --- |
 | **Core protocol** | Two agents register with post-quantum DIDs, discover, agree a price (x402), settle an **aETH** payment, exchange an A2A task, and share an ML-KEM-sealed dataset — live on the ledger and dashboard. |
-| **Agentic payments & fees** | Payments settle on the PQC-signed ledger; a protocol fee (`ACP_FEE_BPS`) skims to `treasury@web3.0`; receipts carry `fee` / `netToPayee`. |
+| **Agentic payments & fees** | Payments settle on the PQC-signed ledger; a protocol fee (`WEB3_FEE_BPS`) skims to `treasury@web3.0`; receipts carry `fee` / `netToPayee`. |
 | **Developer dApps** | Publish an HTTP endpoint as an agent; a paid task **fires the webhook** and returns its JSON, with the fee settling in aETH. |
 | **Hosted agents (Genesis)** | Launch an LLM agent inside the node from the GUI (no VPS); it registers, hosts its brain, and answers tasks. |
 | **Distributed L1** | Three nodes form a PoA chain, gossip ML-DSA-signed blocks, and **converge on one canonical history**; the chain **keeps advancing when an authority goes offline** (proposer-skip). |
@@ -243,7 +243,7 @@ tests. What passed:
 | **Telegram front door** | A human on Telegram queries the node and **pays an ACP agent in aETH for an LLM answer** — the whole loop from a phone. |
 | **Quantum-resistant claim** | **Python cross-verifies the TypeScript node's ML-DSA signatures**, and any tampering is rejected (`verifyChain()` flips to false). |
 
-Reproduce the automated portion with `pnpm -w test` (71 TS tests) and `pytest packages/acp-sdk-py`
+Reproduce the automated portion with `pnpm -w test` (71 TS tests) and `pytest packages/web3-sdk-py`
 (33 Python tests); the live flows are the demos and the dashboard described above.
 
 ## The console
@@ -280,7 +280,7 @@ The node loads these by config (`config.modules`) — remove one and it's gone:
 **Auth hardening** (kernel-level): registration is a signed envelope so only the key holder can
 claim a handle and wallet; every envelope (registration, `/pay`, relay hello) passes a
 **replay/freshness** check so captured requests can't be resubmitted; and a **per-IP HTTP rate
-limiter** backstops the per-agent guardrails against floods. On by default, or `ACP_AUTH_ENFORCE=false`
+limiter** backstops the per-agent guardrails against floods. On by default, or `WEB3_AUTH_ENFORCE=false`
 for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits).
 
 ## Running a node (and earning)
@@ -316,7 +316,7 @@ and invite-only**.
 - **Who runs it:** you at launch, then a handful of trusted, independent partners. Not strangers —
   see **[GOVERNANCE.md](GOVERNANCE.md)**.
 - **Needs:** an always-on server with good uptime; its key must be in the authority set
-  (`ACP_AUTHORITIES`).
+  (`WEB3_AUTHORITIES`).
 - **Earns:** a **block reward** each time it proposes a block, plus protocol fees.
 - **How many:** ~4 to launch, keep **> ⅔ online**. Proposer-skip means one going offline won't stall
   the chain.
@@ -343,7 +343,7 @@ scales to millions of devices.
 | Authority | **1** works (centralized) | **4+** | BFT tolerance is 3f+1: 4 nodes survive 1 offline/faulty. Keep **> 2/3** online. |
 | Relay/host | 0 required for correctness | as many as you like | More = more capacity + agents stay online; offline agents' messages queue meanwhile. |
 
-With the **proposer-skip** (`ACP_SLOT_MS`), if the authority whose turn it is goes offline, the next
+With the **proposer-skip** (`WEB3_SLOT_MS`), if the authority whose turn it is goes offline, the next
 one steps in after a slot — so a single down node no longer stalls the chain. A practical launch is
 **3–4 authority nodes** you and partners run, growing the set (and moving toward staking/BFT) as real
 value flows.
@@ -371,9 +371,9 @@ More traffic = more earnings 📈
 
 **The detail.** Running a node pays in aETH, off these levers (all default **0** = off):
 
-- **Protocol fee** (`ACP_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
+- **Protocol fee** (`WEB3_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
   to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
-- **Block reward** (`ACP_BLOCK_REWARD`) — aETH minted to the proposer's treasury for each block.
+- **Block reward** (`WEB3_BLOCK_REWARD`) — aETH minted to the proposer's treasury for each block.
 - **Hosting revenue** — a host node runs other people's agents; those agents earn their per-task
   fees directly into their wallets (a platform cut is a natural next step).
 
@@ -426,15 +426,15 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
 
 - ✅ **Distributed L1** — proof-of-authority consensus: authorities take turns proposing
   ML-DSA-signed blocks over the ledger, gossiped to peers until all agree. Try three nodes converge:
-  `pnpm --filter @acp/node demo:consensus`. (`ACP_CONSENSUS=poa`)
+  `pnpm --filter @web3/node demo:consensus`. (`WEB3_CONSENSUS=poa`)
 - ✅ **Pluggable settlement** — `internal` ledger (default), `simulated` stablecoin, or a `testnet`
   ERC-20 rail that builds real transfers against an EVM testnet (never broadcasts without a signer).
 - ✅ **Telegram front door** + **no-VPS `AgentHost`** — one process supervises a fleet of agents and
   keeps them online; a Telegram bot bridges humans to agents. Plus the **Genesis** create-an-agent
   wizard in the dashboard.
 - ✅ **Accounts & authentication (admin / operator / developer)** — sign-up mints a human address
-  (`sanjay@web3.0`) + an **`ACP_TOKEN`**; roles are enforced server-side (`requireRole`). Replaces the
-  single shared `ACP_ADMIN_TOKEN`. Dashboard **Account** view for sign-up / sign-in.
+  (`sanjay@web3.0`) + an **`WEB3_TOKEN`**; roles are enforced server-side (`requireRole`). Replaces the
+  single shared `WEB3_ADMIN_TOKEN`. Dashboard **Account** view for sign-up / sign-in.
 - ✅ **Per-developer scoping (server-side)** — `POST /hosted/launch` stamps the dApp's owner = the
   signed-in developer; `GET /hosted` returns only your own dApps (admins see all). The old UI-only
   "My apps" filter is now a real API boundary.

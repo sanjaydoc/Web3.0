@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@web3/crypto": ["../../packages/web3-crypto/src/index.ts"],
+      "@web3/core": ["../../packages/web3-core/src/index.ts"],
+      "@web3/ledger": ["../../packages/web3-ledger/src/index.ts"],
+      "@web3/consensus": ["../../packages/web3-consensus/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

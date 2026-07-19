@@ -108,8 +108,8 @@ export function Operator() {
               </dl>
               {e && e.balance === 0 && (
                 <p className="hint">
-                  Earnings are off by default — set <code>ACP_FEE_BPS</code> /{' '}
-                  <code>ACP_BLOCK_REWARD</code> to start earning.
+                  Earnings are off by default — set <code>WEB3_FEE_BPS</code> /{' '}
+                  <code>WEB3_BLOCK_REWARD</code> to start earning.
                 </p>
               )}
             </div>

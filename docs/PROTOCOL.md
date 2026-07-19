@@ -47,7 +47,7 @@ Python, which is why cross-language verification works).
 
 `open()` checks that the embedded public key derives the claimed DID, that the signer matches (when
 pinned), and that the signature verifies. The node additionally enforces **freshness and replay
-protection** on every envelope it accepts: the `ts` must be recent (within `ACP_AUTH_FRESHNESS_MS`,
+protection** on every envelope it accepts: the `ts` must be recent (within `WEB3_AUTH_FRESHNESS_MS`,
 default 2 min) and the `nonce` must not have been seen before — so a captured envelope can't be
 resubmitted. See [Auth & rate limits](#auth--rate-limits).
 
@@ -94,7 +94,7 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
 
    ```json
    { "x402Version": 1, "resource": "acp://bob@web3.0/summarise",
-     "accepts": [{ "scheme": "acp-ledger", "network": "acp-mvp", "payTo": "bob@web3.0",
+     "accepts": [{ "scheme": "web3-ledger", "network": "acp-mvp", "payTo": "bob@web3.0",
                    "amount": 500, "currency": "aETH" }] }
    ```
 
@@ -108,7 +108,7 @@ Amounts are integer **minor units** (e.g. `500` = 5.00 aETH) to avoid floating-p
 
 ## Auth & rate limits
 
-The node ships with auth hardening on by default (`ACP_AUTH_ENFORCE=true`). Set it to `false` for
+The node ships with auth hardening on by default (`WEB3_AUTH_ENFORCE=true`). Set it to `false` for
 **warn-only** mode — violations are logged to the event feed but still allowed, useful while
 migrating clients. Either way the decision is recorded, and every rejection surfaces as an
 `auth.rejected` event on the observability feed (visible in the dashboard).
@@ -116,10 +116,10 @@ migrating clients. Either way the decision is recorded, and every rejection surf
 | Control | What it does | Config |
 | --- | --- | --- |
 | Signed registration | Only the key holder can claim a handle + wallet | always on when enforcing |
-| Replay / freshness | Rejects stale or reused envelopes (registration, `/pay`, relay hello) | `ACP_AUTH_FRESHNESS_MS`, `ACP_AUTH_CLOCK_SKEW_MS` |
+| Replay / freshness | Rejects stale or reused envelopes (registration, `/pay`, relay hello) | `WEB3_AUTH_FRESHNESS_MS`, `WEB3_AUTH_CLOCK_SKEW_MS` |
 | Signature + key binding | `/pay` and hello must be signed by the account's key | always on |
-| Per-agent guardrails | Rate-limit + spend-cap + capability, per Web3.0 ID | `ACP_RATE_LIMIT`, `ACP_SPEND_CAP`, `ACP_WINDOW_MS` |
-| Per-IP HTTP rate limit | Coarse DoS backstop before an agent is identified (429); `/health` exempt | `ACP_HTTP_RATE_LIMIT`, `ACP_HTTP_RATE_WINDOW_MS` |
+| Per-agent guardrails | Rate-limit + spend-cap + capability, per Web3.0 ID | `WEB3_RATE_LIMIT`, `WEB3_SPEND_CAP`, `WEB3_WINDOW_MS` |
+| Per-IP HTTP rate limit | Coarse DoS backstop before an agent is identified (429); `/health` exempt | `WEB3_HTTP_RATE_LIMIT`, `WEB3_HTTP_RATE_WINDOW_MS` |
 
 Replay state is in-memory for the MVP: nonces are forgotten on restart, but the freshness window
 bounds how long a captured envelope could be replayed after a restart anyway.
@@ -133,7 +133,7 @@ over `hash`. Types: `register`, `payment`, `message` (hash-only provenance). `ve
 
 ## Settlement
 
-Where a payment's value settles, chosen by `ACP_SETTLEMENT`. `GET /settlement` reports the active
+Where a payment's value settles, chosen by `WEB3_SETTLEMENT`. `GET /settlement` reports the active
 rail, and every `/pay` receipt carries a `settlement` block (`{ network, status, txRef?, ... }`):
 
 - **internal** (default) — the PQC-signed ACP ledger is the source of truth; `txRef` is the entry hash.
@@ -144,11 +144,11 @@ rail, and every `/pay` receipt carries a `settlement` block (`{ network, status,
 
 ## Consensus (distributed L1)
 
-With `ACP_CONSENSUS=poa`, nodes run a proof-of-authority chain over the ledger. A fixed, ordered
-authority set (`ACP_AUTHORITIES`) takes turns — the proposer at `height` is
+With `WEB3_CONSENSUS=poa`, nodes run a proof-of-authority chain over the ledger. A fixed, ordered
+authority set (`WEB3_AUTHORITIES`) takes turns — the proposer at `height` is
 `authorities[height % n]` — batching ledger entries into a **block** signed with the proposer's
 ML-DSA key: `{ height, prevBlockHash, proposer, entries, ts, hash, signature }`. Peers gossip blocks
 over the `/consensus/peer` WebSocket and accept one only from the authority whose turn it is, linking
 to the head, with a valid hash + signature. Fork choice is longest-valid-chain with a deterministic
 tie-break. `GET /consensus` reports height, head, and the current proposer. Three nodes converging:
-`pnpm --filter @acp/node demo:consensus`.
+`pnpm --filter @web3/node demo:consensus`.

@@ -15,16 +15,16 @@ pnpm test
 # Python agent SDK (in an isolated virtualenv)
 python3 -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -e "packages/acp-sdk-py[dev]"
-pytest packages/acp-sdk-py -q
-ruff check packages/acp-sdk-py examples
+pip install -e "packages/web3-sdk-py[dev]"
+pytest packages/web3-sdk-py -q
+ruff check packages/web3-sdk-py examples
 ```
 
 Boot the stack locally:
 
 ```bash
-pnpm --filter @acp/node dev        # ACP kernel + modules on :8787
-pnpm --filter @acp/dashboard dev   # observability console on :5173
+pnpm --filter @web3/node dev        # ACP kernel + modules on :8787
+pnpm --filter @web3/dashboard dev   # observability console on :5173
 python examples/two-agents-demo/demo.py
 ```
 

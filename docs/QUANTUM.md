@@ -38,7 +38,7 @@ demonstrable meaning of "quantum-resistant and tamper-evident".
 ## The ledger, honestly
 
 The base ledger is a **verifiable, PQC-signed, append-only log**. On top of it, an **opt-in
-proof-of-authority L1** (`ACP_CONSENSUS=poa`) now lets multiple nodes agree on a shared, signed block
+proof-of-authority L1** (`WEB3_CONSENSUS=poa`) now lets multiple nodes agree on a shared, signed block
 history — real multi-node consensus, but round-robin PoA over a fixed authority set, not yet a
 byzantine-fault-tolerant validator set. Likewise, **settlement is pluggable** (internal / simulated /
 testnet ERC-20), but real-money mainnet settlement deliberately requires a signer you add yourself.

@@ -8,7 +8,7 @@ grounded in what already exists.
 - **Hosted agents** (`hosted` module + `HostedAgentService`): a node runs others' agents/dApps
   in-process, with per-node contribution limits (`My node` console: RAM, max-agents).
 - **Payments + fees**: per-task settlement in aETH on the PQC ledger; protocol fee to treasury.
-- **Accounts/roles** (`accounts`): developer/operator identities with `ACP_TOKEN`.
+- **Accounts/roles** (`accounts`): developer/operator identities with `WEB3_TOKEN`.
 - **Node resources**: `/node` already reports RAM, CPU, uptime, and the operator's declared limits.
 
 The marketplace is the **matching + pricing + settlement layer** that connects a developer who wants

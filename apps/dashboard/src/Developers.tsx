@@ -125,8 +125,8 @@ export function Developers() {
     }
   }
 
-  const pySnippet = `# pip install -e packages/acp-sdk-py
-from acp_sdk import Agent
+  const pySnippet = `# pip install -e packages/web3-sdk-py
+from web3_sdk import Agent
 
 app = Agent("myapp", name="My dApp", base_url="${NODE_URL}",
             skills=[{"id": "ask", "name": "Ask", "description": "…", "tags": []}],
@@ -267,8 +267,8 @@ curl ${NODE_URL}/settlement`;
         <Snippet title="dApp — any HTTP endpoint" code={webhookSnippet} />
         <Snippet title="Explore over HTTP" code={curlSnippet} />
         <p className="hint">
-          Full spec in <code>docs/PROTOCOL.md</code> · SDK in <code>packages/acp-sdk-py</code> · run
-          your own node from the <b>Download</b> tab.
+          Full spec in <code>docs/PROTOCOL.md</code> · SDK in <code>packages/web3-sdk-py</code> ·
+          run your own node from the <b>Download</b> tab.
         </p>
       </div>
     </>

@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import os
 
-from acp_sdk import crypto
-from acp_sdk.http import get_json
+from web3_sdk import crypto
+from web3_sdk.http import get_json
 
-BASE_URL = os.environ.get("ACP_URL", "http://127.0.0.1:8787")
+BASE_URL = os.environ.get("WEB3_URL", "http://127.0.0.1:8787")
 GENESIS = "0" * 64
 
 

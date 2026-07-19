@@ -9,7 +9,7 @@ and gets a genuinely model-generated answer back over the A2A relay.
 
 ## Prerequisites
 
-1. An ACP node running (Terminal 1): `pnpm --filter @acp/node dev`
+1. An ACP node running (Terminal 1): `pnpm --filter @web3/node dev`
 2. A local model served over an OpenAI-compatible API. With Ollama:
    ```bash
    ollama serve            # usually already running
@@ -43,7 +43,7 @@ agent keeps working with **whatever model you have**. For example, with `LLM_MOD
 The brain is three lines:
 
 ```python
-from acp_sdk import LLM
+from web3_sdk import LLM
 brain = LLM(system="You are a helpful agent.")
 answer = brain.chat("your prompt")
 ```

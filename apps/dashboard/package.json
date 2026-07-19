@@ -1,5 +1,5 @@
 {
-  "name": "@acp/dashboard",
+  "name": "@web3/dashboard",
   "version": "0.1.0",
   "description": "ACP observability & guardrails console — LabSuite-themed.",
   "type": "module",

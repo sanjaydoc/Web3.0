@@ -4,9 +4,9 @@ Status: **design** (roadmap item). This turns today's round-robin **proof-of-aut
 into a **staked, byzantine-fault-tolerant** one. It is a multi-phase effort; this doc is the plan and
 the interfaces, not a finished implementation.
 
-## Where we are today (`@acp/consensus`)
+## Where we are today (`@web3/consensus`)
 - Round-robin PoA: authorities take turns proposing ML-DSA-signed blocks over the ledger.
-- **Safety** by signature (`verifyChain()`); **liveness** by proposer-skip (`ACP_SLOT_MS`).
+- **Safety** by signature (`verifyChain()`); **liveness** by proposer-skip (`WEB3_SLOT_MS`).
 - Fork choice = longest valid chain, most-in-turn history, deterministic.
 - Trust = honesty of a small, curated authority set (see `GOVERNANCE.md`). A colluding majority of
   authorities could reorder/censor — the gap this item closes.
@@ -23,7 +23,7 @@ plus **slashing** for equivocation/liveness faults.
 2. **BFT voting round (Tendermint-style).** Per height: `propose → prevote → precommit → commit`.
    A block commits when precommits representing **> ⅔ total stake** are collected. Add message types
    `Prevote`/`Precommit` (ML-DSA-signed) gossiped like blocks today.
-   Deliverable: `BftEngine` alongside the current `Engine`, selected by `ACP_CONSENSUS=bft`.
+   Deliverable: `BftEngine` alongside the current `Engine`, selected by `WEB3_CONSENSUS=bft`.
 3. **State-machine replication.** Make block application a pure reducer `apply(state, block) → state`
    over the ledger so every validator converges on identical state; snapshot + replay for fast sync.
 4. **Slashing.** Detect double-sign (two conflicting precommits at one height) and downtime; burn a

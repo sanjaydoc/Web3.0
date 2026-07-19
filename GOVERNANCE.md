@@ -48,7 +48,7 @@ devices — PCs, phones, tablets, servers. Onboarding is: download the node, run
 
 - **Safety** — every block is signed with a post-quantum (ML-DSA) key by the authority whose turn it
   is; validators reject anything else. Tampering is caught by `verifyChain()`.
-- **Liveness** — round-robin proposing with **proposer-skip** (`ACP_SLOT_MS`): if the in-turn
+- **Liveness** — round-robin proposing with **proposer-skip** (`WEB3_SLOT_MS`): if the in-turn
   authority is offline, the next steps in after a slot, so one down node cannot stall the chain.
 - **Fork choice** — longest valid chain, preferring the most in-turn history; deterministic, so honest
   nodes converge.
@@ -58,7 +58,7 @@ or censor. Mitigations today are curation (few, accountable authorities) and div
 fix is the PoS/BFT migration on the roadmap.
 
 **Access control, stated plainly:** write actions on a node (launching agents, publishing dApps,
-changing settings) are gated by an **admin token** (`ACP_ADMIN_TOKEN`); read APIs are open. The
+changing settings) are gated by an **admin token** (`WEB3_ADMIN_TOKEN`); read APIs are open. The
 dashboard adds ownership *scoping* in the UI — the node owner sees every developer's hosted dApps, a
 developer sees only the ones they published — but because the read APIs are open, this is a
 convenience boundary, **not** a hard multi-tenant wall. A real per-developer boundary (each developer
@@ -77,7 +77,7 @@ votes) as part of the PoS/BFT work.
 
 ## Money & incentives
 
-Fees and block rewards are configurable per node (`ACP_FEE_BPS`, `ACP_BLOCK_REWARD`) and default to
+Fees and block rewards are configurable per node (`WEB3_FEE_BPS`, `WEB3_BLOCK_REWARD`) and default to
 off. aETH is the network's native token — modeled on Ethereum's economics, **free-floating and not
 pegged to any fiat** (see the README's **What is aETH?**). Today it's a closed-loop ledger credit with
 no market value; on-chain issuance, at which point demand sets its price, is a deliberate legal/custody

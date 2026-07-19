@@ -52,17 +52,17 @@ importers:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.1)
 
-  packages/acp-consensus:
+  packages/web3-consensus:
     dependencies:
-      '@acp/core':
+      '@web3/core':
         specifier: workspace:*
-        version: link:../acp-core
-      '@acp/crypto':
+        version: link:../web3-core
+      '@web3/crypto':
         specifier: workspace:*
-        version: link:../acp-crypto
-      '@acp/ledger':
+        version: link:../web3-crypto
+      '@web3/ledger':
         specifier: workspace:*
-        version: link:../acp-ledger
+        version: link:../web3-ledger
     devDependencies:
       typescript:
         specifier: ^5.7.2
@@ -71,11 +71,11 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
-  packages/acp-core:
+  packages/web3-core:
     dependencies:
-      '@acp/crypto':
+      '@web3/crypto':
         specifier: workspace:*
-        version: link:../acp-crypto
+        version: link:../web3-crypto
     devDependencies:
       typescript:
         specifier: ^5.7.2
@@ -84,7 +84,7 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
-  packages/acp-crypto:
+  packages/web3-crypto:
     dependencies:
       '@noble/ciphers':
         specifier: ^2.2.0
@@ -106,14 +106,14 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
-  packages/acp-ledger:
+  packages/web3-ledger:
     dependencies:
-      '@acp/core':
+      '@web3/core':
         specifier: workspace:*
-        version: link:../acp-core
-      '@acp/crypto':
+        version: link:../web3-core
+      '@web3/crypto':
         specifier: workspace:*
-        version: link:../acp-crypto
+        version: link:../web3-crypto
     devDependencies:
       typescript:
         specifier: ^5.7.2
@@ -122,26 +122,26 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
-  services/acp-node:
+  services/web3-node:
     dependencies:
-      '@acp/consensus':
-        specifier: workspace:*
-        version: link:../../packages/acp-consensus
-      '@acp/core':
-        specifier: workspace:*
-        version: link:../../packages/acp-core
-      '@acp/crypto':
-        specifier: workspace:*
-        version: link:../../packages/acp-crypto
-      '@acp/ledger':
-        specifier: workspace:*
-        version: link:../../packages/acp-ledger
       '@fastify/cors':
         specifier: ^10.0.1
         version: 10.1.0
       '@fastify/websocket':
         specifier: ^11.0.1
         version: 11.3.0
+      '@web3/consensus':
+        specifier: workspace:*
+        version: link:../../packages/web3-consensus
+      '@web3/core':
+        specifier: workspace:*
+        version: link:../../packages/web3-core
+      '@web3/crypto':
+        specifier: workspace:*
+        version: link:../../packages/web3-crypto
+      '@web3/ledger':
+        specifier: workspace:*
+        version: link:../../packages/web3-ledger
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1

@@ -1,5 +1,5 @@
 [package]
-name = "acp-node-desktop"
+name = "web3-node-desktop"
 version = "0.1.0"
 edition = "2021"
 description = "ACP Node desktop shell (Web3.0)"

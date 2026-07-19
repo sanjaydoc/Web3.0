@@ -7,8 +7,8 @@ is a module bolted on through a single, stable context. This document explains h
 
 ```
                          ┌──────────────────────────────┐
-   Python / TS agents ──▶│  acp-node kernel             │
-   (acp-sdk-py)          │  ┌────────────────────────┐  │
+   Python / TS agents ──▶│  web3-node kernel             │
+   (web3-sdk-py)          │  ┌────────────────────────┐  │
                          │  │ modules (pluggable)     │  │
    Dashboard (React) ───▶│  │  naming   registry      │  │
                          │  │  messaging  payments    │  │
@@ -20,7 +20,7 @@ is a module bolted on through a single, stable context. This document explains h
                          └──────────────┬───────────────┘
                                         │
                        ┌────────────────┴────────────────┐
-                       │ @acp/core   @acp/ledger  @acp/crypto │
+                       │ @web3/core   @web3/ledger  @web3/crypto │
                        │ (types)     (PQC ledger) (ML-DSA/KEM) │
                        └──────────────────────────────────────┘
 ```
@@ -29,15 +29,15 @@ is a module bolted on through a single, stable context. This document explains h
 
 | Package | Role |
 | --- | --- |
-| **@acp/crypto** | Post-quantum primitives. `generateKeypair`/`sign`/`verify` (ML-DSA-65), `seal`/`open` (ML-KEM-768 hybrid box), `deriveDid`, and a canonical-JSON hasher used everywhere signatures are computed. |
-| **@acp/core** | The shared vocabulary: Web3.0 IDs, agent cards (A2A-aligned), wallets, **signed envelopes** (`seal`/`open`), the A2A task lifecycle, and observability events. Dependency-light so every module and the Python SDK can mirror it. |
-| **@acp/ledger** | The quantum-resistant ledger — an append-only, hash-linked log whose every entry is ML-DSA-signed by the node. Derives wallet balances from the log; `verifyChain()`/`verifySnapshot()` prove integrity. |
-| **@acp/node** | The kernel + modules (below). |
-| **acp-sdk-py** | The Python agent SDK — a byte-compatible reimplementation of the crypto/envelope layer plus an `Agent` class. |
+| **@web3/crypto** | Post-quantum primitives. `generateKeypair`/`sign`/`verify` (ML-DSA-65), `seal`/`open` (ML-KEM-768 hybrid box), `deriveDid`, and a canonical-JSON hasher used everywhere signatures are computed. |
+| **@web3/core** | The shared vocabulary: Web3.0 IDs, agent cards (A2A-aligned), wallets, **signed envelopes** (`seal`/`open`), the A2A task lifecycle, and observability events. Dependency-light so every module and the Python SDK can mirror it. |
+| **@web3/ledger** | The quantum-resistant ledger — an append-only, hash-linked log whose every entry is ML-DSA-signed by the node. Derives wallet balances from the log; `verifyChain()`/`verifySnapshot()` prove integrity. |
+| **@web3/node** | The kernel + modules (below). |
+| **web3-sdk-py** | The Python agent SDK — a byte-compatible reimplementation of the crypto/envelope layer plus an `Agent` class. |
 
 ## The kernel
 
-`Kernel` (in `services/acp-node/src/kernel.ts`) constructs the shared services and loads the
+`Kernel` (in `services/web3-node/src/kernel.ts`) constructs the shared services and loads the
 modules named in `config.modules`, handing each a `ModuleContext`:
 
 ```ts
@@ -73,11 +73,11 @@ ACP an "agentic OS": the core is small and stable; features come and go as modul
   (capability, rate-limit, spend-cap), and every verdict is emitted as an event.
 - **auth hardening** (kernel-level, not a module) — signed registration, a **replay/freshness
   guard** on every envelope (fresh `ts` + unused `nonce`), and a **per-IP HTTP rate limiter** as a
-  DoS backstop in front of the per-agent guardrails. On by default; `ACP_AUTH_ENFORCE=false` gives
+  DoS backstop in front of the per-agent guardrails. On by default; `WEB3_AUTH_ENFORCE=false` gives
   warn-only. Rejections emit an `auth.rejected` event. See PROTOCOL.md → Auth & rate limits.
 - **observability** — the read side: `/events` (+ SSE `/events/stream`), `/ledger` (with live
   verification), `/stats`. This powers the dashboard.
-- **consensus** — the distributed L1 (opt-in, `ACP_CONSENSUS=poa`). Proof-of-authority: authorities
+- **consensus** — the distributed L1 (opt-in, `WEB3_CONSENSUS=poa`). Proof-of-authority: authorities
   take turns proposing ML-DSA-signed blocks over the ledger, gossiped to peers via `/consensus/peer`
   until all converge. `GET /consensus` reports status. See PROTOCOL.md → Consensus.
 - **settlement** (kernel service, surfaced on `/pay` + `GET /settlement`) — pluggable payment rail:
@@ -102,7 +102,7 @@ The node keeps fast in-memory structures (registry, ledger, wallet balances) but
 pluggable **`Store`**:
 
 - **`MemoryStore`** (default) — for local dev and tests; state lives for the process lifetime.
-- **`MongoStore`** — set `ACP_MONGODB_URI` (e.g. a MongoDB Atlas cluster) and state survives
+- **`MongoStore`** — set `WEB3_MONGODB_URI` (e.g. a MongoDB Atlas cluster) and state survives
   restarts. Agent cards go to the `agents` collection; ledger entries to `ledger_entries`.
 
 Only two things are persisted: **agent cards** and **ledger entries**. Wallet balances are *derived*
@@ -112,14 +112,14 @@ awaits the card write, and each new ledger entry is persisted via the ledger's `
 (drained on graceful shutdown).
 
 Because the ledger is signed by the node's key, the **node identity must be stable across restarts**
-or the persisted log won't verify. Set `ACP_NODE_SEED` to a 32-byte base64url seed
-(`generateKeypair(seed)` is deterministic); generate one with `pnpm --filter @acp/node keygen`.
+or the persisted log won't verify. Set `WEB3_NODE_SEED` to a 32-byte base64url seed
+(`generateKeypair(seed)` is deterministic); generate one with `pnpm --filter @web3/node keygen`.
 Without it the node uses an ephemeral key and warns that state won't survive a restart.
 
 ```
-ACP_MONGODB_URI=mongodb+srv://user:pass@cluster.xxxx.mongodb.net   # persistence on
-ACP_MONGODB_DB=acp                                                 # database name (default: acp)
-ACP_NODE_SEED=<32-byte base64url>                                  # stable signing identity
+WEB3_MONGODB_URI=mongodb+srv://user:pass@cluster.xxxx.mongodb.net   # persistence on
+WEB3_MONGODB_DB=acp                                                 # database name (default: acp)
+WEB3_NODE_SEED=<32-byte base64url>                                  # stable signing identity
 ```
 
 This is durable single-node storage — still not a distributed L1 with consensus (see
@@ -142,7 +142,7 @@ Nothing special is required — it's just normal HTTP from inside the handler.
 so the rest of the network can discover, pay, and task it — without touching the original service:
 
 ```python
-from acp_sdk import Agent
+from web3_sdk import Agent
 import urllib.request, json
 
 # Expose an existing weather REST API as a paid ACP agent.

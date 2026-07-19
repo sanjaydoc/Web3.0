@@ -17,7 +17,7 @@ from __future__ import annotations
 import sys
 import time
 
-from acp_sdk import LLM, load_env
+from web3_sdk import LLM, load_env
 
 load_env()
 

@@ -3,8 +3,8 @@
 # Usage:  curl -fsSL <raw-url>/scripts/install-node.sh | bash
 set -euo pipefail
 
-REPO="${ACP_REPO:-https://github.com/sanjaydoc/Web3.0.git}"
-DIR="${ACP_DIR:-acp-node}"
+REPO="${WEB3_REPO:-https://github.com/sanjaydoc/Web3.0.git}"
+DIR="${WEB3_DIR:-web3-node}"
 
 echo "▸ ACP node installer"
 
@@ -47,4 +47,4 @@ pnpm install
 echo "▸ config is in .env  (edit it, then re-run to apply)"
 
 echo "▸ starting the node on http://127.0.0.1:8787 …"
-pnpm --filter @acp/node start
+pnpm --filter @web3/node start

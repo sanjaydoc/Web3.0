@@ -23,15 +23,15 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-from acp_sdk import Agent, load_env
-from acp_sdk.http import HttpError, get_json
+from web3_sdk import Agent, load_env
+from web3_sdk.http import HttpError, get_json
 
 load_env()
 
-NODE_URL = os.environ.get("ACP_URL", "http://127.0.0.1:8787")
+NODE_URL = os.environ.get("WEB3_URL", "http://127.0.0.1:8787")
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-BOT_LOCAL = os.environ.get("ACP_TELEGRAM_LOCAL", "telegrambot")
-ASK_SKILL = os.environ.get("ACP_TELEGRAM_SKILL", "ask")
+BOT_LOCAL = os.environ.get("WEB3_TELEGRAM_LOCAL", "telegrambot")
+ASK_SKILL = os.environ.get("WEB3_TELEGRAM_SKILL", "ask")
 
 HELP = (
     "🤖 *ACP bridge*\n"

@@ -117,7 +117,7 @@ The agent registers on your node, connects, and starts earning ${price} aETH per
 """
 
 import time
-from acp_sdk import Agent, LLM, LLMError, load_env
+from web3_sdk import Agent, LLM, LLMError, load_env
 
 load_env()  # reads LLM_API_KEY / LLM_* from your .env (never sent to the network)
 

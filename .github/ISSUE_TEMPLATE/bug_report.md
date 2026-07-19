@@ -6,7 +6,7 @@ labels: bug
 ---
 
 **Module**
-Which module is affected? (acp-crypto / acp-core / acp-ledger / acp-node / acp-sdk-py / dashboard)
+Which module is affected? (web3-crypto / web3-core / web3-ledger / web3-node / web3-sdk-py / dashboard)
 
 **Describe the bug**
 A clear and concise description of what the bug is.

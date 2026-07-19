@@ -1,7 +1,7 @@
 // Thin typed client for the ACP node's observability endpoints.
 
 export const NODE_URL =
-  (import.meta.env.VITE_ACP_URL as string | undefined) ?? 'http://127.0.0.1:8787';
+  (import.meta.env.VITE_WEB3_URL as string | undefined) ?? 'http://127.0.0.1:8787';
 
 export interface AgentCard {
   web3Id: string;
@@ -169,7 +169,7 @@ export interface ConsensusInfo {
   peers: string[];
 }
 
-// ── account token (an `acp_…` API token from sign-up), stored in this browser ──
+// ── account token (an `web3_…` API token from sign-up), stored in this browser ──
 const TOKEN_KEY = 'acp.token';
 export function getAcpToken(): string {
   return localStorage.getItem(TOKEN_KEY) ?? '';
