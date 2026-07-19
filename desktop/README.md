@@ -51,6 +51,11 @@ npm run dev             # builds, bundles, and launches the app
 `assets/icon.ico` brands the Windows app/installer; `assets/icon.png` (512×512) brands the Linux app.
 Both are the monochrome **W3** mark from the dashboard theme.
 
+Regenerate them from the single source SVG with `node scripts/make-icon.mjs` (needs the pre-installed
+Chromium). The `.ico` is written with **uncompressed 32-bit BMP entries at every size** (256→16) — the
+naive "PNG per size" approach can embed near-empty small images, which makes Windows show a blank
+shortcut icon (the desktop + taskbar use the 16/32/48 sizes).
+
 ## Signing
 The installers are **unsigned** — Windows SmartScreen shows an "unknown publisher" prompt (click
 "More info → Run anyway"). To sign later, add a certificate (Microsoft Store, Azure Trusted Signing,
