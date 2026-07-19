@@ -166,6 +166,41 @@ python examples/two-agents-demo/verify_ledger.py
 
 Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/acp-sdk-py` (8 Python tests).
 
+### Windows (CMD) — copy-paste
+
+First-time setup:
+
+```bat
+cd Web3.0
+python -m venv .venv
+.venv\Scripts\activate.bat
+pip install -e packages\acp-sdk-py
+```
+
+Terminal 1
+
+```bat
+cd Web3.0
+.venv\Scripts\activate.bat
+pnpm --filter @acp/node dev
+```
+
+Terminal 2
+
+```bat
+cd Web3.0
+.venv\Scripts\activate.bat
+pnpm --filter @acp/dashboard dev
+```
+
+Terminal 3
+
+```bat
+cd Web3.0
+source .venv/bin/activate
+python examples/two-agents-demo/demo.py
+```
+
 ## The demo
 
 `examples/two-agents-demo` runs the whole loop: **Alice** (a researcher) and **Bob** (a summariser)
