@@ -76,7 +76,7 @@ export function HostedDapps() {
                 className={scope === 'mine' ? 'active' : ''}
                 onClick={() => setScope('mine')}
               >
-                Only mine
+                My apps
               </button>
             </div>
           ) : (
