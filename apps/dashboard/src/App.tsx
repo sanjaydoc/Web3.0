@@ -36,10 +36,10 @@ type View =
   | 'developers'
   | 'download';
 
-type Role = 'operator' | 'developer';
+type Role = 'operator' | 'admin';
 const ROLE_KEY = 'acp.role';
 
-/** Sidebar entries. `operator: true` = shown to node operators too; the rest are developer-only. */
+/** Sidebar entries. `operator: true` = shown to node operators too; the rest are admin-only. */
 const NAV: {
   id: View;
   label: string;
@@ -98,11 +98,11 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
-  const [role, setRole] = useState<Role>(
-    () => (localStorage.getItem(ROLE_KEY) as Role | null) ?? 'developer',
+  const [role, setRole] = useState<Role>(() =>
+    localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
   );
 
-  const visibleNav = NAV.filter((n) => role === 'developer' || n.operator);
+  const visibleNav = NAV.filter((n) => role === 'admin' || n.operator);
 
   const changeRole = (r: Role) => {
     setRole(r);
@@ -162,10 +162,10 @@ export function App() {
           </button>
           <button
             type="button"
-            className={role === 'developer' ? 'active' : ''}
-            onClick={() => changeRole('developer')}
+            className={role === 'admin' ? 'active' : ''}
+            onClick={() => changeRole('admin')}
           >
-            Developer
+            Admin
           </button>
         </div>
         {visibleNav.map((n) => (
