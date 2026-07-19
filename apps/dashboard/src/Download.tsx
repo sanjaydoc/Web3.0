@@ -6,10 +6,12 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 // Published by the `desktop` workflow on every version tag.
 const DESKTOP_VERSION = '0.1.0';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
-const DESKTOP_EXE = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
-const DESKTOP_MSI = `${REPO}/releases/download/v${DESKTOP_VERSION}/Web3.0.${DESKTOP_VERSION}.msi`;
-// Linux artifact filenames vary by arch (x86_64 / amd64), so point at the release page.
-const DESKTOP_LINUX = DESKTOP_RELEASE;
+const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
+const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
+const DESKTOP_MSI = `${DL}/Web3.0.${DESKTOP_VERSION}.msi`;
+const DESKTOP_DMG = `${DL}/Web3.0-${DESKTOP_VERSION}-universal.dmg`;
+const DESKTOP_APPIMAGE = `${DL}/Web3.0-${DESKTOP_VERSION}.AppImage`;
+const DESKTOP_DEB = `${DL}/web3_${DESKTOP_VERSION}_amd64.deb`;
 
 const INSTALL_SCRIPT = `#!/usr/bin/env bash
 # Run a Web3.0 node on macOS or Linux.
@@ -405,21 +407,21 @@ function DesktopApp() {
       sub: 'Apple Silicon + Intel',
       accent: '#a0a0a0',
       icon: <AppleLogo />,
-      href: DESKTOP_LINUX,
+      href: DESKTOP_DMG,
     },
     {
       label: 'Linux (AppImage)',
       sub: 'any distro · double-click',
       accent: '#f2c14e',
       icon: <LinuxLogo />,
-      href: DESKTOP_LINUX,
+      href: DESKTOP_APPIMAGE,
     },
     {
       label: 'Linux (.deb)',
       sub: 'Debian · Ubuntu',
       accent: '#e95420',
       icon: <UbuntuLogo />,
-      href: DESKTOP_LINUX,
+      href: DESKTOP_DEB,
     },
     {
       label: 'All releases',
