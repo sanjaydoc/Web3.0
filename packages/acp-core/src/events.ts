@@ -13,6 +13,7 @@ export interface GuardrailDecision {
 /** The categories of events surfaced to the observability dashboard. */
 export type EventKind =
   | 'agent.registered'
+  | 'account.created'
   | 'message.routed'
   | 'task.updated'
   | 'payment.settled'

@@ -1,6 +1,7 @@
 import type { Ledger } from '@acp/ledger';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import type { AcpConfig } from './config.js';
+import type { AccountsService } from './services/accounts.js';
 import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
 import type { ConsensusCoordinator } from './services/consensus.js';
@@ -27,6 +28,8 @@ export interface ModuleContext {
   consensus: ConsensusCoordinator;
   connections: ConnectionHub;
   store: Store;
+  /** Sign-up + authentication: resolves accounts, addresses, and roles from ACP tokens. */
+  accounts: AccountsService;
   config: AcpConfig;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;

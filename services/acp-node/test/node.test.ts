@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 process.env.ACP_LOG_LEVEL = 'silent';
 import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
+import { AccountsService } from '../src/services/accounts.js';
 import { HostedAgentService } from '../src/services/hosted.js';
 import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
@@ -362,6 +363,7 @@ function ctxOf(k: Kernel) {
     consensus: k.consensus,
     connections: k.connections,
     store: k.store,
+    accounts: new AccountsService(k.store, () => new Date().toISOString()),
     config: k.config,
     treasuryId: k.treasuryId,
     clock: () => new Date().toISOString(),
@@ -699,6 +701,93 @@ describe('operator incentives (fees & block rewards)', () => {
     const block = k.consensus.proposeTick();
     expect(block).not.toBeNull();
     expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(500); // block reward minted
+    await k.close();
+  });
+});
+
+describe('accounts & authentication', () => {
+  it('signs up an account, mints a one-time token, and authenticates it', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const post = (url: string, payload: unknown, token?: string) =>
+      k.http.inject({
+        method: 'POST',
+        url,
+        payload: payload as object,
+        headers: token ? { 'x-acp-token': token } : undefined,
+      });
+
+    // sign up a developer → gets an address + a one-time token
+    const res = await post('/accounts/signup', { local: 'sanjay', role: 'developer' });
+    expect(res.statusCode).toBe(201);
+    const created = res.json() as { address: string; role: string; token: string };
+    expect(created.address).toBe('sanjay@web3.0');
+    expect(created.role).toBe('developer');
+    expect(created.token).toMatch(/^acp_/);
+
+    // the token authenticates /accounts/me and never leaks the hash
+    const me = await k.http.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { 'x-acp-token': created.token },
+    });
+    expect(me.statusCode).toBe(200);
+    expect(me.json()).toMatchObject({ address: 'sanjay@web3.0', role: 'developer' });
+    expect(JSON.stringify(me.json())).not.toContain('tokenHash');
+
+    // no/!bad token → 401
+    const anon = await k.http.inject({ method: 'GET', url: '/accounts/me' });
+    expect(anon.statusCode).toBe(401);
+    await k.close();
+  });
+
+  it('enforces roles: only an admin may list accounts, and the taken address is rejected', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const post = (url: string, payload: unknown, token?: string) =>
+      k.http.inject({
+        method: 'POST',
+        url,
+        payload: payload as object,
+        headers: token ? { 'x-acp-token': token } : undefined,
+      });
+
+    const admin = (await post('/accounts/signup', { local: 'boss', role: 'admin' })).json() as {
+      token: string;
+    };
+    const dev = (await post('/accounts/signup', { local: 'devy', role: 'developer' })).json() as {
+      token: string;
+    };
+
+    // a developer cannot list accounts; the admin can
+    const denied = await k.http.inject({
+      method: 'GET',
+      url: '/accounts',
+      headers: { 'x-acp-token': dev.token },
+    });
+    expect(denied.statusCode).toBe(403);
+    const allowed = await k.http.inject({
+      method: 'GET',
+      url: '/accounts',
+      headers: { 'x-acp-token': admin.token },
+    });
+    expect(allowed.statusCode).toBe(200);
+    expect((allowed.json() as { accounts: unknown[] }).accounts.length).toBe(2);
+
+    // once an admin exists, minting another admin requires admin auth
+    const forbidden = await post('/accounts/signup', { local: 'boss2', role: 'admin' });
+    expect(forbidden.statusCode).toBe(401);
+    const okAdmin = await post('/accounts/signup', { local: 'boss2', role: 'admin' }, admin.token);
+    expect(okAdmin.statusCode).toBe(201);
+
+    // duplicate address is rejected
+    const dup = await post('/accounts/signup', { local: 'devy', role: 'developer' });
+    expect(dup.statusCode).toBe(400);
+
+    // accounts persist across a restart over the same store
+    const svc = new AccountsService(k.store, () => new Date().toISOString());
+    await svc.load();
+    expect(svc.get('boss@web3.0')?.role).toBe('admin');
     await k.close();
   });
 });

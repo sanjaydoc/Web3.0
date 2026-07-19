@@ -1,6 +1,7 @@
 /** All ACP modules that ship with the node. Disable any by removing it from `config.modules`. */
 export const ALL_MODULES = [
   'naming',
+  'accounts',
   'registry',
   'messaging',
   'payments',

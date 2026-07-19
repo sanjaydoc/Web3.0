@@ -10,6 +10,7 @@ import type { FastifyInstance } from 'fastify';
 import { type AcpConfig, DEFAULT_CONFIG } from './config.js';
 import type { AcpModule, ModuleContext } from './context.js';
 import { MODULE_FACTORIES } from './modules/index.js';
+import { AccountsService } from './services/accounts.js';
 import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
 import { ConsensusCoordinator } from './services/consensus.js';
@@ -141,6 +142,10 @@ export class Kernel {
     }));
     this.http.get('/health', () => ({ ok: true, ledgerVerified: this.ledger.verifyChain().ok }));
 
+    const clock = () => new Date().toISOString();
+    const accounts = new AccountsService(this.store, clock);
+    await accounts.load();
+
     const ctx: ModuleContext = {
       http: this.http,
       ledger: this.ledger,
@@ -152,10 +157,11 @@ export class Kernel {
       consensus: this.consensus,
       connections: this.connections,
       store: this.store,
+      accounts,
       config: this.config,
       treasuryId: this.treasuryId,
       startedAt: this.startedAt,
-      clock: () => new Date().toISOString(),
+      clock,
       log: this.http.log,
     };
 
