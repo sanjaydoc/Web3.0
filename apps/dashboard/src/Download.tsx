@@ -96,10 +96,15 @@ pnpm --filter @acp/node start`,
   {
     name: 'Server',
     tag: 'Docker',
-    steps: `git clone ${REPO}.git && cd Web3.0
-docker build -t acp-node .
-docker run -p 8787:8787 --env-file .env acp-node`,
-    note: 'Point ACP_MONGODB_URI at Atlas to persist. Put it behind a reverse proxy for TLS.',
+    steps: `# No Node.js or git needed on the host — only Docker.
+# Node 20 runs inside the image; build straight from the repo:
+docker build -t acp-node ${REPO}.git
+docker run -p 8787:8787 -e ACP_MONGODB_URI=... acp-node
+
+# (or with git, to edit .env locally first)
+# git clone ${REPO}.git && cd Web3.0
+# docker build -t acp-node . && docker run -p 8787:8787 --env-file .env acp-node`,
+    note: 'The host needs only Docker — Node.js is inside the container. Set ACP_MONGODB_URI (Atlas) to persist; put it behind a reverse proxy for TLS.',
   },
   {
     name: 'Android phone · tablet',
