@@ -793,3 +793,25 @@ button.connector:not(:disabled):hover {
   color: #555;
   flex-shrink: 0;
 }
+
+/* platform manual-setup steps rendered inside a mini terminal */
+.term-steps {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.7;
+}
+.term-steps code {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+}

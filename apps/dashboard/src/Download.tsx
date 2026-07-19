@@ -181,9 +181,10 @@ function CmdLine({ command }: { command: string }) {
 }
 
 const NODE_CMDS = [
-  `git clone ${REPO}.git`,
-  'cd Web3.0 && pnpm install',
-  'cp .env.example .env',
+  `git clone ${REPO}.git && cd Web3.0`,
+  'python -m venv .venv && source .venv/bin/activate',
+  'pnpm install',
+  'pip install -e packages/acp-sdk-py',
   'pnpm --filter @acp/node start',
 ];
 
@@ -344,14 +345,22 @@ function NodeClients() {
 
 function Card({ p }: { p: Platform }) {
   return (
-    <div className="card">
-      <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>{p.name}</span>
-        <span className="chip">{p.tag}</span>
+    <div>
+      <div className="term">
+        <div className="term-bar">
+          <div className="term-dot" style={{ background: '#ff5f57' }} />
+          <div className="term-dot" style={{ background: '#ffbd2e' }} />
+          <div className="term-dot" style={{ background: '#28c840' }} />
+          <span className="term-name">
+            {p.name} · {p.tag}
+          </span>
+        </div>
+        <div className="term-body">
+          <pre className="term-steps">
+            <code>{p.steps}</code>
+          </pre>
+        </div>
       </div>
-      <pre>
-        <code>{p.steps}</code>
-      </pre>
       {p.note && <p className="hint">{p.note}</p>}
     </div>
   );
@@ -372,10 +381,11 @@ export function Download() {
       <NodeTerminal />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
-        The installers <b>set up Node.js 20+ and git for you</b> if missing, then clone, install,
-        and start the node. <b>Windows:</b> right-click the <code>.ps1</code> → Run with PowerShell.{' '}
-        <b>Mac/Linux:</b> <code>chmod +x install-acp-node.* &amp;&amp; ./install-acp-node.*</code>{' '}
-        (one-line: <code>curl -fsSL {REPO}/raw/main/scripts/install-node.sh | bash</code>).
+        Steps: clone → activate a Python venv → install packages (pnpm) → install the agent SDK (pip)
+        → start the node. The one-click installers do this for you and also{' '}
+        <b>set up Node.js 20+ and git</b> if missing. On <b>Windows</b>, activate the venv with{' '}
+        <code>.venv\Scripts\activate</code> (not <code>source</code>) and run the <code>.ps1</code> via
+        right-click → Run with PowerShell.
       </p>
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
