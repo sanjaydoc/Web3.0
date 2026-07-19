@@ -966,9 +966,12 @@ button.connector:not(:disabled):hover {
 .l-lead {
   color: #9aa6bd;
   font-size: 1.06rem;
-  max-width: 30rem;
+  max-width: 34rem;
+  width: 100%;
   margin-top: 1.2rem;
   line-height: 1.55;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .l-stats {
   display: flex;
