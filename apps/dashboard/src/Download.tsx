@@ -1,7 +1,7 @@
 const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
 const INSTALL_SCRIPT = `#!/usr/bin/env bash
-# Run an ACP (Web3.0) node on any machine.
+# Run an ACP (Web3.0) node on macOS or Linux.
 set -euo pipefail
 REPO="\${ACP_REPO:-${REPO}.git}"
 DIR="\${ACP_DIR:-acp-node}"
@@ -13,6 +13,22 @@ corepack enable >/dev/null 2>&1 || npm install -g pnpm
 pnpm install
 [ -f .env ] || cp .env.example .env
 pnpm --filter @acp/node start
+`;
+
+const INSTALL_PS1 = `# Run an ACP (Web3.0) node on Windows (PowerShell).
+# Usage:  powershell -ExecutionPolicy Bypass -File install-acp-node.ps1
+$ErrorActionPreference = "Stop"
+$Repo = if ($env:ACP_REPO) { $env:ACP_REPO } else { "${REPO}.git" }
+$Dir  = if ($env:ACP_DIR)  { $env:ACP_DIR }  else { "acp-node" }
+if (-not (Get-Command git  -ErrorAction SilentlyContinue)) { throw "git required — https://git-scm.com" }
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js 20+ required — https://nodejs.org" }
+if (-not (Test-Path $Dir)) { git clone --depth 1 $Repo $Dir }
+Set-Location $Dir
+corepack enable 2>$null
+if ($LASTEXITCODE -ne 0) { npm install -g pnpm }
+pnpm install
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+pnpm --filter '@acp/node' start
 `;
 
 interface Platform {
@@ -95,26 +111,43 @@ export function Download() {
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
-        <div className="section-title">One-line install</div>
+        <div className="section-title">One-click installer</div>
         <p className="muted" style={{ margin: '2px 0 12px' }}>
-          Fastest path on Mac, Linux, or Android/Termux — clones the repo, installs, and starts the
-          node. Review it first; then run it in a terminal.
+          Grab the installer for your OS — it clones the repo, installs dependencies, and starts the
+          node. Review it first; then run it (details below each button).
         </p>
-        <pre>
-          <code>curl -fsSL {REPO}/raw/main/scripts/install-node.sh | bash</code>
-        </pre>
         <div className="gen-actions">
+          <button
+            type="button"
+            className="btn act"
+            onClick={() => download('install-acp-node.ps1', INSTALL_PS1)}
+          >
+            ⊞ Windows installer
+          </button>
+          <button
+            type="button"
+            className="btn act"
+            onClick={() => download('install-acp-node.command', INSTALL_SCRIPT)}
+          >
+            🍎 Mac installer
+          </button>
           <button
             type="button"
             className="btn act"
             onClick={() => download('install-acp-node.sh', INSTALL_SCRIPT)}
           >
-            Download install script
+            🐧 Linux installer
           </button>
           <a className="btn" href={REPO} target="_blank" rel="noreferrer">
             View source on GitHub
           </a>
         </div>
+        <p className="hint" style={{ marginTop: 10 }}>
+          <b>Windows:</b> right-click the <code>.ps1</code> → Run with PowerShell, or{' '}
+          <code>powershell -ExecutionPolicy Bypass -File install-acp-node.ps1</code>. &nbsp;
+          <b>Mac/Linux:</b> <code>chmod +x install-acp-node.* &amp;&amp; ./install-acp-node.*</code>{' '}
+          (or one-line: <code>curl -fsSL {REPO}/raw/main/scripts/install-node.sh | bash</code>).
+        </p>
       </div>
 
       <div className="grid-2">
