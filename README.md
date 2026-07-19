@@ -432,26 +432,29 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
 - ✅ **Telegram front door** + **no-VPS `AgentHost`** — one process supervises a fleet of agents and
   keeps them online; a Telegram bot bridges humans to agents. Plus the **Genesis** create-an-agent
   wizard in the dashboard.
+- ✅ **Accounts & authentication (admin / operator / developer)** — sign-up mints a human address
+  (`sanjay@web3.0`) + an **`ACP_TOKEN`**; roles are enforced server-side (`requireRole`). Replaces the
+  single shared `ACP_ADMIN_TOKEN`. Dashboard **Account** view for sign-up / sign-in.
+- ✅ **Per-developer scoping (server-side)** — `POST /hosted/launch` stamps the dApp's owner = the
+  signed-in developer; `GET /hosted` returns only your own dApps (admins see all). The old UI-only
+  "My apps" filter is now a real API boundary.
+- ✅ **Adapters** — put an existing agent/model on ACP in one call: `CallableAdapter`, `HttpAdapter`,
+  `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
+- ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
+  real ERC-20 transfers; the node holds no key and never broadcasts by default.
 
 Still ahead:
 
-- **Desktop node app (MSI / one-click installer)** — wrap the node + dashboard in a native
-  installer (Windows MSI, macOS `.dmg`, Linux `.AppImage`) with a **WebView** UI, so an operator
-  double-clicks to install and run a node — no terminal, no Node.js/git prerequisites. The bundled
-  WebView loads the existing dashboard against the local node.
-- **Accounts & authentication (admin / operator / developer)** — a real **sign-up** flow that mints
-  each user an ACP identity: an **`ACP_TOKEN`** (their signing key / API token) and a human address
-  like **`sanjay@web3.0`**. Roles (admin, operator, developer) become enforced server-side, turning
-  today's UI-only Operator/Admin toggle and dApp scoping into a real authorization boundary. Replaces
-  the single shared `ACP_ADMIN_TOKEN` with per-user accounts.
-- **Real mainnet settlement** — add a funded signer to the testnet rail (deliberately out of the box)
-- **BFT/PoS validators + state-machine replication** — beyond round-robin PoA and a replicated log
-- **Per-developer authentication & multi-tenant scoping** — today the dashboard scopes the *Hosted
-  dApps* view by ownership in the UI (owner sees all; a developer sees only what they published), but
-  the read APIs are still open. A real boundary needs each developer to authenticate (a signed
-  identity / API key) so the node can enforce "you only see and manage your own dApps" server-side.
-- **Decentralized compute marketplace** — agents earn hosting by joining the network
-- **Adapters** to import existing agents onto ACP
+- **Desktop node app (MSI / one-click installer)** — a Tauri scaffold ships in `desktop/` (WebView
+  wrapping the dashboard; targets msi/dmg/AppImage). Build it on a native toolchain; the remaining
+  step is bundling the node as a sidecar for the full double-click experience.
+- **Real mainnet settlement** — the signer seam exists; going live is an operator plugging their own
+  funded key (deliberately out of the box — the node never holds real funds autonomously).
+- **BFT/PoS validators + state-machine replication** — design in
+  [docs/design/BFT-POS.md](docs/design/BFT-POS.md): staked validators, ⅔ BFT commit, slashing.
+- **Decentralized compute marketplace** — design in
+  [docs/design/COMPUTE-MARKETPLACE.md](docs/design/COMPUTE-MARKETPLACE.md): operators earn by hosting
+  others' agents; capacity offers + placement + revenue split.
 - **Quantum research track** — clearly labelled forward-looking work
 
 ## License
