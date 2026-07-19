@@ -700,6 +700,9 @@ button.connector:not(:disabled):hover {
   word-break: break-all;
   font-family: inherit;
   background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   padding: 0;
 }
 .term-cmd .copy {
