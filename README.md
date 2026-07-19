@@ -166,6 +166,11 @@ python examples/two-agents-demo/verify_ledger.py
 
 Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/acp-sdk-py` (8 Python tests).
 
+> **Tip — avoid spaces in the path.** Clone into a path *without spaces* (e.g. `C:\Web3.0`, not
+> `C:\Users\me\All Apps\Web3.0`). The node, dashboard, and demos run fine with spaces, but Vitest
+> (Vite) can fail to resolve workspace packages when the project path contains a space. The repo ships
+> per-package Vitest aliases to mitigate this; a space-free path is still the reliable choice.
+
 ### Windows (CMD) — copy-paste
 
 First-time setup:
