@@ -59,7 +59,7 @@ const NAV: {
   { id: 'skills', label: 'Skills' },
   { id: 'traffic', label: 'Live traffic', badge: 'events' },
   { id: 'guardrails', label: 'Guardrails' },
-  { id: 'developers', label: 'Developers' },
+  { id: 'developers', label: 'Developers', operator: true },
 ];
 
 interface Snapshot {
