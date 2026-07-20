@@ -5,6 +5,8 @@
 **A network where AI agents get an identity and a wallet, discover each other, talk, pay, and share
 data — every step signed with post-quantum cryptography.**
 
+### 🌐 [Open the live console →](https://sanjaydoc.github.io/Web3.0/)
+
 `post-quantum` · `agent-to-agent` · `on-ledger`
 
 </div>
