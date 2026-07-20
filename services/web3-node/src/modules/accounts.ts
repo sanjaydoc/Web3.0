@@ -14,6 +14,26 @@ export function accountsModule(): Web3Module {
     register(ctx: ModuleContext) {
       const { http, accounts } = ctx;
 
+      // Faucet backfill: accounts created before wallets existed never received the signup grant.
+      // Mint it once to any account with NO mint in its ledger history — idempotent (an account
+      // that received its grant and spent it to zero has a mint entry, so it is never re-granted).
+      if (ctx.config.faucetGrant > 0) {
+        const minted = new Set<string>();
+        for (const e of ctx.ledger.all()) {
+          if (e.type !== 'payment') continue;
+          const d = e.data as { from?: string | null; to?: string };
+          if (d.from === null && d.to) minted.add(d.to);
+        }
+        for (const acct of accounts.list()) {
+          if (minted.has(acct.address)) continue;
+          ctx.ledger.mint(
+            acct.address as Parameters<typeof ctx.ledger.mint>[0],
+            ctx.config.faucetGrant,
+          );
+          ctx.log.info(`faucet backfill: granted ${acct.address} its signup wallet`);
+        }
+      }
+
       http.post('/accounts/signup', async (request, reply) => {
         const body = (request.body ?? {}) as { local?: string; role?: Role };
         const local = (body.local ?? '').trim();

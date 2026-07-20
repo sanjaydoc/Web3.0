@@ -413,6 +413,37 @@ describe('consensus (PoA)', () => {
     await k.close();
   });
 
+  it('faucet backfill grants pre-wallet accounts their signup aETH exactly once', async () => {
+    // An account created before wallets existed: written straight to the store, no mint.
+    const store = new MemoryStore();
+    const nodeKeys = generateKeypair(); // stable identity across reboots (WEB3_NODE_SEED)
+    const oldAccounts = new AccountsService(store, () => new Date().toISOString());
+    await oldAccounts.load();
+    await oldAccounts.signup('oldtimer', 'operator');
+
+    const k1 = new Kernel({ port: 0 }, nodeKeys, store);
+    await k1.init(); // backfill runs at module registration
+    const balanceOf = (k: Kernel, id: string) =>
+      k.http
+        .inject({ method: 'GET', url: `/wallets/${encodeURIComponent(id)}` })
+        .then((r) => (r.json() as { wallet?: { balance: number } }).wallet?.balance ?? 0);
+    expect(await balanceOf(k1, 'oldtimer@web3.0')).toBe(k1.config.faucetGrant);
+
+    // Spend it all, then reboot — the backfill must NOT re-grant (the mint is in history).
+    k1.ledger.transfer(
+      'oldtimer@web3.0' as Parameters<Kernel['ledger']['transfer']>[0],
+      'stake@web3.0' as Parameters<Kernel['ledger']['transfer']>[0],
+      k1.config.faucetGrant,
+      { memo: 'authority-stake:test' },
+    );
+    expect(await balanceOf(k1, 'oldtimer@web3.0')).toBe(0);
+    await k1.close();
+    const k2 = new Kernel({ port: 0 }, nodeKeys, store);
+    await k2.init();
+    expect(await balanceOf(k2, 'oldtimer@web3.0')).toBe(0); // still zero — no double grant
+    await k2.close();
+  });
+
   it('collect sweeps treasury earnings into the admin wallet (operators are refused)', async () => {
     const k = new Kernel(
       {

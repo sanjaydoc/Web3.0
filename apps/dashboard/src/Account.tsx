@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Account as Acct, type Role, api, getWeb3Token, setWeb3Token } from './api.js';
+import {
+  type Account as Acct,
+  type Role,
+  api,
+  formatAmount,
+  getWeb3Token,
+  setWeb3Token,
+} from './api.js';
 
 /**
  * Account — sign up (mint an address + one-time Web3.0 token) or sign in (paste a token). The token is
@@ -16,6 +23,7 @@ export function Account() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
 
   const copyToken = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(
@@ -34,7 +42,12 @@ export function Account() {
       return;
     }
     try {
-      setMe(await api.me());
+      const acct = await api.me();
+      setMe(acct);
+      api
+        .wallet(acct.address)
+        .then((w) => setBalance(w.wallet.balance))
+        .catch(() => setBalance(0));
     } catch {
       setMe(null); // stale/invalid token
     } finally {
@@ -103,6 +116,11 @@ export function Account() {
           <dl className="kv">
             <dt>Address</dt>
             <dd className="mono-hash">{me.address}</dd>
+            <dt>Wallet</dt>
+            <dd>
+              <b>{balance === null ? '…' : formatAmount(balance)}</b>{' '}
+              <span className="muted">— earn via agents &amp; fees · stake it in My node</span>
+            </dd>
             <dt>Role</dt>
             <dd>
               <span className="chip allow">{me.role}</span>

@@ -326,6 +326,7 @@ export const api = {
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
   signup: (local: string, role: Role) => post<SignupResult>('/accounts/signup', { local, role }),
   me: () => get<Account>('/accounts/me'),
+  wallet: (id: string) => get<{ wallet: Wallet }>(`/wallets/${encodeURIComponent(id)}`),
   accounts: () => get<{ accounts: Account[] }>('/accounts'),
   skills: () => get<{ skills: SkillDef[] }>('/skills'),
   createSkill: (input: { id: string; name: string; description?: string }) =>
