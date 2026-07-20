@@ -129,6 +129,9 @@ WEB3_FAUCET=100000                       # 1,000 aETH grant per new account (min
 
 # --- consensus ---
 WEB3_CONSENSUS=solo                      # single-node to start; add authorities later
+
+# --- CORS: lock the API to your dashboard origin(s) (comma-separated) ---
+WEB3_CORS_ORIGIN=https://sanjaydoc.github.io
 ```
 
 > The full list of tunables (fees, burn, block reward, authority stake, rate limits, settlement,
@@ -179,56 +182,36 @@ Now `https://api.web3.example/stats` works, and that's the URL the dashboard wil
 The dashboard is a static build that talks to the backend URL baked in at build time via
 `VITE_WEB3_URL` (defaults to `http://127.0.0.1:8787` for local dev — see `apps/dashboard/src/api.ts`).
 
-In the **public `web3-console`** repo, add `.github/workflows/pages.yml`:
+A ready-to-use workflow ships in this repo at **`deploy/web3-console/pages.yml`**. Copy it into the
+**public `web3-console`** repo at `.github/workflows/pages.yml`. (It lives under `deploy/` here so it
+stays inert in the private repo — GitHub only runs workflows inside `.github/workflows/` — and never
+collides with this repo's own `docs/` Pages deploy. A repo can host only **one** Pages site.)
 
-```yaml
-name: Deploy dashboard to Pages
-on:
-  push:
-    branches: [main]
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install
-      - run: pnpm --filter @web3/dashboard build
-        env:
-          VITE_WEB3_URL: ${{ vars.WEB3_API_URL }}   # e.g. https://api.web3.example
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: apps/dashboard/dist }
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
-```
+Then, in the public repo:
 
-Then:
-
-1. In the public repo: **Settings → Secrets and variables → Actions → Variables** → add
-   `WEB3_API_URL = https://api.web3.example` (your node's public HTTPS URL).
+1. **Settings → Secrets and variables → Actions → Variables** → add
+   `WEB3_API_URL = https://api.web3.example` (your node's public HTTPS URL). The workflow bakes this
+   into the bundle as `VITE_WEB3_URL`, so the static site knows where the live node is.
 2. **Settings → Pages → Source: GitHub Actions.**
 3. Push to `main`. The dashboard deploys to `https://sanjaydoc.github.io/web3-console/`
    (or your custom domain).
 
-> **Vite base path:** if the site is served from a subpath (`/web3-console/`), set
-> `base: '/web3-console/'` in `apps/dashboard/vite.config.ts`, or use a custom domain served at root.
+> **Base path:** the dashboard's `vite.config.ts` already uses `base: './'` (relative), so it loads
+> correctly from a project subpath like `/web3-console/` **and** from a custom domain root — no change
+> needed. Navigation is state-based (not URL routing), so there are no deep links for Pages to 404 on.
 
-### 3.1 Allow the Pages origin to call the node (CORS)
+### 3.1 Allow the Pages origin to call the node (CORS) — wired
 
-The node must send CORS headers permitting the Pages origin, or the browser will block the calls.
-Set the allowed origin to your Pages URL when you start `@web3/node`. (If CORS isn't yet wired in the
-backend, that's a one-line `@fastify/cors` addition — ask and it can be added.)
+CORS is built into `@web3/node`. Set `WEB3_CORS_ORIGIN` on the backend to your dashboard origin(s),
+comma-separated:
+
+```bash
+WEB3_CORS_ORIGIN=https://sanjaydoc.github.io          # or https://console.web3.example, ...
+```
+
+- **Unset/empty** ⇒ the node reflects any origin (convenient for local dev).
+- **Set** ⇒ only those exact origins receive the `Access-Control-Allow-Origin` header; every other
+  site's browser calls are blocked. Use the exact scheme+host (no trailing slash, no path).
 
 ---
 

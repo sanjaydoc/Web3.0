@@ -116,7 +116,10 @@ export class Kernel {
       );
     }
 
-    await this.http.register(cors, { origin: true });
+    // CORS: with no configured origins, reflect any origin (dev). In production, WEB3_CORS_ORIGIN
+    // pins the dashboard origin(s) so only your console (e.g. the GitHub Pages site) may call the API.
+    const allowed = this.config.corsOrigins ?? [];
+    await this.http.register(cors, { origin: allowed.length > 0 ? allowed : true });
     await this.http.register(websocket);
 
     // HTTP rate limit (per client IP) — a coarse DoS backstop in front of the per-agent guardrails.

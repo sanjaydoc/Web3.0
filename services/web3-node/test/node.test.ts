@@ -1479,6 +1479,42 @@ describe('production economics + exit + slash + replication', () => {
   });
 });
 
+describe('CORS', () => {
+  it('reflects any origin when none are configured (dev default)', async () => {
+    const k = new Kernel({ port: 0, corsOrigins: [] }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const res = await k.http.inject({
+      method: 'GET',
+      url: '/stats',
+      headers: { origin: 'https://anything.example' },
+    });
+    expect(res.headers['access-control-allow-origin']).toBe('https://anything.example');
+    await k.close();
+  });
+
+  it('allows a configured origin and rejects others', async () => {
+    const allowed = 'https://sanjaydoc.github.io';
+    const k = new Kernel({ port: 0, corsOrigins: [allowed] }, generateKeypair(), new MemoryStore());
+    await k.init();
+
+    const ok = await k.http.inject({
+      method: 'GET',
+      url: '/stats',
+      headers: { origin: allowed },
+    });
+    expect(ok.headers['access-control-allow-origin']).toBe(allowed);
+
+    const blocked = await k.http.inject({
+      method: 'GET',
+      url: '/stats',
+      headers: { origin: 'https://evil.example' },
+    });
+    // A disallowed origin gets no ACAO header, so the browser blocks the response.
+    expect(blocked.headers['access-control-allow-origin']).toBeUndefined();
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

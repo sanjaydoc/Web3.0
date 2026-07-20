@@ -112,6 +112,12 @@ export interface Web3Config {
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
   mongodbDb: string;
+  /**
+   * Browser origins allowed to call this node (CORS). Undefined/empty ⇒ reflect any origin (dev
+   * default). In production set `WEB3_CORS_ORIGIN` to your dashboard's origin(s) — comma-separated,
+   * e.g. `https://sanjaydoc.github.io,https://console.web3.example` — to lock it down.
+   */
+  corsOrigins?: string[];
 }
 
 // Back-compat shim: the config vars were renamed ACP_* → WEB3_*. Any legacy ACP_* var still in the
@@ -166,6 +172,10 @@ export const DEFAULT_CONFIG: Web3Config = {
   port: Number(process.env.WEB3_PORT ?? 8787),
   modules: [...ALL_MODULES],
   faucetGrant: Number(process.env.WEB3_FAUCET ?? 100_000), // 1,000.00 aETH
+  corsOrigins: (process.env.WEB3_CORS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
   guardrails: {
     spendCapPerWindow: Number(process.env.WEB3_SPEND_CAP ?? 500_000), // 5,000.00 aETH
     rateLimitPerWindow: Number(process.env.WEB3_RATE_LIMIT ?? 120),
