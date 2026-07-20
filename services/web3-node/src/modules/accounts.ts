@@ -30,6 +30,14 @@ export function accountsModule(): Web3Module {
         }
         try {
           const created = await accounts.signup(local, role);
+          // Every account gets a personal wallet with the faucet grant — same as agents. This is
+          // what operators stake from (Ethereum-deposit-contract style) to become an authority.
+          if (ctx.config.faucetGrant > 0) {
+            ctx.ledger.mint(
+              created.address as Parameters<typeof ctx.ledger.mint>[0],
+              ctx.config.faucetGrant,
+            );
+          }
           ctx.bus.emit({
             kind: 'account.created',
             summary: `${created.address} signed up as ${created.role}`,

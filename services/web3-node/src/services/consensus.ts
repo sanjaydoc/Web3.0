@@ -26,6 +26,11 @@ export interface ConsensusStatus {
  * node's entries into this node's local wallet balances (full state-machine replication) is the
  * documented next step; here each node keeps its own ledger and the chain orders the block stream.
  */
+/** Where authority stakes are escrowed on the ledger (the "deposit contract"). */
+export const STAKE_ESCROW_ID = 'stake@web3.0';
+/** Payment-memo prefix that binds a stake to a node key: `authority-stake:<base64url key>`. */
+export const STAKE_MEMO_PREFIX = 'authority-stake:';
+
 export class ConsensusCoordinator {
   readonly enabled: boolean;
   readonly engine: ConsensusEngine | null;
@@ -35,9 +40,14 @@ export class ConsensusCoordinator {
     private readonly config: ConsensusConfig,
     nodeKeys: Keypair,
     private readonly ledger: Ledger,
-    private readonly rewards: { treasuryId: string; blockReward: number } = {
+    private readonly rewards: {
+      treasuryId: string;
+      blockReward: number;
+      authorityStake: number;
+    } = {
       treasuryId: '',
       blockReward: 0,
+      authorityStake: 0,
     },
   ) {
     this.enabled = config.mode === 'poa';
@@ -54,8 +64,44 @@ export class ConsensusCoordinator {
    * out-of-turn once earlier authorities have missed their slots (proposer-skip keeps the chain
    * live if a node is down).
    */
+  /** Total on-ledger stake escrowed for a node key (payments to the escrow with its memo). */
+  stakeOf(key: string): number {
+    let total = 0;
+    for (const e of this.ledger.all()) {
+      if (e.type !== 'payment') continue;
+      const d = e.data as { to?: string; amount?: number; memo?: string };
+      if (d.to === STAKE_ESCROW_ID && d.memo === `${STAKE_MEMO_PREFIX}${key}`) {
+        total += d.amount ?? 0;
+      }
+    }
+    return total;
+  }
+
+  /**
+   * Permissionless admission (Ethereum-style): any key whose escrowed stake meets the threshold is
+   * queued for on-chain seating — the membership change rides in the next block this node proposes.
+   * No admin in the loop; the "activation queue" is simply the block cadence.
+   */
+  private queueStakedAuthorities(): void {
+    if (!this.engine || this.rewards.authorityStake <= 0) return;
+    const totals = new Map<string, number>();
+    for (const e of this.ledger.all()) {
+      if (e.type !== 'payment') continue;
+      const d = e.data as { to?: string; amount?: number; memo?: string };
+      if (d.to !== STAKE_ESCROW_ID || !d.memo?.startsWith(STAKE_MEMO_PREFIX)) continue;
+      const key = d.memo.slice(STAKE_MEMO_PREFIX.length);
+      totals.set(key, (totals.get(key) ?? 0) + (d.amount ?? 0));
+    }
+    for (const [key, total] of totals) {
+      if (total >= this.rewards.authorityStake && !this.engine.chain.authorities.includes(key)) {
+        this.engine.queueAuthorityAdd(key);
+      }
+    }
+  }
+
   proposeTick(): Block | null {
     if (!this.engine) return null;
+    this.queueStakedAuthorities();
     const all = this.ledger.all();
     const pending = all.slice(this.includedLocalEntries);
     if (pending.length === 0) return null;

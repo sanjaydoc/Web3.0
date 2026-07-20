@@ -66,6 +66,7 @@ export class Kernel {
     this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger, {
       treasuryId: this.treasuryId,
       blockReward: this.config.fees.blockReward,
+      authorityStake: this.config.authorityStake,
     });
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,

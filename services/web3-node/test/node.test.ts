@@ -352,6 +352,67 @@ describe('consensus (PoA)', () => {
     await k.close();
   });
 
+  it('permissionless staking: stake to the escrow and the network seats the key automatically', async () => {
+    const k = new Kernel(
+      {
+        port: 0,
+        authorityStake: 50_000, // 500.00 aETH — reachable from the 1,000 aETH signup faucet
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const op = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'staker', role: 'operator' },
+      })
+      .then((r) => r.json())) as { token: string; address: string };
+    const candidateKey = toB64u(generateKeypair().publicKey);
+
+    // signup minted a personal wallet with the faucet grant to stake from
+    const info = (await k.http
+      .inject({
+        method: 'GET',
+        url: `/operator/stake?key=${encodeURIComponent(candidateKey)}`,
+        headers: { 'x-web3-token': op.token },
+      })
+      .then((r) => r.json())) as { walletBalance: number; staked: number; threshold: number };
+    expect(info.walletBalance).toBe(k.config.faucetGrant);
+    expect(info.staked).toBe(0);
+
+    const stake = (payload: Record<string, unknown>) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/operator/stake',
+        headers: { 'x-web3-token': op.token },
+        payload,
+      });
+
+    // partial stake → not yet eligible; second stake defaults to the remaining amount
+    const s1 = (await stake({ nodePublicKey: candidateKey, amount: 30_000 }).then((r) =>
+      r.json(),
+    )) as { staked: number; eligible: boolean };
+    expect(s1).toMatchObject({ staked: 30_000, eligible: false });
+    const s2 = (await stake({ nodePublicKey: candidateKey }).then((r) => r.json())) as {
+      staked: number;
+      eligible: boolean;
+    };
+    expect(s2).toMatchObject({ staked: 50_000, eligible: true });
+
+    // the stake entries are on the ledger; the next proposed block seats the key — no admin
+    const block = k.consensus.proposeTick();
+    expect(block?.authorityAdd).toBe(candidateKey);
+    expect(k.consensus.status().authorities).toContain(candidateKey);
+    expect(k.consensus.stakeOf(candidateKey)).toBe(50_000);
+
+    // an overdrawn stake is refused by the ledger
+    expect((await stake({ nodePublicKey: candidateKey, amount: 10 ** 9 })).statusCode).toBe(400);
+    await k.close();
+  });
+
   it('admin approval seats the authority on-chain via the next proposed block', async () => {
     const k = new Kernel(
       {

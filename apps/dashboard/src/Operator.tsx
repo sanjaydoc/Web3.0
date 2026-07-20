@@ -4,6 +4,7 @@ import {
   type NodeLocation,
   type NodeOperator,
   type NodeRole,
+  type StakeInfo,
   api,
   formatAmount,
 } from './api.js';
@@ -14,24 +15,46 @@ const ROLE_HELP: Record<NodeRole, string> = {
   authority: 'signs blocks and keeps consensus for the network',
 };
 
-/** Ask the admin to promote this node into the authority set, and track the request. */
+/** Two roads to authority: stake aETH (permissionless) or ask the admin (invite lane). */
 function AuthorityCard({ role }: { role: NodeRole }) {
   const [mine, setMine] = useState<AuthorityRequest | null>(null);
+  const [stake, setStake] = useState<StakeInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
 
-  useEffect(() => {
+  const refresh = () => {
     api
       .myAuthorityRequest()
       .then((r) => setMine(r.request))
       .catch(() => undefined);
-  }, []);
+    api
+      .stakeInfo()
+      .then(setStake)
+      .catch(() => undefined);
+  };
+  useEffect(refresh, []);
 
   async function request() {
     setBusy(true);
     setErr('');
     try {
       setMine(await api.requestAuthority());
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doStake() {
+    setBusy(true);
+    setErr('');
+    setOk('');
+    try {
+      const res = await api.stake({});
+      setOk(res.note);
+      refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -49,14 +72,61 @@ function AuthorityCard({ role }: { role: NodeRole }) {
       </div>
     );
   }
+  const remaining = stake ? Math.max(0, stake.threshold - stake.staked) : 0;
+  const canAfford = stake ? stake.walletBalance >= remaining && remaining > 0 : false;
+  const pct =
+    stake && stake.threshold > 0 ? Math.min(100, (stake.staked / stake.threshold) * 100) : 0;
   return (
     <div className="card" style={{ marginBottom: 18 }}>
-      <div className="section-title">Authority status</div>
-      <p className="muted" style={{ margin: '2px 0 12px' }}>
-        Authority nodes sign the chain's blocks and earn block rewards. Membership is{' '}
-        <b>admin-approved</b>: request below and the network admin will approve or reject. If
-        approved, your node key is added to the authority set (<code>WEB3_AUTHORITIES</code>).
+      <div className="section-title">Become an authority</div>
+      <p className="muted" style={{ margin: '2px 0 14px' }}>
+        Authority nodes sign the chain's blocks and earn block rewards. Two ways in — <b>stake</b>{' '}
+        (permissionless, Ethereum-style) or <b>ask the admin</b> (invited). Either way the seating
+        happens on-chain automatically.
       </p>
+
+      <div className="section-title" style={{ fontSize: 'var(--fs-title)' }}>
+        1 · Stake {stake?.thresholdFormatted ?? '…'}
+      </div>
+      {stake && (
+        <>
+          <p className="muted" style={{ margin: '0 0 8px' }}>
+            Escrow <code>{stake.escrow}</code> holds <b>{stake.stakedFormatted}</b> for this node ·
+            your wallet: <b>{formatAmount(stake.walletBalance)}</b>
+            {stake.eligible && ' — threshold met, seating on-chain'}
+          </p>
+          <div
+            style={{
+              height: 8,
+              borderRadius: 6,
+              background: 'var(--hair)',
+              overflow: 'hidden',
+              marginBottom: 10,
+              maxWidth: 420,
+            }}
+          >
+            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--ok)' }} />
+          </div>
+          {!stake.eligible && (
+            <button
+              type="button"
+              className="btn act"
+              disabled={busy || !canAfford}
+              onClick={doStake}
+            >
+              {busy
+                ? 'Staking…'
+                : canAfford
+                  ? `Stake ${formatAmount(remaining)} & join`
+                  : `Need ${formatAmount(remaining)} — earn aETH to stake`}
+            </button>
+          )}
+        </>
+      )}
+
+      <div className="section-title" style={{ fontSize: 'var(--fs-title)', marginTop: 16 }}>
+        2 · Ask the admin
+      </div>
       {mine && (
         <p style={{ margin: '0 0 12px' }}>
           Your request:{' '}
@@ -77,6 +147,7 @@ function AuthorityCard({ role }: { role: NodeRole }) {
           {busy ? 'Sending…' : 'Request authority status'}
         </button>
       )}
+      {ok && <div className="note note-ok">{ok}</div>}
       {err && <div className="note note-err">{err}</div>}
     </div>
   );

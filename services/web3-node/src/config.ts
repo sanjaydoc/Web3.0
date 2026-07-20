@@ -98,6 +98,12 @@ export interface Web3Config {
   settlement: SettlementConfig;
   consensus: ConsensusConfig;
   fees: FeesConfig;
+  /**
+   * Permissionless authority admission (Ethereum-style): stake this much aETH (minor units) to the
+   * on-chain escrow and the network seats your node key automatically — no admin approval needed.
+   * Default 3,200,000 minor = 32,000.00 aETH (32× the faucet grant; a nod to ETH's 32).
+   */
+  authorityStake: number;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -158,6 +164,8 @@ export const DEFAULT_CONFIG: Web3Config = {
     blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
   },
+  authorityStake: Number(process.env.WEB3_AUTHORITY_STAKE ?? 3_200_000), // 32,000.00 aETH
+
   mongodbUri: process.env.WEB3_MONGODB_URI,
   mongodbDb: process.env.WEB3_MONGODB_DB ?? 'web3',
 };

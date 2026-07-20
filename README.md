@@ -341,9 +341,15 @@ and invite-only**.
   see **[GOVERNANCE.md](GOVERNANCE.md)**.
 - **Needs:** an always-on server with good uptime; its key must be in the authority set.
   `WEB3_AUTHORITIES` seeds the **genesis** set; after launch, new authorities are seated
-  **on-chain**: an operator requests authority status in the console, the admin approves, and the
-  key rides in the next block (`authorityAdd`) — every node applies the membership change
-  automatically, no restarts or config edits.
+  **on-chain** (`authorityAdd` in a signed block — every node applies the change automatically, no
+  restarts or config edits) via either admission lane:
+  - **Stake (permissionless, Ethereum-style):** escrow **32,000 aETH** (`WEB3_AUTHORITY_STAKE`,
+    32× the faucet grant — a nod to ETH's 32) from your account wallet to `stake@web3.0` in the
+    console; once the threshold is met the network seats your key in an upcoming block. No admin in
+    the loop — the "activation queue" is the block cadence. Slashing + voluntary exit/unstake are
+    the documented next steps.
+  - **Ask the admin (invited):** request in the console; the admin approves and the seating block
+    follows.
 - **Earns:** a **block reward** each time it proposes a block, plus protocol fees.
 - **How many:** ~4 to launch, keep **> ⅔ online**. Proposer-skip means one going offline won't stall
   the chain.

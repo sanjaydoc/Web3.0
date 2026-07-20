@@ -18,6 +18,7 @@ export type EventKind =
   | 'connector.created'
   | 'authority.requested'
   | 'authority.decided'
+  | 'authority.staked'
   | 'message.routed'
   | 'task.updated'
   | 'payment.settled'

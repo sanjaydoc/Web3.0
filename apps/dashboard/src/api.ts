@@ -238,6 +238,27 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   return res.json() as Promise<T>;
 }
 
+/** Staking state for permissionless authority admission (Ethereum-deposit-contract style). */
+export interface StakeInfo {
+  threshold: number;
+  thresholdFormatted: string;
+  escrow: string;
+  nodePublicKey: string;
+  staked: number;
+  stakedFormatted: string;
+  eligible: boolean;
+  isAuthority: boolean;
+  walletBalance: number;
+}
+
+export interface StakeResult {
+  staked: number;
+  stakedFormatted: string;
+  threshold: number;
+  eligible: boolean;
+  note: string;
+}
+
 /** An operator's request to be promoted into the authority set (admin-approved). */
 export interface AuthorityRequest {
   address: string;
@@ -261,6 +282,9 @@ export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
+  stakeInfo: () => get<StakeInfo>('/operator/stake'),
+  stake: (input: { amount?: number; nodePublicKey?: string }) =>
+    post<StakeResult>('/operator/stake', input),
   requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),
   myAuthorityRequest: () => get<{ request: AuthorityRequest | null }>('/operator/authority/mine'),
   authorityRequests: () => get<{ requests: AuthorityRequest[] }>('/operator/authority/requests'),

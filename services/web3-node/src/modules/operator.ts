@@ -4,6 +4,7 @@ import type { Web3Id } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
 import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
+import { STAKE_ESCROW_ID, STAKE_MEMO_PREFIX } from '../services/consensus.js';
 
 /** An operator's self-reported node position, shown on the Network map. Opt-in only. */
 export interface NodeLocation {
@@ -151,6 +152,69 @@ export function operatorModule(): Web3Module {
         const rest = (await loadLocations()).filter((l) => l.address !== acct.address);
         await ctx.store.saveSetting(LOCATIONS_KEY, [...rest, loc]);
         return loc;
+      });
+
+      // --- permissionless staking (Ethereum-style authority admission) --------------------------
+      // Stake aETH from your account wallet into the on-ledger escrow; once the total for a node
+      // key meets the threshold, the network seats it automatically — no admin in the loop.
+
+      http.get('/operator/stake', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        const key = ((request.query as { key?: string }).key ?? ctx.nodePublicKey).trim();
+        const staked = consensus.stakeOf(key);
+        const threshold = ctx.config.authorityStake;
+        return {
+          threshold,
+          thresholdFormatted: formatAmount(threshold),
+          escrow: STAKE_ESCROW_ID,
+          nodePublicKey: key,
+          staked,
+          stakedFormatted: formatAmount(staked),
+          eligible: threshold > 0 && staked >= threshold,
+          isAuthority: consensus.status().authorities.includes(key),
+          walletBalance: acct ? ledger.balanceOf(acct.address as Web3Id) : 0,
+        };
+      });
+
+      http.post('/operator/stake', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in to stake' });
+        const body = (request.body ?? {}) as { amount?: number; nodePublicKey?: string };
+        const key = String(body.nodePublicKey ?? ctx.nodePublicKey).trim();
+        if (key.length < 32) {
+          return reply.code(400).send({ error: 'nodePublicKey is not a plausible authority key' });
+        }
+        const threshold = ctx.config.authorityStake;
+        const already = consensus.stakeOf(key);
+        // Default: stake exactly what's still missing to reach the threshold.
+        const amount = Math.round(Number(body.amount ?? Math.max(0, threshold - already)));
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return reply.code(400).send({ error: 'amount must be a positive number (minor units)' });
+        }
+        try {
+          ledger.transfer(acct.address as Web3Id, STAKE_ESCROW_ID as Web3Id, amount, {
+            memo: `${STAKE_MEMO_PREFIX}${key}`,
+          });
+        } catch (err) {
+          return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+        }
+        const staked = consensus.stakeOf(key);
+        const eligible = threshold > 0 && staked >= threshold;
+        ctx.bus.emit({
+          kind: 'authority.staked',
+          summary: `${acct.address} staked ${formatAmount(amount)} for ${key.slice(0, 16)}… (${formatAmount(staked)} total${eligible ? ' — eligible, seating on-chain' : ''})`,
+        });
+        return reply.code(201).send({
+          staked,
+          stakedFormatted: formatAmount(staked),
+          threshold,
+          eligible,
+          note: eligible
+            ? 'stake threshold met — the network seats this key in an upcoming block automatically'
+            : `staked — ${formatAmount(threshold - staked)} more to reach the threshold`,
+        });
       });
 
       // --- authority approvals (relay → authority is admin-gated governance) --------------------
