@@ -253,6 +253,33 @@ them, then start paying. Reserve them for **short, GPU-heavy bursts**:
 
 ---
 
+## Part 6 — Desktop installers (built private, published public)
+
+The desktop app bundles the node (private core), so it **builds in this private repo** but its
+installers must land as **public downloads** — release assets on a private repo sit behind a login
+wall. `.github/workflows/desktop.yml` is already wired to publish cross-repo to the **public**
+`sanjaydoc/Web3.0` Releases. One-time setup:
+
+1. **Create a token that can write releases on the public repo.** GitHub → *Settings → Developer
+   settings → Fine-grained personal access tokens → Generate*:
+   - **Resource owner:** `sanjaydoc`; **Repository access:** only `sanjaydoc/Web3.0`.
+   - **Permissions:** *Repository → Contents → Read and write* (releases live under Contents).
+   - Copy the token.
+2. **Store it as a secret in the *private* repo.** `sanjaydoc/web3-core` → *Settings → Secrets and
+   variables → Actions → New repository secret* → name **`PUBLIC_RELEASE_TOKEN`**, paste the token.
+3. **Cut a release:** push a version tag in the private repo:
+   ```bash
+   git tag v0.1.1 && git push origin v0.1.1
+   ```
+   The three OS jobs build in parallel and attach `.msi`/`.exe`, `.dmg`, `.AppImage`/`.deb` to the
+   `v0.1.1` release **on the public repo**. The dashboard/README download buttons already point at
+   `github.com/sanjaydoc/Web3.0/releases/latest`, so they light up automatically.
+
+> The workflow's tag (`v0.1.1`) is created on the public repo pointing at its current `main` — it's
+> just the container for the binaries. The source that built them stays private.
+
+---
+
 ## Verification checklist
 
 - [ ] `curl https://api.web3.example/stats` returns JSON from the VM.

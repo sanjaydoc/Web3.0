@@ -11,8 +11,8 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
-    # Needed so the release-attach step can create/update the GitHub Release for the tag.
-    # Without this the GITHUB_TOKEN is read-only and softprops/action-gh-release returns 403.
+    # The release is published cross-repo with PUBLIC_RELEASE_TOKEN (a PAT), so GITHUB_TOKEN's
+    # contents scope isn't strictly needed here — kept at write as a harmless safety net.
     permissions:
       contents: write
     steps:
@@ -48,10 +48,17 @@ jobs:
             desktop/release/*.msi
             desktop/release/*.exe
 
-      - name: Attach installers to the release
+      - name: Attach installers to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          # Publish to the PUBLIC repo so anyone can download — private-repo release assets sit
+          # behind a login wall. Cross-repo publishing needs a PAT with Contents:write on
+          # sanjaydoc/Web3.0, stored in THIS repo as the PUBLIC_RELEASE_TOKEN secret (GITHUB_TOKEN
+          # can't write to another repo).
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
           files: |
             desktop/release/*.msi
             desktop/release/*.exe
@@ -90,10 +97,13 @@ jobs:
             desktop/release/*.AppImage
             desktop/release/*.deb
 
-      - name: Attach installers to the release
+      - name: Attach installers to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
           files: |
             desktop/release/*.AppImage
             desktop/release/*.deb
@@ -133,8 +143,11 @@ jobs:
           name: web3-desktop-macos
           path: desktop/release/*.dmg
 
-      - name: Attach installer to the release
+      - name: Attach installer to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
           files: desktop/release/*.dmg
