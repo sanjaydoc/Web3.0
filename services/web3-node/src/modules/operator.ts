@@ -3,7 +3,7 @@ import { formatAmount } from '@web3/core';
 import type { Web3Id } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
-import { currentAccount, requireAuthed } from '../services/auth.js';
+import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
 
 /** An operator's self-reported node position, shown on the Network map. Opt-in only. */
 export interface NodeLocation {
@@ -15,6 +15,21 @@ export interface NodeLocation {
 }
 
 export const LOCATIONS_KEY = 'node-locations';
+
+/** What this node IS in the network: solo (own chain), relay (follows the chain), authority (signs it). */
+export type NodeRole = 'solo' | 'relay' | 'authority';
+
+/** An operator asking the admin to promote their node into the authority set. */
+export interface AuthorityRequest {
+  address: string; // requesting account (one open request per account)
+  nodePublicKey: string; // the node key to add to WEB3_AUTHORITIES if approved
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  decidedAt?: string;
+  decidedBy?: string;
+}
+
+export const AUTHORITY_REQUESTS_KEY = 'authority-requests';
 
 export interface NodeLimits {
   /** Whether this node offers spare compute to host others' agents. */
@@ -68,11 +83,19 @@ export function operatorModule(): Web3Module {
         };
       };
 
+      // solo = not part of a shared chain; relay = follows/verifies it; authority = signs blocks.
+      const nodeRole = (): NodeRole => {
+        const status = consensus.status();
+        if (!status.enabled) return 'solo';
+        return status.authorities.includes(ctx.nodePublicKey) ? 'authority' : 'relay';
+      };
+
       http.get('/node', async () => {
         const limits = (await ctx.store.loadSetting<NodeLimits>(LIMITS_KEY)) ?? DEFAULT_LIMITS;
         const status = consensus.status();
         return {
-          nodePublicKey: status.authority || undefined,
+          role: nodeRole(),
+          nodePublicKey: ctx.nodePublicKey,
           treasuryId,
           uptimeSec: resources().uptimeSec,
           earnings: earnings(),
@@ -128,6 +151,82 @@ export function operatorModule(): Web3Module {
         const rest = (await loadLocations()).filter((l) => l.address !== acct.address);
         await ctx.store.saveSetting(LOCATIONS_KEY, [...rest, loc]);
         return loc;
+      });
+
+      // --- authority approvals (relay → authority is admin-gated governance) --------------------
+      const loadRequests = async () =>
+        (await ctx.store.loadSetting<AuthorityRequest[]>(AUTHORITY_REQUESTS_KEY)) ?? [];
+
+      // A signed-in operator asks to join the authority set. One request per account; a rejected
+      // request may be re-submitted. The node's own key is the default candidate key.
+      http.post('/operator/authority/request', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in to request authority status' });
+        const body = (request.body ?? {}) as { nodePublicKey?: string };
+        const key = String(body.nodePublicKey ?? ctx.nodePublicKey).trim();
+        if (!key) return reply.code(400).send({ error: 'nodePublicKey required' });
+        const all = await loadRequests();
+        const existing = all.find((r) => r.address === acct.address);
+        if (existing?.status === 'pending') {
+          return reply.code(400).send({ error: 'you already have a pending request' });
+        }
+        if (existing?.status === 'approved') {
+          return reply.code(400).send({ error: 'already approved — the admin has your key' });
+        }
+        const req: AuthorityRequest = {
+          address: acct.address,
+          nodePublicKey: key,
+          requestedAt: ctx.clock(),
+          status: 'pending',
+        };
+        await ctx.store.saveSetting(AUTHORITY_REQUESTS_KEY, [
+          ...all.filter((r) => r.address !== acct.address),
+          req,
+        ]);
+        ctx.bus.emit({
+          kind: 'authority.requested',
+          summary: `${acct.address} requested authority status`,
+        });
+        return reply.code(201).send(req);
+      });
+
+      // Your own request's status (any signed-in account).
+      http.get('/operator/authority/mine', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        const mine = acct
+          ? ((await loadRequests()).find((r) => r.address === acct.address) ?? null)
+          : null;
+        return { request: mine };
+      });
+
+      // Admin: the full queue, and approve / reject decisions.
+      http.get('/operator/authority/requests', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        return { requests: await loadRequests() };
+      });
+
+      http.post('/operator/authority/decide', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        const body = (request.body ?? {}) as { address?: string; action?: string };
+        const action = body.action;
+        if (action !== 'approve' && action !== 'reject') {
+          return reply.code(400).send({ error: "action must be 'approve' or 'reject'" });
+        }
+        const all = await loadRequests();
+        const target = all.find((r) => r.address === body.address);
+        if (!target) return reply.code(404).send({ error: 'no request from that address' });
+        const admin = currentAccount(request, ctx.accounts);
+        target.status = action === 'approve' ? 'approved' : 'rejected';
+        target.decidedAt = ctx.clock();
+        target.decidedBy = admin?.address ?? 'admin-token';
+        await ctx.store.saveSetting(AUTHORITY_REQUESTS_KEY, all);
+        ctx.bus.emit({
+          kind: 'authority.decided',
+          summary: `authority request from ${target.address} ${target.status}`,
+        });
+        return target;
       });
 
       // Remove your own position from the map.

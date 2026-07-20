@@ -1016,6 +1016,75 @@ describe('operator locations', () => {
   });
 });
 
+describe('node role + authority approvals', () => {
+  it('reports the node role, and runs the request → admin approve/reject flow', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { token: string; address: string });
+    const admin = await signup('gov', 'admin');
+    const op = await signup('hopeful', 'operator');
+
+    // out of the box the node is solo (no shared chain configured)
+    const node = (await k.http.inject({ method: 'GET', url: '/node' }).then((r) => r.json())) as {
+      role: string;
+      nodePublicKey: string;
+    };
+    expect(node.role).toBe('solo');
+    expect(node.nodePublicKey.length).toBeGreaterThan(40);
+
+    const ask = (token?: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/operator/authority/request',
+        headers: token ? { 'x-web3-token': token } : undefined,
+        payload: {},
+      });
+
+    // anonymous blocked; operator can request; duplicate pending blocked
+    expect((await ask()).statusCode).toBe(401);
+    const asked = await ask(op.token);
+    expect(asked.statusCode).toBe(201);
+    expect((asked.json() as { nodePublicKey: string }).nodePublicKey).toBe(node.nodePublicKey);
+    expect((await ask(op.token)).statusCode).toBe(400);
+
+    // queue is admin-only; the operator sees only their own status
+    const opList = await k.http.inject({
+      method: 'GET',
+      url: '/operator/authority/requests',
+      headers: { 'x-web3-token': op.token },
+    });
+    expect(opList.statusCode).toBe(403);
+    const mine = (await k.http
+      .inject({
+        method: 'GET',
+        url: '/operator/authority/mine',
+        headers: { 'x-web3-token': op.token },
+      })
+      .then((r) => r.json())) as { request: { status: string } };
+    expect(mine.request.status).toBe('pending');
+
+    // admin rejects, operator may re-request, then admin approves
+    const decide = (action: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/operator/authority/decide',
+        headers: { 'x-web3-token': admin.token },
+        payload: { address: op.address, action },
+      });
+    expect((await decide('reject')).statusCode).toBe(200);
+    expect((await ask(op.token)).statusCode).toBe(201);
+    const approved = await decide('approve');
+    expect((approved.json() as { status: string; decidedBy: string }).status).toBe('approved');
+    expect((approved.json() as { decidedBy: string }).decidedBy).toBe(admin.address);
+    // once approved, a fresh request is refused
+    expect((await ask(op.token)).statusCode).toBe(400);
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

@@ -1,11 +1,13 @@
 import {
   type PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import {
+  type AuthorityRequest,
   type ConsensusInfo,
   type NodeLocation,
   type SettlementInfo,
@@ -52,6 +54,85 @@ const nearest = CITIES.reduce(
 const ORDERED = [CITIES[nearest]!, ...CITIES.filter((_, i) => i !== nearest)];
 const cityXY = ORDERED.map((c) => ({ ...c, ...proj(c.lon, c.lat) }));
 
+/** Admin-only queue: operators asking to join the authority set — approve or reject. */
+function AuthorityQueue() {
+  const [requests, setRequests] = useState<AuthorityRequest[]>([]);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(
+    () =>
+      api
+        .authorityRequests()
+        .then((r) => setRequests(r.requests))
+        .catch(() => undefined),
+    [],
+  );
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  async function decide(address: string, action: 'approve' | 'reject') {
+    setErr('');
+    try {
+      await api.decideAuthority(address, action);
+      load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  const pending = requests.filter((r) => r.status === 'pending');
+  const approved = requests.filter((r) => r.status === 'approved');
+  if (requests.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="section-title">Authority requests</div>
+      {pending.length === 0 && <p className="muted">No pending requests.</p>}
+      {pending.map((r) => (
+        <div
+          key={r.address}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            padding: '8px 0',
+            borderTop: '1px solid var(--hair)',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <b>{r.address}</b> <span className="muted">· asked {r.requestedAt.slice(0, 10)}</span>
+            <div className="mono-hash">key {r.nodePublicKey.slice(0, 40)}…</div>
+          </div>
+          <button type="button" className="btn act" onClick={() => decide(r.address, 'approve')}>
+            Approve
+          </button>
+          <button type="button" className="btn act" onClick={() => decide(r.address, 'reject')}>
+            Reject
+          </button>
+        </div>
+      ))}
+      {approved.length > 0 && (
+        <>
+          <p className="muted" style={{ margin: '14px 0 6px' }}>
+            Approved — add these keys to every node's <code>WEB3_AUTHORITIES</code>{' '}
+            (comma-separated) and restart to seat them:
+          </p>
+          {approved.map((r) => (
+            <div key={r.address} className="mono-hash" style={{ padding: '2px 0' }}>
+              {r.nodePublicKey} <span className="muted">· {r.address}</span>
+            </div>
+          ))}
+        </>
+      )}
+      {err && <div className="note note-err">{err}</div>}
+    </div>
+  );
+}
+
 export function Network() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -59,13 +140,17 @@ export function Network() {
   const [settle, setSettle] = useState<SettlementInfo | null>(null);
   const [locations, setLocations] = useState<NodeLocation[]>([]);
   const [myAddress, setMyAddress] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const drag = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
     api
       .me()
-      .then((a) => setMyAddress(a.address))
+      .then((a) => {
+        setMyAddress(a.address);
+        setIsAdmin(a.role === 'admin');
+      })
       .catch(() => undefined);
     const load = () => {
       api
@@ -283,6 +368,8 @@ export function Network() {
           </div>
         </div>
       </div>
+
+      {isAdmin && <AuthorityQueue />}
     </>
   );
 }

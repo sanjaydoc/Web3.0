@@ -168,6 +168,7 @@ export class Kernel {
       connectors,
       config: this.config,
       treasuryId: this.treasuryId,
+      nodePublicKey: toB64u(this.nodeKeys.publicKey),
       startedAt: this.startedAt,
       clock,
       log: this.http.log,

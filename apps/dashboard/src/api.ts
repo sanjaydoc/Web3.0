@@ -122,7 +122,10 @@ export interface NodeLimits {
   maxAgents: number;
 }
 
+export type NodeRole = 'solo' | 'relay' | 'authority';
+
 export interface NodeOperator {
+  role: NodeRole;
   nodePublicKey?: string;
   treasuryId: string;
   uptimeSec: number;
@@ -235,6 +238,16 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   return res.json() as Promise<T>;
 }
 
+/** An operator's request to be promoted into the authority set (admin-approved). */
+export interface AuthorityRequest {
+  address: string;
+  nodePublicKey: string;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  decidedAt?: string;
+  decidedBy?: string;
+}
+
 /** An operator's self-reported node position on the Network map (opt-in). */
 export interface NodeLocation {
   address: string;
@@ -248,6 +261,11 @@ export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
+  requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),
+  myAuthorityRequest: () => get<{ request: AuthorityRequest | null }>('/operator/authority/mine'),
+  authorityRequests: () => get<{ requests: AuthorityRequest[] }>('/operator/authority/requests'),
+  decideAuthority: (address: string, action: 'approve' | 'reject') =>
+    post<AuthorityRequest>('/operator/authority/decide', { address, action }),
   setNodeLocation: (loc: { lat: number; lon: number; label?: string }) =>
     send<NodeLocation>('PUT', '/operator/location', loc),
   clearNodeLocation: () => send<{ removed: boolean }>('DELETE', '/operator/location'),

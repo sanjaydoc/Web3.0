@@ -16,6 +16,8 @@ export type EventKind =
   | 'account.created'
   | 'skill.created'
   | 'connector.created'
+  | 'authority.requested'
+  | 'authority.decided'
   | 'message.routed'
   | 'task.updated'
   | 'payment.settled'

@@ -263,6 +263,33 @@ body {
   font-size: var(--fs-lg);
   margin-bottom: 12px;
 }
+
+/* Node-role badge: what this node IS — SOLO (own chain) / RELAY (follows) / AUTHORITY (signs). */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1.5px solid;
+  vertical-align: middle;
+}
+.role-badge.solo {
+  color: var(--muted);
+  border-color: var(--muted);
+}
+.role-badge.relay {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.role-badge.authority {
+  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
 .empty {
   color: var(--faint);
   padding: 24px 0;

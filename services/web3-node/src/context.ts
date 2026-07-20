@@ -39,6 +39,8 @@ export interface ModuleContext {
   config: Web3Config;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;
+  /** This node's ML-DSA signing public key (base64url) — its identity in the authority set. */
+  nodePublicKey: string;
   /** Epoch-ms the node process started (for uptime). */
   startedAt: number;
   clock: () => string;

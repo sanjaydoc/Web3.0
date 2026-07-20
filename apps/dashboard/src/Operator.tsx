@@ -1,5 +1,86 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type NodeLocation, type NodeOperator, api, formatAmount } from './api.js';
+import {
+  type AuthorityRequest,
+  type NodeLocation,
+  type NodeOperator,
+  type NodeRole,
+  api,
+  formatAmount,
+} from './api.js';
+
+const ROLE_HELP: Record<NodeRole, string> = {
+  solo: 'running its own chain — not joined to a shared network yet',
+  relay: 'carries traffic, hosts agents, verifies the shared chain',
+  authority: 'signs blocks and keeps consensus for the network',
+};
+
+/** Ask the admin to promote this node into the authority set, and track the request. */
+function AuthorityCard({ role }: { role: NodeRole }) {
+  const [mine, setMine] = useState<AuthorityRequest | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    api
+      .myAuthorityRequest()
+      .then((r) => setMine(r.request))
+      .catch(() => undefined);
+  }, []);
+
+  async function request() {
+    setBusy(true);
+    setErr('');
+    try {
+      setMine(await api.requestAuthority());
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (role === 'authority') {
+    return (
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="section-title">Authority status</div>
+        <p className="muted" style={{ margin: '2px 0 0' }}>
+          This node is in the authority set — it proposes and signs blocks, and earns block rewards.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Authority status</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        Authority nodes sign the chain's blocks and earn block rewards. Membership is{' '}
+        <b>admin-approved</b>: request below and the network admin will approve or reject. If
+        approved, your node key is added to the authority set (<code>WEB3_AUTHORITIES</code>).
+      </p>
+      {mine && (
+        <p style={{ margin: '0 0 12px' }}>
+          Your request:{' '}
+          <span
+            className={`chip ${mine.status === 'approved' ? 'allow' : mine.status === 'rejected' ? 'deny' : ''}`}
+          >
+            {mine.status}
+          </span>{' '}
+          <span className="muted">
+            {mine.status === 'pending' && '— waiting for the admin'}
+            {mine.status === 'approved' && `— approved ${mine.decidedAt?.slice(0, 10) ?? ''}`}
+            {mine.status === 'rejected' && '— you may request again'}
+          </span>
+        </p>
+      )}
+      {(!mine || mine.status === 'rejected') && (
+        <button type="button" className="btn act" disabled={busy} onClick={request}>
+          {busy ? 'Sending…' : 'Request authority status'}
+        </button>
+      )}
+      {err && <div className="note note-err">{err}</div>}
+    </div>
+  );
+}
 
 const ADMIN_KEY = 'web3.adminToken';
 
@@ -231,8 +312,13 @@ export function Operator() {
   return (
     <>
       <div className="page-head">
-        <h1>My node</h1>
-        <span className="muted">what this node earns, carries, and contributes to Web3.0</span>
+        <h1>
+          My node{' '}
+          {node && <span className={`role-badge ${node.role}`}>{node.role.toUpperCase()}</span>}
+        </h1>
+        <span className="muted">
+          {node ? ROLE_HELP[node.role] : 'what this node earns, carries, and contributes to Web3.0'}
+        </span>
       </div>
 
       {!node && (
@@ -380,6 +466,8 @@ export function Operator() {
               </div>
             )}
           </div>
+
+          <AuthorityCard role={node.role} />
 
           <NodeLocationCard />
 
