@@ -7,7 +7,7 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
 // The packaged desktop app (Electron) — runs a full node + opens the dashboard in one window.
 // Published by the `desktop` workflow on every version tag, attached to the public repo's releases.
-const DESKTOP_VERSION = '0.1.0';
+const DESKTOP_VERSION = '0.1.1';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
