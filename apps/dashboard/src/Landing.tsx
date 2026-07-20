@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { type Role, api, setWeb3Token } from './api.js';
+import { InstallButton } from './InstallButton.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
 const NODES: [number, number][] = [
@@ -175,14 +176,17 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
           <div className="l-brand">
             <span className="l-badge">W</span> Web3.0
           </div>
-          <a
-            className="l-doclink"
-            href="https://github.com/sanjaydoc/Web3.0"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub ↗
-          </a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <InstallButton className="l-doclink" />
+            <a
+              className="l-doclink"
+              href="https://github.com/sanjaydoc/Web3.0"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub ↗
+            </a>
+          </div>
         </header>
 
         <div className="l-hero">

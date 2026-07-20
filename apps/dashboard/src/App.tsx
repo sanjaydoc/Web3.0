@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Account } from './Account.js';
 import { Connectors } from './Connectors.js';
+import { InstallBanner } from './InstallBanner.js';
+import { InstallButton } from './InstallButton.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
@@ -189,11 +191,17 @@ export function App() {
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
   if (!authed && !guest) {
-    return <Landing onEnter={() => checkAuth()} onGuest={() => setGuest(true)} />;
+    return (
+      <>
+        <InstallBanner />
+        <Landing onEnter={() => checkAuth()} onGuest={() => setGuest(true)} />
+      </>
+    );
   }
 
   return (
     <div className="app">
+      <InstallBanner />
       <aside className="side">
         <div className="brand">
           <span className="badge">W</span> Web3.0
@@ -239,6 +247,7 @@ export function App() {
           <span className={`pill-live ${snap.online ? '' : 'pill-off'}`}>
             <span className="dot" /> {snap.online ? 'node online' : 'node offline'}
           </span>
+          <InstallButton className="btn act btn-install" />
         </div>
       </aside>
 

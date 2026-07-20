@@ -118,6 +118,11 @@ body {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.btn-install {
+  font-size: var(--fs-xs);
+  padding: 0.24rem 0.6rem;
 }
 
 /* --- main --------------------------------------------------------------- */
@@ -1405,4 +1410,101 @@ button.connector:not(:disabled):hover {
   font-size: var(--fs-sm);
   color: var(--muted);
   font-weight: 600;
+}
+
+/* --- PWA install banner (the Nature drop-down pattern) ------------------- */
+/* A slim card that slides in from the top on first visit, prompting the user to install the
+   console to their home screen. Fixed so it floats over whatever view is mounted. */
+.pwa-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 30px rgba(16, 16, 20, 0.16);
+  animation: pwa-drop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes pwa-drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -18px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.pwa-badge {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+.pwa-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+  flex: 1;
+}
+.pwa-text b {
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+.pwa-text span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pwa-install {
+  flex: none;
+  border: none;
+  cursor: pointer;
+  background: var(--ink);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: 0.46rem 0.95rem;
+  border-radius: 999px;
+}
+.pwa-install:hover {
+  opacity: 0.88;
+}
+.pwa-x {
+  flex: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 8px;
+}
+.pwa-x:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+@media (max-width: 480px) {
+  .pwa-text span {
+    white-space: normal;
+  }
 }
