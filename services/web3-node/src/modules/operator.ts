@@ -3,6 +3,18 @@ import { formatAmount } from '@web3/core';
 import type { Web3Id } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
+import { currentAccount, requireAuthed } from '../services/auth.js';
+
+/** An operator's self-reported node position, shown on the Network map. Opt-in only. */
+export interface NodeLocation {
+  address: string; // account that set it (one location per account)
+  label: string; // display name, e.g. "Chennai"
+  lat: number;
+  lon: number;
+  updatedAt: string;
+}
+
+export const LOCATIONS_KEY = 'node-locations';
 
 export interface NodeLimits {
   /** Whether this node offers spare compute to host others' agents. */
@@ -80,6 +92,52 @@ export function operatorModule(): Web3Module {
           resources: resources(),
           limits,
         };
+      });
+
+      // --- operator locations (the Network map's real geography) -----------------------------
+      const loadLocations = async () =>
+        (await ctx.store.loadSetting<NodeLocation[]>(LOCATIONS_KEY)) ?? [];
+
+      // Public: every opt-in operator position (this is what the map renders).
+      http.get('/operator/locations', async () => ({ locations: await loadLocations() }));
+
+      // Signed-in operators set (or update) their own position. Coordinates are rounded to 4 dp
+      // (~11 m) and only what is explicitly saved here is ever shared.
+      http.put('/operator/location', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in to set a node location' });
+        const body = (request.body ?? {}) as { lat?: number; lon?: number; label?: string };
+        const lat = Number(body.lat);
+        const lon = Number(body.lon);
+        if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+          return reply.code(400).send({ error: 'lat must be a number in [-90, 90]' });
+        }
+        if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+          return reply.code(400).send({ error: 'lon must be a number in [-180, 180]' });
+        }
+        const loc: NodeLocation = {
+          address: acct.address,
+          label: String(body.label ?? '')
+            .trim()
+            .slice(0, 48),
+          lat: Math.round(lat * 10000) / 10000,
+          lon: Math.round(lon * 10000) / 10000,
+          updatedAt: new Date().toISOString(),
+        };
+        const rest = (await loadLocations()).filter((l) => l.address !== acct.address);
+        await ctx.store.saveSetting(LOCATIONS_KEY, [...rest, loc]);
+        return loc;
+      });
+
+      // Remove your own position from the map.
+      http.delete('/operator/location', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in first' });
+        const rest = (await loadLocations()).filter((l) => l.address !== acct.address);
+        await ctx.store.saveSetting(LOCATIONS_KEY, rest);
+        return { removed: true };
       });
 
       http.post('/node/limits', async (request, reply) => {

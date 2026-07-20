@@ -222,9 +222,35 @@ async function post<T>(path: string, body: unknown, adminToken?: string): Promis
   return res.json() as Promise<T>;
 }
 
+async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${NODE_URL}${path}`, {
+    method,
+    headers: authHeaders({ 'content-type': 'application/json' }),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error((detail as { error?: string }).error ?? `${path} → ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** An operator's self-reported node position on the Network map (opt-in). */
+export interface NodeLocation {
+  address: string;
+  label: string;
+  lat: number;
+  lon: number;
+  updatedAt: string;
+}
+
 export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
+  nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
+  setNodeLocation: (loc: { lat: number; lon: number; label?: string }) =>
+    send<NodeLocation>('PUT', '/operator/location', loc),
+  clearNodeLocation: () => send<{ removed: boolean }>('DELETE', '/operator/location'),
   agents: () => get<{ agents: AgentCard[]; count: number }>('/agents'),
   events: (limit = 60) => get<{ events: Web3Event[] }>(`/events?limit=${limit}`),
   ledger: () =>

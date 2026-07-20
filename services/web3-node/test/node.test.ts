@@ -960,6 +960,62 @@ describe('connector registry', () => {
   });
 });
 
+describe('operator locations', () => {
+  it('lets a signed-in operator set/update/clear their map position; list is public', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const op = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'mapper', role: 'operator' },
+      })
+      .then((r) => r.json())) as { token: string; address: string };
+
+    const put = (payload: Record<string, unknown>, token?: string) =>
+      k.http.inject({
+        method: 'PUT',
+        url: '/operator/location',
+        headers: token ? { 'x-web3-token': token } : undefined,
+        payload,
+      });
+
+    // anonymous set is blocked; bad coordinates are rejected
+    expect((await put({ lat: 13.08, lon: 80.27 })).statusCode).toBe(401);
+    expect((await put({ lat: 123, lon: 80 }, op.token)).statusCode).toBe(400);
+    expect((await put({ lat: 13, lon: 999 }, op.token)).statusCode).toBe(400);
+
+    // a signed-in operator sets their position (Chennai); address is stamped server-side
+    const ok = await put({ lat: 13.0827, lon: 80.2707, label: 'Chennai' }, op.token);
+    expect(ok.statusCode).toBe(200);
+    const loc = ok.json() as { address: string; label: string; lat: number; lon: number };
+    expect(loc.address).toBe(op.address);
+    expect(loc.label).toBe('Chennai');
+    expect(loc.lat).toBeCloseTo(13.0827, 4);
+
+    // update replaces (one location per account), and the list is public
+    await put({ lat: 12.9716, lon: 77.5946, label: 'Bengaluru' }, op.token);
+    const list = (await k.http
+      .inject({ method: 'GET', url: '/operator/locations' })
+      .then((r) => r.json())) as { locations: { address: string; label: string }[] };
+    expect(list.locations).toHaveLength(1);
+    expect(list.locations[0]!.label).toBe('Bengaluru');
+
+    // clear removes it
+    const del = await k.http.inject({
+      method: 'DELETE',
+      url: '/operator/location',
+      headers: { 'x-web3-token': op.token },
+    });
+    expect(del.statusCode).toBe(200);
+    const after = (await k.http
+      .inject({ method: 'GET', url: '/operator/locations' })
+      .then((r) => r.json())) as { locations: unknown[] };
+    expect(after.locations).toHaveLength(0);
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

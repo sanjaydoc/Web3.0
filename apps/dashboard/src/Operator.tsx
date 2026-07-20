@@ -1,7 +1,157 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type NodeOperator, api, formatAmount } from './api.js';
+import { type NodeLocation, type NodeOperator, api, formatAmount } from './api.js';
 
 const ADMIN_KEY = 'web3.adminToken';
+
+/** Set / update the operator's position on the Network map — browser GPS or typed manually. */
+function NodeLocationCard() {
+  const [mine, setMine] = useState<NodeLocation | null>(null);
+  const [label, setLabel] = useState('');
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [me, locs] = await Promise.all([api.me(), api.nodeLocations()]);
+        const loc = locs.locations.find((l) => l.address === me.address) ?? null;
+        setMine(loc);
+        if (loc) {
+          setLabel(loc.label);
+          setLat(String(loc.lat));
+          setLon(String(loc.lon));
+        }
+      } catch {
+        /* signed out or node offline */
+      }
+    })();
+  }, []);
+
+  const useGps = () => {
+    setMsg(null);
+    if (!navigator.geolocation) {
+      setMsg({
+        kind: 'err',
+        text: 'This browser has no geolocation — enter coordinates manually.',
+      });
+      return;
+    }
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(4));
+        setLon(pos.coords.longitude.toFixed(4));
+        setBusy(false);
+        setMsg({ kind: 'ok', text: 'Location captured — press Save to publish it to the map.' });
+      },
+      (err) => {
+        setBusy(false);
+        setMsg({ kind: 'err', text: `Location denied or unavailable (${err.message}).` });
+      },
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
+  };
+
+  async function saveLoc() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const saved = await api.setNodeLocation({
+        lat: Number.parseFloat(lat),
+        lon: Number.parseFloat(lon),
+        label: label.trim(),
+      });
+      setMine(saved);
+      setMsg({
+        kind: 'ok',
+        text: `Saved — your node now shows at "${saved.label || 'unnamed'}" on the Network map.`,
+      });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeLoc() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.clearNodeLocation();
+      setMine(null);
+      setLabel('');
+      setLat('');
+      setLon('');
+      setMsg({ kind: 'ok', text: 'Removed — your node is off the map.' });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Node location</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        Where your node appears on the Network map. Opt-in: only what you save here is shared, and
+        you can remove it any time.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="loc-label">Place name</label>
+          <input
+            id="loc-label"
+            value={label}
+            onChange={(ev) => setLabel(ev.target.value)}
+            placeholder="e.g. Chennai"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="loc-lat">Latitude · longitude</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              id="loc-lat"
+              value={lat}
+              onChange={(ev) => setLat(ev.target.value)}
+              placeholder="13.0827"
+            />
+            <input
+              aria-label="Longitude"
+              value={lon}
+              onChange={(ev) => setLon(ev.target.value)}
+              placeholder="80.2707"
+            />
+          </div>
+          <span className="hint">decimal degrees — south / west are negative</span>
+        </div>
+      </div>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy} onClick={useGps}>
+          📍 Use my location
+        </button>
+        <button
+          type="button"
+          className="btn act"
+          disabled={busy || !lat.trim() || !lon.trim()}
+          onClick={saveLoc}
+        >
+          {busy ? 'Working…' : mine ? 'Update on map' : 'Save to map'}
+        </button>
+        {mine && (
+          <button type="button" className="btn act" disabled={busy} onClick={removeLoc}>
+            Remove from map
+          </button>
+        )}
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
 
 function uptime(sec: number): string {
   const d = Math.floor(sec / 86400);
@@ -230,6 +380,8 @@ export function Operator() {
               </div>
             )}
           </div>
+
+          <NodeLocationCard />
 
           <div className="card">
             <div className="section-title">This node</div>

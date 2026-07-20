@@ -5,7 +5,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { type ConsensusInfo, type SettlementInfo, type Stats, api } from './api.js';
+import {
+  type ConsensusInfo,
+  type NodeLocation,
+  type SettlementInfo,
+  type Stats,
+  api,
+} from './api.js';
 import { WORLD_PATHS, WORLD_VIEWBOX } from './worldMap.js';
 
 const VB_W = 1010;
@@ -25,12 +31,13 @@ const CITIES: { n: string; lon: number; lat: number }[] = [
   { n: 'JNB', lon: 28, lat: -26 },
 ];
 
-// Web Mercator, calibrated to the @svg-maps/world 1010x666 viewBox.
+// Web Mercator, calibrated to the @svg-maps/world 1010x666 viewBox by least-squares fit against
+// 14 known country centroids (rmse < 1px): x = 474.55 + 2.8095·lon, y = 462.86 − 159.83·merc(lat).
 function proj(lon: number, lat: number): { x: number; y: number } {
-  const x = 505 + 2.75 * lon;
-  const phi = (Math.max(-82, Math.min(82, lat)) * Math.PI) / 180;
+  const x = 474.55 + 2.8095 * lon;
+  const phi = (Math.max(-84, Math.min(84, lat)) * Math.PI) / 180;
   const ymerc = Math.log(Math.tan(Math.PI / 4 + phi / 2));
-  return { x, y: 435 - 214.7 * ymerc };
+  return { x, y: 462.86 - 159.832 * ymerc };
 }
 
 // Put "you" at the city nearest the viewer, not a hardcoded one. The browser's UTC offset gives an
@@ -38,7 +45,8 @@ function proj(lon: number, lat: number): { x: number; y: number } {
 // UTC+5:30 (India) → ~82°E → BOM; UTC-8 → ~-120° → SFO.
 const viewerLon = (-new Date().getTimezoneOffset() / 60) * 15;
 const nearest = CITIES.reduce(
-  (best, c, i) => (Math.abs(c.lon - viewerLon) < Math.abs(CITIES[best]!.lon - viewerLon) ? i : best),
+  (best, c, i) =>
+    Math.abs(c.lon - viewerLon) < Math.abs(CITIES[best]!.lon - viewerLon) ? i : best,
   0,
 );
 const ORDERED = [CITIES[nearest]!, ...CITIES.filter((_, i) => i !== nearest)];
@@ -49,10 +57,16 @@ export function Network() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [cons, setCons] = useState<ConsensusInfo | null>(null);
   const [settle, setSettle] = useState<SettlementInfo | null>(null);
+  const [locations, setLocations] = useState<NodeLocation[]>([]);
+  const [myAddress, setMyAddress] = useState<string | null>(null);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const drag = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
+    api
+      .me()
+      .then((a) => setMyAddress(a.address))
+      .catch(() => undefined);
     const load = () => {
       api
         .stats()
@@ -66,6 +80,10 @@ export function Network() {
         .settlement()
         .then(setSettle)
         .catch(() => undefined);
+      api
+        .nodeLocations()
+        .then((r) => setLocations(r.locations))
+        .catch(() => undefined);
     };
     load();
     const t = setInterval(load, 4000);
@@ -74,20 +92,36 @@ export function Network() {
 
   const authorities = cons?.enabled ? Math.max(1, cons.authorities.length) : 1;
   const agentCount = stats?.agents ?? 0;
-  const nodeCities = cityXY.slice(0, Math.min(authorities, cityXY.length));
 
-  // Scatter agents deterministically near the cities.
+  // Markers: real opt-in operator locations when any exist ("· you" = your account's entry);
+  // otherwise fall back to the illustrative cities, nearest-timezone city first.
+  const markers = useMemo(() => {
+    if (locations.length > 0) {
+      return locations.map((l) => ({
+        key: l.address,
+        n: l.label || l.address.split('@')[0] || 'node',
+        you: myAddress !== null && l.address === myAddress,
+        ...proj(l.lon, l.lat),
+      }));
+    }
+    return cityXY
+      .slice(0, Math.min(authorities, cityXY.length))
+      .map((c, i) => ({ key: c.n, n: c.n, you: i === 0, x: c.x, y: c.y }));
+  }, [locations, myAddress, authorities]);
+
+  // Scatter agents deterministically near the markers.
   const agentDots = useMemo(() => {
     const shown = Math.min(agentCount, 80);
+    const anchors = markers.length > 0 ? markers : cityXY;
     const out: { x: number; y: number }[] = [];
     for (let i = 0; i < shown; i++) {
-      const c = cityXY[(i * 3) % cityXY.length]!;
+      const c = anchors[(i * 3) % anchors.length]!;
       const a = i * 2.399;
       const r = 6 + ((i * 37) % 22);
       out.push({ x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r * 0.7 });
     }
     return out;
-  }, [agentCount]);
+  }, [agentCount, markers]);
 
   // --- pan / zoom (SVG group transform in viewBox units) ---
   const toUser = (clientX: number, clientY: number) => {
@@ -172,8 +206,8 @@ export function Network() {
             {agentDots.map((a, i) => (
               <circle key={`a${i}`} className="net-agent" cx={a.x} cy={a.y} r={1.6 / view.s} />
             ))}
-            {nodeCities.map((c, i) => (
-              <g key={c.n}>
+            {markers.map((c) => (
+              <g key={c.key}>
                 <circle className="net-ring" cx={c.x} cy={c.y} r={9 / view.s} />
                 <circle className="net-node" cx={c.x} cy={c.y} r={4 / view.s} />
                 <text
@@ -183,7 +217,7 @@ export function Network() {
                   style={{ fontSize: `${11 / view.s}px` }}
                 >
                   {c.n}
-                  {i === 0 ? ' · you' : ''}
+                  {c.you ? ' · you' : ''}
                 </text>
               </g>
             ))}

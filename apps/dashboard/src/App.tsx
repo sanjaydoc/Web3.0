@@ -55,7 +55,7 @@ const NAV: {
   { id: 'account', label: 'Account', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
-  { id: 'network', label: 'Network' },
+  { id: 'network', label: 'Network', operator: true },
   { id: 'connectors', label: 'Connectors', operator: true },
   { id: 'skills', label: 'Skills', operator: true },
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
