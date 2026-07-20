@@ -474,6 +474,11 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
 
 Still ahead:
 
+- **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
+  **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
+  (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid
+  task, verify it all lands on the ledger. This proves the "any agent can join" claim end-to-end
+  with real third-party coding agents.
 - **Real mainnet settlement** — the signer seam exists; going live is an operator plugging their own
   funded key (deliberately out of the box — the node never holds real funds autonomously).
 - **BFT/PoS validators + state-machine replication** — design in
