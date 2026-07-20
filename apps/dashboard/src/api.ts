@@ -238,6 +238,25 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   return res.json() as Promise<T>;
 }
 
+/** Live monetary policy — GUI-editable by the admin, applies immediately. */
+export interface Economics {
+  feeBps: number;
+  blockReward: number;
+  burnBps: number;
+  authorityStake: number;
+  blockRewardFormatted?: string;
+  authorityStakeFormatted?: string;
+}
+
+/** Node persistence settings (config-file backed; restart to apply). */
+export interface StorageInfo {
+  kind: string;
+  mongodbDb: string;
+  mongodbUriHint: string | null;
+  configPath: string | null;
+  note: string;
+}
+
 /** Staking state for permissionless authority admission (Ethereum-deposit-contract style). */
 export interface StakeInfo {
   threshold: number;
@@ -283,6 +302,19 @@ export const api = {
   stats: () => get<Stats>('/stats'),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
   stakeInfo: () => get<StakeInfo>('/operator/stake'),
+  unstake: () =>
+    post<{ amount: number; availableAt: string; removalQueued: boolean; cooldownMs: number }>(
+      '/operator/unstake',
+      {},
+    ),
+  economics: () => get<Economics>('/operator/economics'),
+  updateEconomics: (patch: Partial<Economics>) => post<Economics>('/operator/economics', patch),
+  storageInfo: () => get<StorageInfo>('/operator/storage'),
+  saveStorage: (input: { mongodbUri?: string; mongodbDb?: string }) =>
+    post<{ saved: boolean; restartRequired: boolean; configPath: string }>(
+      '/operator/storage',
+      input,
+    ),
   collectEarnings: () =>
     post<{ collected: number; collectedFormatted: string; walletBalance: number }>(
       '/operator/collect',

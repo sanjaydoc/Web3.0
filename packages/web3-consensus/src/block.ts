@@ -31,6 +31,9 @@ export interface BlockCore {
    * out-of-band config edits.
    */
   authorityAdd?: string;
+  /** On-chain governance: an authority key this block REMOVES from the set (exit or slash),
+   *  effective from the next block. Same trust model as authorityAdd. */
+  authorityRemove?: string;
 }
 
 /** A proposed, signed block. `signature` is the proposer's ML-DSA signature over `hash`. */
@@ -50,6 +53,7 @@ export function hashBlock(core: BlockCore): string {
     ts: core.ts,
     // Included only when present so blocks without a membership change keep their pre-existing hash.
     ...(core.authorityAdd ? { authorityAdd: core.authorityAdd } : {}),
+    ...(core.authorityRemove ? { authorityRemove: core.authorityRemove } : {}),
   });
 }
 
@@ -66,6 +70,7 @@ export function proposeBlock(
   now: string,
   round = 0,
   authorityAdd?: string,
+  authorityRemove?: string,
 ): Block {
   const core: BlockCore = {
     height,
@@ -75,6 +80,7 @@ export function proposeBlock(
     entries,
     ts: now,
     ...(authorityAdd ? { authorityAdd } : {}),
+    ...(authorityRemove ? { authorityRemove } : {}),
   };
   const hash = hashBlock(core);
   return { ...core, hash, signature: signString(keys.secretKey, hash) };

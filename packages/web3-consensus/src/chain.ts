@@ -99,6 +99,16 @@ export class Blockchain {
         return { ok: false, reason: 'authorityAdd key is already an authority' };
       }
     }
+    if (block.authorityRemove !== undefined) {
+      if (!this._authorities.includes(block.authorityRemove)) {
+        return { ok: false, reason: 'authorityRemove key is not an authority' };
+      }
+      // The set may never empty; net size after this block must stay >= 1.
+      const netSize = this._authorities.length + (block.authorityAdd ? 1 : 0) - 1;
+      if (netSize < 1) {
+        return { ok: false, reason: 'cannot remove the last authority' };
+      }
+    }
     if (hashBlock(block) !== block.hash) {
       return { ok: false, reason: 'block hash mismatch (tampered content)' };
     }
@@ -113,8 +123,12 @@ export class Blockchain {
     const result = this.validate(block);
     if (result.ok) {
       this._blocks.push(block);
-      // Seat the new authority — effective from the next height (rotation includes it from here on).
+      // Seat / unseat — effective from the next height (rotation reflects it from here on).
       if (block.authorityAdd) this._authorities.push(block.authorityAdd);
+      if (block.authorityRemove) {
+        const i = this._authorities.indexOf(block.authorityRemove);
+        if (i >= 0) this._authorities.splice(i, 1);
+      }
     }
     return result;
   }

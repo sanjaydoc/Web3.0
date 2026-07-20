@@ -481,6 +481,15 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
   [`desktop/README.md`](desktop/README.md) has the build details.
 
+Now wired for production (GUI-managed, no restarts): **live economics** (protocol fee, EIP-1559-style
+burn, block reward, authority stake — all admin-editable in the console), **staking with voluntary
+exit** (unstake with an Ethereum-style cooldown; leaving the authority set is an on-chain
+`authorityRemove`), **equivocation slashing** (double-signing burns the whole stake and removes the
+authority — evidence is cryptographically verified first), **state replication** (committed blocks
+apply every node's entries to every ledger, so balances converge network-wide),
+**`network.json` genesis defaults** (downloads join YOUR network out of the box; the desktop app
+bundles it), and **GUI storage settings** (MongoDB URI saved from the console; restart to apply).
+
 Still ahead:
 
 - **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
@@ -495,6 +504,14 @@ Still ahead:
 - **Decentralized compute marketplace** — design in
   [docs/design/COMPUTE-MARKETPLACE.md](docs/design/COMPUTE-MARKETPLACE.md): operators earn by hosting
   others' agents; capacity offers + placement + revenue split.
+- **Fork choice in live gossip** — `heaviest()` exists; wiring it into the mesh resolves competing
+  chains after network partitions.
+- **M-of-N authority voting** — replace single-admin approval with Clique-style majority voting as
+  the authority set grows.
+- **Faucet tightening at launch** — rate-limit / gate the free 1,000 aETH so stake thresholds can't
+  be Sybil-farmed.
+- **Public endpoint hardening** — TLS, domain, reverse proxy for the founding node.
+- **Code signing** — Windows cert + Apple Developer ID to remove installer warnings.
 - **Quantum research track** — clearly labelled forward-looking work
 
 ## License

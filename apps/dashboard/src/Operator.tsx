@@ -1,13 +1,186 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   type AuthorityRequest,
+  type Economics,
   type NodeLocation,
   type NodeOperator,
   type NodeRole,
   type StakeInfo,
+  type StorageInfo,
   api,
   formatAmount,
 } from './api.js';
+
+/** Live monetary policy — visible to any signed-in operator, editable by the admin. */
+function EconomicsCard() {
+  const [eco, setEco] = useState<Economics | null>(null);
+  const [feeBps, setFeeBps] = useState('');
+  const [burnBps, setBurnBps] = useState('');
+  const [rewardAeth, setRewardAeth] = useState('');
+  const [stakeAeth, setStakeAeth] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    api
+      .economics()
+      .then((e) => {
+        setEco(e);
+        setFeeBps(String(e.feeBps));
+        setBurnBps(String(e.burnBps));
+        setRewardAeth((e.blockReward / 100).toString());
+        setStakeAeth((e.authorityStake / 100).toString());
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const next = await api.updateEconomics({
+        feeBps: Math.round(Number.parseFloat(feeBps || '0')),
+        burnBps: Math.round(Number.parseFloat(burnBps || '0')),
+        blockReward: Math.round(Number.parseFloat(rewardAeth || '0') * 100),
+        authorityStake: Math.round(Number.parseFloat(stakeAeth || '0') * 100),
+      });
+      setEco(next);
+      setMsg({
+        kind: 'ok',
+        text: 'Saved — the new policy applies immediately, network-wide on this node.',
+      });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!eco) return null;
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Economics</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        The node's live monetary policy — fees fund operators, burns give aETH scarcity, the stake
+        prices authority admission. Admin-only to change; applies without a restart.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="eco-fee">Protocol fee (bps)</label>
+          <input id="eco-fee" value={feeBps} onChange={(ev) => setFeeBps(ev.target.value)} />
+          <span className="hint">100 bps = 1% of every payment → node treasury</span>
+        </div>
+        <div className="field">
+          <label htmlFor="eco-burn">Burn (bps)</label>
+          <input id="eco-burn" value={burnBps} onChange={(ev) => setBurnBps(ev.target.value)} />
+          <span className="hint">EIP-1559-style: burned forever → supply sink</span>
+        </div>
+        <div className="field">
+          <label htmlFor="eco-reward">Block reward (aETH)</label>
+          <input
+            id="eco-reward"
+            value={rewardAeth}
+            onChange={(ev) => setRewardAeth(ev.target.value)}
+          />
+          <span className="hint">minted to the proposer's treasury per block</span>
+        </div>
+        <div className="field">
+          <label htmlFor="eco-stake">Authority stake (aETH)</label>
+          <input
+            id="eco-stake"
+            value={stakeAeth}
+            onChange={(ev) => setStakeAeth(ev.target.value)}
+          />
+          <span className="hint">permissionless admission threshold</span>
+        </div>
+      </div>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy} onClick={save}>
+          {busy ? 'Saving…' : 'Save policy'}
+        </button>
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
+
+/** Persistence settings (admin) — saves to the node's config file; restart to apply. */
+function StorageCard() {
+  const [info, setInfo] = useState<StorageInfo | null>(null);
+  const [uri, setUri] = useState('');
+  const [db, setDb] = useState('web3');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    api
+      .storageInfo()
+      .then((i) => {
+        setInfo(i);
+        setDb(i.mongodbDb);
+      })
+      .catch(() => undefined); // non-admins simply don't see the card
+  }, []);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await api.saveStorage({ mongodbUri: uri, mongodbDb: db });
+      setMsg({
+        kind: 'ok',
+        text: `Saved to ${res.configPath} — restart the node (or the desktop app) to apply.`,
+      });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!info) return null;
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Storage</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        <b>{info.kind === 'mongodb' ? 'MongoDB' : 'In-memory'}</b> — {info.note}
+        {info.mongodbUriHint && (
+          <>
+            {' '}
+            · <code>{info.mongodbUriHint}</code>
+          </>
+        )}
+      </p>
+      <div className="form-grid">
+        <div className="field wide">
+          <label htmlFor="st-uri">MongoDB connection string</label>
+          <input
+            id="st-uri"
+            type="password"
+            value={uri}
+            onChange={(ev) => setUri(ev.target.value)}
+            placeholder="mongodb+srv://user:password@cluster…"
+          />
+          <span className="hint">stored only in this node's local config file — never shared</span>
+        </div>
+        <div className="field">
+          <label htmlFor="st-db">Database name</label>
+          <input id="st-db" value={db} onChange={(ev) => setDb(ev.target.value)} />
+        </div>
+      </div>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy || !uri.trim()} onClick={save}>
+          {busy ? 'Saving…' : 'Save storage settings'}
+        </button>
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
 
 const ROLE_HELP: Record<NodeRole, string> = {
   solo: 'running its own chain — not joined to a shared network yet',
@@ -107,6 +280,34 @@ function AuthorityCard({ role }: { role: NodeRole }) {
           >
             <div style={{ width: `${pct}%`, height: '100%', background: 'var(--ok)' }} />
           </div>
+          {stake.staked > 0 && (
+            <button
+              type="button"
+              className="btn act"
+              disabled={busy}
+              style={{ marginRight: 8 }}
+              onClick={async () => {
+                setBusy(true);
+                setErr('');
+                setOk('');
+                try {
+                  const res = await api.unstake();
+                  setOk(
+                    res.cooldownMs > 0
+                      ? `Exit requested — ${formatAmount(res.amount)} refunds after the ${Math.round(res.cooldownMs / 3_600_000)}h cooldown${res.removalQueued ? '; leaving the authority set on-chain' : ''}.`
+                      : `Unstaked ${formatAmount(res.amount)} back to your wallet${res.removalQueued ? ' — leaving the authority set on-chain' : ''}.`,
+                  );
+                  refresh();
+                } catch (e) {
+                  setErr(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Unstake &amp; exit
+            </button>
+          )}
           {!stake.eligible && (
             <button
               type="button"
@@ -593,6 +794,10 @@ export function Operator() {
           </div>
 
           <AuthorityCard role={node.role} />
+
+          <EconomicsCard />
+
+          <StorageCard />
 
           <NodeLocationCard />
 

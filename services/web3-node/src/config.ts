@@ -82,6 +82,8 @@ export interface FeesConfig {
   protocolBps: number;
   /** aETH minted to a block's proposer as a reward (only when this node proposes). */
   blockReward: number;
+  /** EIP-1559-style burn on each payment, in basis points (0 = no burn). */
+  burnBps: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
 }
@@ -104,6 +106,8 @@ export interface Web3Config {
    * Default 3,200,000 minor = 32,000.00 aETH (32× the faucet grant; a nod to ETH's 32).
    */
   authorityStake: number;
+  /** Cooldown (ms) between requesting an unstake and the escrow refund (Ethereum-style exit delay). */
+  unstakeCooldownMs: number;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -119,6 +123,36 @@ for (const [k, v] of Object.entries(process.env)) {
     if (process.env[renamed] === undefined) process.env[renamed] = v;
   }
 }
+
+// ── deployment files ─────────────────────────────────────────────────────────────────────────────
+// network.json — the network's genesis defaults (consensus mode, authority set, peers), so a
+// downloaded node JOINS the network out of the box instead of booting solo. Env vars win over the
+// file; the file wins over built-in defaults. The desktop app bundles it and points
+// WEB3_NETWORK_FILE at its copy.
+// config.json (WEB3_CONFIG_PATH) — GUI-saved node settings (storage today). Same precedence.
+import { existsSync, readFileSync } from 'node:fs';
+
+function readJsonFile<T>(path: string | undefined): Partial<T> {
+  if (!path || !existsSync(path)) return {};
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as Partial<T>;
+  } catch {
+    return {};
+  }
+}
+
+interface NetworkFile {
+  consensus?: Partial<ConsensusConfig>;
+}
+interface LocalConfigFile {
+  mongodbUri?: string;
+  mongodbDb?: string;
+}
+
+const networkFile =
+  readJsonFile<NetworkFile>(process.env.WEB3_NETWORK_FILE ?? 'network.json').consensus ?? {};
+export const CONFIG_FILE_PATH = process.env.WEB3_CONFIG_PATH ?? '';
+const localFile = readJsonFile<LocalConfigFile>(CONFIG_FILE_PATH || undefined);
 
 /** Read a boolean env var: "0", "false", "no", "off" (case-insensitive) are false; unset → fallback. */
 function envBool(name: string, fallback: boolean): boolean {
@@ -153,21 +187,25 @@ export const DEFAULT_CONFIG: Web3Config = {
     explorerBaseUrl: process.env.WEB3_SETTLEMENT_EXPLORER,
   },
   consensus: {
-    mode: (process.env.WEB3_CONSENSUS as ConsensusMode) || 'off',
-    authorities: csv(process.env.WEB3_AUTHORITIES),
-    peers: csv(process.env.WEB3_PEERS),
-    blockMs: Number(process.env.WEB3_BLOCK_MS ?? 3_000),
-    slotMs: Number(process.env.WEB3_SLOT_MS ?? 6_000),
+    mode: (process.env.WEB3_CONSENSUS as ConsensusMode) || networkFile.mode || 'off',
+    authorities: process.env.WEB3_AUTHORITIES
+      ? csv(process.env.WEB3_AUTHORITIES)
+      : (networkFile.authorities ?? []),
+    peers: process.env.WEB3_PEERS ? csv(process.env.WEB3_PEERS) : (networkFile.peers ?? []),
+    blockMs: Number(process.env.WEB3_BLOCK_MS ?? networkFile.blockMs ?? 3_000),
+    slotMs: Number(process.env.WEB3_SLOT_MS ?? networkFile.slotMs ?? 6_000),
   },
   fees: {
     protocolBps: Number(process.env.WEB3_FEE_BPS ?? 0),
     blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0),
+    burnBps: Number(process.env.WEB3_BURN_BPS ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
   },
   authorityStake: Number(process.env.WEB3_AUTHORITY_STAKE ?? 3_200_000), // 32,000.00 aETH
+  unstakeCooldownMs: Number(process.env.WEB3_UNSTAKE_COOLDOWN_MS ?? 86_400_000), // 24 h
 
-  mongodbUri: process.env.WEB3_MONGODB_URI,
-  mongodbDb: process.env.WEB3_MONGODB_DB ?? 'web3',
+  mongodbUri: process.env.WEB3_MONGODB_URI ?? localFile.mongodbUri,
+  mongodbDb: process.env.WEB3_MONGODB_DB ?? localFile.mongodbDb ?? 'web3',
 };
 
 /** Parse a comma-separated env var into a trimmed, non-empty list. */

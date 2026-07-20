@@ -203,6 +203,16 @@ export class Ledger {
     return entry;
   }
 
+  /**
+   * Apply the balance effects of a FOREIGN entry (proposed by a peer, committed in a block) without
+   * appending it to this node's signed local log. This is the state-replication half of the chain:
+   * blocks order every node's entries; applying them here converges balances across the network.
+   * The caller is responsible for dedupe (apply each foreign entry exactly once).
+   */
+  applyExternal(entry: LedgerEntry): void {
+    this.replayBalances(entry);
+  }
+
   private credit(web3Id: Web3Id, amount: Amount, currency: Currency): void {
     const wallet = this.balances.get(web3Id) ?? { owner: web3Id, currency, balance: 0 };
     wallet.balance += amount;

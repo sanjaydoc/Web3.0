@@ -1,10 +1,24 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import { dirname } from 'node:path';
 import { formatAmount } from '@web3/core';
 import type { Web3Id } from '@web3/core';
+import { CONFIG_FILE_PATH } from '../config.js';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
 import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
-import { STAKE_ESCROW_ID, STAKE_MEMO_PREFIX } from '../services/consensus.js';
+import { STAKE_ESCROW_ID, STAKE_MEMO_PREFIX, UNSTAKE_MEMO_PREFIX } from '../services/consensus.js';
+
+/** A requested exit: the stake refund matures after the cooldown (Ethereum-style withdrawal delay). */
+export interface PendingExit {
+  address: string; // the staker being refunded
+  nodePublicKey: string; // the key whose stake is exiting
+  amount: number;
+  requestedAt: string;
+  availableAt: string; // requestedAt + cooldown
+}
+
+export const EXITS_KEY = 'unstake-exits';
 
 /** An operator's self-reported node position, shown on the Network map. Opt-in only. */
 export interface NodeLocation {
@@ -154,6 +168,74 @@ export function operatorModule(): Web3Module {
         return loc;
       });
 
+      // --- storage settings (GUI-owned persistence config) --------------------------------------
+      // Saved to the node's local config file (WEB3_CONFIG_PATH); applied on next start. The URI is
+      // never echoed back in full.
+      http.get('/operator/storage', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        const uri = ctx.config.mongodbUri ?? '';
+        return {
+          kind: ctx.store.kind,
+          mongodbDb: ctx.config.mongodbDb,
+          mongodbUriHint: uri ? `${uri.slice(0, 14)}…${uri.slice(-8)}` : null,
+          configPath: CONFIG_FILE_PATH || null,
+          note:
+            ctx.store.kind === 'mongodb'
+              ? 'persistent — state survives restarts'
+              : 'in-memory — state is lost on restart; save a MongoDB URI to persist',
+        };
+      });
+
+      http.post('/operator/storage', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        if (!CONFIG_FILE_PATH) {
+          return reply.code(400).send({
+            error:
+              'no config file location — start the node with WEB3_CONFIG_PATH (the desktop app sets this automatically)',
+          });
+        }
+        const body = (request.body ?? {}) as { mongodbUri?: string; mongodbDb?: string };
+        const uri = String(body.mongodbUri ?? '').trim();
+        if (uri && !/^mongodb(\+srv)?:\/\//.test(uri)) {
+          return reply
+            .code(400)
+            .send({ error: 'mongodbUri must start with mongodb:// or mongodb+srv://' });
+        }
+        const current = existsSync(CONFIG_FILE_PATH)
+          ? (JSON.parse(readFileSync(CONFIG_FILE_PATH, 'utf8')) as Record<string, unknown>)
+          : {};
+        const next = {
+          ...current,
+          mongodbUri: uri || undefined,
+          mongodbDb: String(body.mongodbDb ?? ctx.config.mongodbDb).trim() || 'web3',
+        };
+        mkdirSync(dirname(CONFIG_FILE_PATH), { recursive: true });
+        writeFileSync(CONFIG_FILE_PATH, `${JSON.stringify(next, null, 2)}\n`);
+        return { saved: true, restartRequired: true, configPath: CONFIG_FILE_PATH };
+      });
+
+      // --- live monetary policy (GUI-owned economics) -------------------------------------------
+      http.get('/operator/economics', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const e = ctx.economics.get();
+        return {
+          ...e,
+          blockRewardFormatted: formatAmount(e.blockReward),
+          authorityStakeFormatted: formatAmount(e.authorityStake),
+        };
+      });
+
+      http.post('/operator/economics', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const next = await ctx.economics.update(body);
+        ctx.bus.emit({
+          kind: 'economics.updated',
+          summary: `economics updated — fee ${next.feeBps} bps · reward ${formatAmount(next.blockReward)}/block · burn ${next.burnBps} bps · stake ${formatAmount(next.authorityStake)}`,
+        });
+        return next;
+      });
+
       // Collect node earnings: sweep the treasury (fees + block rewards) into the node owner's
       // account wallet — the wallet staking draws from. Admin-gated: the treasury belongs to
       // whoever runs the node, and on your own node the first signup bootstraps as admin.
@@ -187,10 +269,11 @@ export function operatorModule(): Web3Module {
 
       http.get('/operator/stake', async (request, reply) => {
         if (!requireAuthed(request, reply, ctx.accounts)) return;
+        await processExits(); // land any matured refunds before reporting balances
         const acct = currentAccount(request, ctx.accounts);
         const key = ((request.query as { key?: string }).key ?? ctx.nodePublicKey).trim();
         const staked = consensus.stakeOf(key);
-        const threshold = ctx.config.authorityStake;
+        const threshold = ctx.economics.authorityStake;
         return {
           threshold,
           thresholdFormatted: formatAmount(threshold),
@@ -213,7 +296,7 @@ export function operatorModule(): Web3Module {
         if (key.length < 32) {
           return reply.code(400).send({ error: 'nodePublicKey is not a plausible authority key' });
         }
-        const threshold = ctx.config.authorityStake;
+        const threshold = ctx.economics.authorityStake;
         const already = consensus.stakeOf(key);
         // Default: stake exactly what's still missing to reach the threshold.
         const amount = Math.round(Number(body.amount ?? Math.max(0, threshold - already)));
@@ -242,6 +325,89 @@ export function operatorModule(): Web3Module {
             ? 'stake threshold met — the network seats this key in an upcoming block automatically'
             : `staked — ${formatAmount(threshold - staked)} more to reach the threshold`,
         });
+      });
+
+      // --- voluntary exit (unstake with cooldown) -----------------------------------------------
+      const loadExits = async () => (await ctx.store.loadSetting<PendingExit[]>(EXITS_KEY)) ?? [];
+
+      // Refund every exit whose cooldown has matured (escrow → staker, on the ledger).
+      const processExits = async (): Promise<void> => {
+        const exits = await loadExits();
+        if (exits.length === 0) return;
+        const now = Date.now();
+        const remaining: PendingExit[] = [];
+        for (const exit of exits) {
+          if (Date.parse(exit.availableAt) > now) {
+            remaining.push(exit);
+            continue;
+          }
+          ledger.transfer(STAKE_ESCROW_ID as Web3Id, exit.address as Web3Id, exit.amount, {
+            memo: `${UNSTAKE_MEMO_PREFIX}${exit.nodePublicKey}`,
+          });
+          ctx.bus.emit({
+            kind: 'authority.exited',
+            summary: `${exit.address} unstaked ${formatAmount(exit.amount)} (cooldown complete)`,
+          });
+        }
+        await ctx.store.saveSetting(EXITS_KEY, remaining);
+      };
+
+      // How much of the escrowed stake for `key` this account contributed (in minus refunds out).
+      const contributedStake = (address: string, key: string): number => {
+        let total = 0;
+        for (const e of ledger.all()) {
+          if (e.type !== 'payment') continue;
+          const d = e.data as { from?: string | null; to?: string; amount?: number; memo?: string };
+          if (
+            d.from === address &&
+            d.to === STAKE_ESCROW_ID &&
+            d.memo === `${STAKE_MEMO_PREFIX}${key}`
+          )
+            total += d.amount ?? 0;
+          if (
+            d.from === STAKE_ESCROW_ID &&
+            d.to === address &&
+            d.memo === `${UNSTAKE_MEMO_PREFIX}${key}`
+          )
+            total -= d.amount ?? 0;
+        }
+        return Math.max(0, total);
+      };
+
+      // Request an exit: the node key leaves the authority set on-chain now; the stake refund
+      // matures after the cooldown (Ethereum-style exit-then-withdraw).
+      http.post('/operator/unstake', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in to unstake' });
+        await processExits();
+        const body = (request.body ?? {}) as { nodePublicKey?: string };
+        const key = String(body.nodePublicKey ?? ctx.nodePublicKey).trim();
+        const pendingMine = (await loadExits()).filter(
+          (x) => x.address === acct.address && x.nodePublicKey === key,
+        );
+        const pendingAmount = pendingMine.reduce((s, x) => s + x.amount, 0);
+        const amount = contributedStake(acct.address, key) - pendingAmount;
+        if (amount <= 0) {
+          return reply.code(400).send({ error: 'no stake of yours to withdraw for that key' });
+        }
+        const cooldown = ctx.config.unstakeCooldownMs;
+        const exit: PendingExit = {
+          address: acct.address,
+          nodePublicKey: key,
+          amount,
+          requestedAt: ctx.clock(),
+          availableAt: new Date(Date.now() + cooldown).toISOString(),
+        };
+        await ctx.store.saveSetting(EXITS_KEY, [...(await loadExits()), exit]);
+        // Leaving the validator set is immediate — the refund is what waits.
+        const removed = consensus.queueRemoval(key);
+        ctx.bus.emit({
+          kind: 'authority.exited',
+          summary: `${acct.address} requested exit for ${key.slice(0, 16)}… — ${formatAmount(amount)} refunds after cooldown${removed ? '; authority removal queued on-chain' : ''}`,
+        });
+        await processExits(); // zero-cooldown configs refund immediately
+        return reply.code(201).send({ ...exit, removalQueued: removed, cooldownMs: cooldown });
       });
 
       // --- authority approvals (relay → authority is admin-gated governance) --------------------

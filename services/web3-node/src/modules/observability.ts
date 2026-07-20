@@ -1,5 +1,6 @@
 import { formatAmount } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
+import { BURN_ID } from '../services/economics.js';
 
 /**
  * observability — the read side that powers the dashboard. Exposes the live event feed (recent
@@ -48,7 +49,9 @@ export function observabilityModule(): Web3Module {
 
       http.get('/stats', () => {
         const wallets = ledger.wallets();
-        const totalValue = wallets.reduce((sum, w) => sum + w.balance, 0);
+        // Burned aETH has left circulation — it is not "value in network".
+        const burned = wallets.find((w) => w.owner === BURN_ID)?.balance ?? 0;
+        const totalValue = wallets.reduce((sum, w) => sum + w.balance, 0) - burned;
         return {
           agents: registry.size,
           online: connections.online().length,
@@ -56,6 +59,8 @@ export function observabilityModule(): Web3Module {
           ledgerVerified: ledger.verifyChain().ok,
           totalValue,
           totalValueFormatted: formatAmount(totalValue),
+          burned,
+          burnedFormatted: formatAmount(burned),
         };
       });
     },

@@ -3,6 +3,7 @@ import type { Amount, Currency, SignedEnvelope, Web3Id } from '@web3/core';
 import { randomId } from '@web3/crypto';
 import { InsufficientFundsError } from '@web3/ledger';
 import type { ModuleContext, Web3Module } from '../context.js';
+import { BURN_ID } from '../services/economics.js';
 
 /** A signed instruction to move funds. The signature proves the payer authorised it. */
 interface PaymentInstruction {
@@ -34,6 +35,7 @@ export function paymentsModule(): Web3Module {
       settlement,
       treasuryId,
       config,
+      economics,
     }: ModuleContext) {
       // Report the active settlement rail so clients/dashboards can show where value settles.
       http.get('/settlement', () => ({
@@ -144,10 +146,20 @@ export function paymentsModule(): Web3Module {
           });
           // Protocol fee: skim a basis-point cut from the payee to the node treasury (operator
           // revenue). The payer still pays the quoted amount; the marketplace takes its rate.
-          const fee = Math.floor((instruction.amount * config.fees.protocolBps) / 10_000);
+          // Live policy from the economics service (GUI-editable) — not the boot-time env.
+          const fee = Math.floor((instruction.amount * economics.feeBps) / 10_000);
           if (fee > 0 && ledger.balanceOf(instruction.to) >= fee) {
             ledger.transfer(instruction.to, treasuryId as typeof instruction.to, fee, {
               memo: 'protocol-fee',
+              taskId: instruction.taskId,
+            });
+          }
+          // Burn sink (EIP-1559-style): a slice of every payment leaves circulation for good —
+          // the counterweight to faucet + block-reward minting.
+          const burn = Math.floor((instruction.amount * economics.burnBps) / 10_000);
+          if (burn > 0 && ledger.balanceOf(instruction.to) >= burn) {
+            ledger.transfer(instruction.to, BURN_ID as typeof instruction.to, burn, {
+              memo: 'burn',
               taskId: instruction.taskId,
             });
           }

@@ -13,6 +13,7 @@ export class ConsensusEngine {
   readonly chain: Blockchain;
   /** Membership changes queued by governance, carried in the next block this node proposes. */
   private readonly pendingAuthorityAdds: string[] = [];
+  private readonly pendingAuthorityRemoves: string[] = [];
 
   constructor(
     private readonly keys: Keypair,
@@ -53,6 +54,24 @@ export class ConsensusEngine {
     const k = key.trim();
     if (!k || this.chain.authorities.includes(k) || this.pendingAuthorityAdds.includes(k)) return;
     this.pendingAuthorityAdds.push(k);
+  }
+
+  /** Queue an authority key for on-chain REMOVAL (voluntary exit or slash). */
+  queueAuthorityRemove(key: string): void {
+    const k = key.trim();
+    if (!k || !this.chain.authorities.includes(k) || this.pendingAuthorityRemoves.includes(k))
+      return;
+    this.pendingAuthorityRemoves.push(k);
+  }
+
+  /** The next queued removal that is still valid (key still seated, set stays non-empty). */
+  private nextAuthorityRemove(): string | undefined {
+    while (this.pendingAuthorityRemoves.length > 0) {
+      const k = this.pendingAuthorityRemoves[0]!;
+      if (this.chain.authorities.includes(k) && this.chain.authorities.length > 1) return k;
+      this.pendingAuthorityRemoves.shift(); // already gone (or would empty the set)
+    }
+    return undefined;
   }
 
   /** The next queued membership change that is still valid to seat. */
@@ -103,6 +122,7 @@ export class ConsensusEngine {
 
   private propose(entries: LedgerEntry[], round: number, ts: string): Block {
     const authorityAdd = this.nextAuthorityAdd();
+    const authorityRemove = this.nextAuthorityRemove();
     const block = proposeBlock(
       this.keys,
       this.publicKeyB64u,
@@ -112,10 +132,12 @@ export class ConsensusEngine {
       ts,
       round,
       authorityAdd,
+      authorityRemove,
     );
     const result = this.chain.apply(block);
     if (!result.ok) throw new Error(`refused to propose an invalid block: ${result.reason}`);
     if (authorityAdd) this.pendingAuthorityAdds.shift(); // it's on-chain now
+    if (authorityRemove) this.pendingAuthorityRemoves.shift();
     return block;
   }
 

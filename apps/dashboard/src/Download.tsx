@@ -532,11 +532,11 @@ export function Download() {
       <NodeTerminal />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
-        Steps: clone → activate a Python venv → install packages (pnpm) → install the agent SDK (pip)
-        → start the node. The one-click installers do this for you and also{' '}
+        Steps: clone → activate a Python venv → install packages (pnpm) → install the agent SDK
+        (pip) → start the node. The one-click installers do this for you and also{' '}
         <b>set up Node.js 20+ and git</b> if missing. On <b>Windows</b>, activate the venv with{' '}
-        <code>.venv\Scripts\activate</code> (not <code>source</code>) and run the <code>.ps1</code> via
-        right-click → Run with PowerShell.
+        <code>.venv\Scripts\activate</code> (not <code>source</code>) and run the <code>.ps1</code>{' '}
+        via right-click → Run with PowerShell.
       </p>
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
@@ -557,8 +557,8 @@ export function Download() {
             check.
           </li>
           <li>
-            To join a shared chain, set <code>WEB3_CONSENSUS=poa</code>, <code>WEB3_AUTHORITIES</code>
-            , and <code>WEB3_PEERS</code> in <code>.env</code>.
+            To join a shared chain, set <code>WEB3_CONSENSUS=poa</code>,{' '}
+            <code>WEB3_AUTHORITIES</code>, and <code>WEB3_PEERS</code> in <code>.env</code>.
           </li>
           <li>
             To earn, set <code>WEB3_FEE_BPS</code> and/or <code>WEB3_BLOCK_REWARD</code> — earnings

@@ -15,6 +15,7 @@ import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
 import { ConnectorsService } from './services/connectors.js';
 import { ConsensusCoordinator } from './services/consensus.js';
+import { EconomicsService } from './services/economics.js';
 import { Guardrails } from './services/guardrails.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
@@ -38,6 +39,7 @@ export class Kernel {
   readonly replay: ReplayGuard;
   readonly settlement: SettlementProvider;
   readonly consensus: ConsensusCoordinator;
+  readonly economics: EconomicsService;
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
@@ -63,10 +65,18 @@ export class Kernel {
     this.replay = new ReplayGuard(this.config.auth, () => Date.now());
     this.settlement = createSettlement(this.config.settlement);
     this.treasuryId = makeWeb3Id(this.config.fees.treasuryLocal);
+    this.store = store ?? createStore(this.config);
+    // Live monetary policy: seeded from env config, then GUI-owned (persisted in the store).
+    this.economics = new EconomicsService(this.store, {
+      feeBps: this.config.fees.protocolBps,
+      blockReward: this.config.fees.blockReward,
+      burnBps: this.config.fees.burnBps,
+      authorityStake: this.config.authorityStake,
+    });
     this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger, {
       treasuryId: this.treasuryId,
-      blockReward: this.config.fees.blockReward,
-      authorityStake: this.config.authorityStake,
+      blockReward: () => this.economics.blockReward,
+      authorityStake: () => this.economics.authorityStake,
     });
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
@@ -74,7 +84,6 @@ export class Kernel {
       () => Date.now(),
     );
     this.connections = new ConnectionHub();
-    this.store = store ?? createStore(this.config);
     const level = process.env.WEB3_LOG_LEVEL ?? 'info';
     this.http = Fastify({ logger: level === 'silent' ? false : { level } });
   }
@@ -152,6 +161,7 @@ export class Kernel {
     await skills.load();
     const connectors = new ConnectorsService(this.store, clock);
     await connectors.load();
+    await this.economics.load();
 
     const ctx: ModuleContext = {
       http: this.http,
@@ -167,6 +177,7 @@ export class Kernel {
       accounts,
       skills,
       connectors,
+      economics: this.economics,
       config: this.config,
       treasuryId: this.treasuryId,
       nodePublicKey: toB64u(this.nodeKeys.publicKey),

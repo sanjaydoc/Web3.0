@@ -79,6 +79,14 @@ await build({
   external: ['electron'],
 });
 
+// Bundle the network's genesis file when the repo has one (network.json at the root) so installed
+// nodes join the network instead of booting solo. Absent file → the node still boots solo.
+const genesis = resolve(repo, 'network.json');
+if (existsSync(genesis)) {
+  cpSync(genesis, resolve(out, 'network.json'));
+  console.log('✓ bundled network.json (genesis defaults)');
+}
+
 // Copy the already-built dashboard (Vite dist) into the app payload.
 const dash = resolve(repo, 'apps/dashboard/dist');
 if (!existsSync(dash)) {

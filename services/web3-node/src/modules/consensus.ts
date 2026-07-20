@@ -17,7 +17,7 @@ export function consensusModule(): Web3Module {
     name: 'consensus',
     version: '0.1.0',
     register(ctx: ModuleContext) {
-      const { http, consensus, config, log } = ctx;
+      const { http, consensus, config, log, bus } = ctx;
       const subscribers = new Set<WsSocket>();
       const dialed = new Set<WebSocket>();
       let closing = false;
@@ -41,6 +41,12 @@ export function consensusModule(): Web3Module {
         }
         if (frame.kind !== 'block' || !frame.block) return;
         const result = consensus.ingest(frame.block);
+        if (result.slashed) {
+          bus.emit({
+            kind: 'authority.slashed',
+            summary: `authority ${result.slashed.slice(0, 16)}… slashed for double-signing — stake burned, removed from the set`,
+          });
+        }
         // Re-gossip only genuinely new, valid blocks so the mesh converges without loops.
         if (result.ok && gossip && frame.block.height === consensus.engine!.height - 1) {
           broadcast(frame.block);

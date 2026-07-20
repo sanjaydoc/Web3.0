@@ -448,7 +448,7 @@ describe('consensus (PoA)', () => {
     const k = new Kernel(
       {
         port: 0,
-        fees: { protocolBps: 0, blockReward: 40_000, treasuryLocal: 'treasury' },
+        fees: { protocolBps: 0, blockReward: 40_000, burnBps: 0, treasuryLocal: 'treasury' },
         consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
       },
       generateKeypair(),
@@ -797,7 +797,10 @@ describe('hosted agents (Genesis launch on node)', () => {
 describe('operator console (my node)', () => {
   it('reports earnings, resources, and persists contribution limits', async () => {
     const k = new Kernel(
-      { port: 0, fees: { protocolBps: 250, blockReward: 0, treasuryLocal: 'treasury' } },
+      {
+        port: 0,
+        fees: { protocolBps: 250, blockReward: 0, burnBps: 0, treasuryLocal: 'treasury' },
+      },
       generateKeypair(),
       new MemoryStore(),
     );
@@ -839,7 +842,10 @@ describe('operator console (my node)', () => {
 describe('operator incentives (fees & block rewards)', () => {
   it('skims a protocol fee from each payment to the node treasury', async () => {
     const k = new Kernel(
-      { port: 0, fees: { protocolBps: 250, blockReward: 0, treasuryLocal: 'treasury' } },
+      {
+        port: 0,
+        fees: { protocolBps: 250, blockReward: 0, burnBps: 0, treasuryLocal: 'treasury' },
+      },
       generateKeypair(),
       new MemoryStore(),
     );
@@ -869,7 +875,7 @@ describe('operator incentives (fees & block rewards)', () => {
       {
         port: 0,
         consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
-        fees: { protocolBps: 0, blockReward: 500, treasuryLocal: 'treasury' },
+        fees: { protocolBps: 0, blockReward: 500, burnBps: 0, treasuryLocal: 'treasury' },
       },
       generateKeypair(),
       new MemoryStore(),
@@ -1262,6 +1268,214 @@ describe('node role + authority approvals', () => {
     // once approved, a fresh request is refused
     expect((await ask(op.token)).statusCode).toBe(400);
     await k.close();
+  });
+});
+
+describe('production economics + exit + slash + replication', () => {
+  it('economics are GUI-editable at runtime: fee, burn and reward apply immediately', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const admin = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'policy', role: 'admin' },
+      })
+      .then((r) => r.json())) as { token: string };
+
+    // defaults off → update via the API (no restart)
+    const updated = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/operator/economics',
+        headers: { 'x-web3-token': admin.token },
+        payload: { feeBps: 100, burnBps: 50, blockReward: 1_000, authorityStake: 60_000 },
+      })
+      .then((r) => r.json())) as { feeBps: number; burnBps: number };
+    expect(updated).toMatchObject({ feeBps: 100, burnBps: 50 });
+
+    // a payment now pays 1% fee to treasury and burns 0.5%
+    const a = makeAgent('feepay');
+    const b = makeAgent('feeget');
+    await k.http.inject({ method: 'POST', url: '/agents', payload: a.registration });
+    await k.http.inject({ method: 'POST', url: '/agents', payload: b.registration });
+    await k.http.inject({
+      method: 'POST',
+      url: '/pay',
+      payload: sealAs(a, { from: a.web3Id, to: b.web3Id, amount: 10_000 }),
+    });
+    expect(k.ledger.balanceOf('treasury@web3.0' as never)).toBe(100);
+    expect(k.ledger.balanceOf('burn@web3.0' as never)).toBe(50);
+    // stats exclude the burn from circulating value and report it
+    const stats = (await k.http.inject({ method: 'GET', url: '/stats' }).then((r) => r.json())) as {
+      burned: number;
+    };
+    expect(stats.burned).toBe(50);
+    await k.close();
+  });
+
+  it('unstake exits the authority set on-chain and refunds the escrow after cooldown', async () => {
+    const k = new Kernel(
+      {
+        port: 0,
+        authorityStake: 50_000,
+        unstakeCooldownMs: 0, // instant maturity for the test; prod default is 24 h
+        // slotMs > 0 so this node can step past the exiting authority's turn (proposer-skip)
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 1 },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const op = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'exiter', role: 'operator' },
+      })
+      .then((r) => r.json())) as { token: string; address: string };
+    const key = toB64u(generateKeypair().publicKey);
+    await k.http.inject({
+      method: 'POST',
+      url: '/operator/stake',
+      headers: { 'x-web3-token': op.token },
+      payload: { nodePublicKey: key },
+    });
+    k.consensus.proposeTick(); // seats the staked key
+    expect(k.consensus.status().authorities).toContain(key);
+    const before = k.ledger.balanceOf(op.address as never);
+
+    const exit = await k.http.inject({
+      method: 'POST',
+      url: '/operator/unstake',
+      headers: { 'x-web3-token': op.token },
+      payload: { nodePublicKey: key },
+    });
+    expect(exit.statusCode).toBe(201);
+    expect((exit.json() as { removalQueued: boolean }).removalQueued).toBe(true);
+    // refund landed (cooldown 0) and the removal rides the next block
+    expect(k.ledger.balanceOf(op.address as never)).toBe(before + 50_000);
+    await k.http.inject({ method: 'POST', url: '/agents', payload: makeAgent('exx').registration });
+    const block = k.consensus.proposeTick();
+    expect(block?.authorityRemove).toBe(key);
+    expect(k.consensus.status().authorities).not.toContain(key);
+    // net stake for the key is now zero, so it will NOT be auto-re-seated
+    expect(k.consensus.stakeOf(key)).toBe(0);
+    // double-withdraw refused
+    const again = await k.http.inject({
+      method: 'POST',
+      url: '/operator/unstake',
+      headers: { 'x-web3-token': op.token },
+      payload: { nodePublicKey: key },
+    });
+    expect(again.statusCode).toBe(400);
+    await k.close();
+  });
+
+  it('slashes a double-signing authority: stake burned, removed from the set', async () => {
+    // Network of A (this node) + B (a staked authority who will equivocate).
+    const bKeys = generateKeypair();
+    const bPub = toB64u(bKeys.publicKey);
+    const k = new Kernel(
+      {
+        port: 0,
+        authorityStake: 50_000,
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const op = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'villain', role: 'operator' },
+      })
+      .then((r) => r.json())) as { token: string };
+    await k.http.inject({
+      method: 'POST',
+      url: '/operator/stake',
+      headers: { 'x-web3-token': op.token },
+      payload: { nodePublicKey: bPub },
+    });
+    const seatBlock = k.consensus.proposeTick()!; // block 0 seats B
+    expect(seatBlock.authorityAdd).toBe(bPub);
+    expect(k.consensus.stakeOf(bPub)).toBe(50_000);
+
+    // B's turn at height 1: B signs TWO different blocks for the same height (equivocation).
+    const { proposeBlock } = await import('@web3/consensus');
+    const head = k.consensus.engine!.head();
+    const ts = new Date().toISOString();
+    const block1 = proposeBlock(bKeys, bPub, 1, head, [], ts);
+    const block2 = proposeBlock(
+      bKeys,
+      bPub,
+      1,
+      head,
+      [],
+      `${ts.slice(0, -1)}9Z`.replace('Z9Z', '9Z'),
+    );
+    expect(block1.hash).not.toBe(block2.hash);
+    expect(k.consensus.ingest(block1).ok).toBe(true); // first block commits normally
+    const verdict = k.consensus.ingest(block2); // second is proof of double-signing
+    expect(verdict.slashed).toBe(bPub);
+    // stake burned to the sink, and the removal is queued for the next block A proposes
+    expect(k.consensus.stakeOf(bPub)).toBe(0);
+    expect(k.ledger.balanceOf('burn@web3.0' as never)).toBe(50_000);
+    await k.http.inject({ method: 'POST', url: '/agents', payload: makeAgent('sl1').registration });
+    const removalBlock = k.consensus.proposeTick();
+    expect(removalBlock?.authorityRemove).toBe(bPub);
+    expect(k.consensus.status().authorities).not.toContain(bPub);
+    await k.close();
+  });
+
+  it('replicates committed foreign entries: balances converge across nodes', async () => {
+    // Node A (authority) and node B (relay following the chain).
+    const aKeys = generateKeypair();
+    const aPub = toB64u(aKeys.publicKey);
+    const mk = (keys: ReturnType<typeof generateKeypair>) =>
+      new Kernel(
+        {
+          port: 0,
+          consensus: { mode: 'poa', authorities: [aPub], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+        },
+        keys,
+        new MemoryStore(),
+      );
+    const nodeA = mk(aKeys);
+    const nodeB = mk(generateKeypair());
+    await nodeA.init();
+    await nodeB.init();
+
+    // Activity happens on A: two agents register and settle a payment.
+    const alice = makeAgent('repa');
+    const bob = makeAgent('repb');
+    await nodeA.http.inject({ method: 'POST', url: '/agents', payload: alice.registration });
+    await nodeA.http.inject({ method: 'POST', url: '/agents', payload: bob.registration });
+    await nodeA.http.inject({
+      method: 'POST',
+      url: '/pay',
+      payload: sealAs(alice, { from: alice.web3Id, to: bob.web3Id, amount: 4_000 }),
+    });
+    const block = nodeA.consensus.proposeTick()!;
+
+    // B has never seen these agents — until the block lands and replication applies the entries.
+    expect(nodeB.ledger.balanceOf(bob.web3Id as never)).toBe(0);
+    expect(nodeB.consensus.ingest(block).ok).toBe(true);
+    expect(nodeB.ledger.balanceOf(bob.web3Id as never)).toBe(
+      nodeA.ledger.balanceOf(bob.web3Id as never),
+    );
+    expect(nodeB.ledger.balanceOf(alice.web3Id as never)).toBe(
+      nodeA.ledger.balanceOf(alice.web3Id as never),
+    );
+    // Re-ingesting the same block (gossip replay / reconnect sync) is idempotent.
+    nodeB.consensus.ingest(block);
+    expect(nodeB.ledger.balanceOf(bob.web3Id as never)).toBe(
+      nodeA.ledger.balanceOf(bob.web3Id as never),
+    );
+    await nodeA.close();
+    await nodeB.close();
   });
 });
 

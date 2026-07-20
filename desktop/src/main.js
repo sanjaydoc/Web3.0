@@ -36,6 +36,10 @@ function startNode() {
       WEB3_PORT: String(NODE_PORT),
       WEB3_NODE_SEED: nodeSeed(),
       WEB3_LOG_LEVEL: 'info',
+      // Genesis defaults bundled with the app (network.json) — the node joins the network out of
+      // the box. GUI-saved settings (storage) live in userData and survive updates.
+      WEB3_NETWORK_FILE: path.join(__dirname, 'network.json'),
+      WEB3_CONFIG_PATH: path.join(app.getPath('userData'), 'node-config.json'),
     },
     stdio: 'inherit',
   });

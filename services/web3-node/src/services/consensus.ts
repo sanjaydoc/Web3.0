@@ -1,4 +1,5 @@
-import { type Block, ConsensusEngine } from '@web3/consensus';
+import { type Block, ConsensusEngine, hashBlock } from '@web3/consensus';
+import { fromB64u, verifyString } from '@web3/crypto';
 import type { Keypair } from '@web3/crypto';
 import { toB64u } from '@web3/crypto';
 import type { Ledger } from '@web3/ledger';
@@ -30,11 +31,22 @@ export interface ConsensusStatus {
 export const STAKE_ESCROW_ID = 'stake@web3.0';
 /** Payment-memo prefix that binds a stake to a node key: `authority-stake:<base64url key>`. */
 export const STAKE_MEMO_PREFIX = 'authority-stake:';
+/** Refund memo prefix (escrow → staker) for voluntary exits. */
+export const UNSTAKE_MEMO_PREFIX = 'authority-unstake:';
+/** Slash memo prefix (escrow → burn) when an authority equivocates. */
+export const SLASH_MEMO_PREFIX = 'authority-slash:';
+/** Where slashed stakes go — same sink as the fee burn. */
+const BURN_SINK = 'burn@web3.0';
 
 export class ConsensusCoordinator {
   readonly enabled: boolean;
   readonly engine: ConsensusEngine | null;
   private includedLocalEntries = 0;
+  /** Foreign entry hashes already applied to local balances (replication dedupe). */
+  private readonly appliedExternal = new Set<string>();
+  /** height → committed {proposer, hash}: the evidence base for equivocation (double-sign) slashing. */
+  private readonly committedAt = new Map<number, { proposer: string; hash: string }>();
+  private readonly slashed = new Set<string>();
 
   constructor(
     private readonly config: ConsensusConfig,
@@ -42,12 +54,13 @@ export class ConsensusCoordinator {
     private readonly ledger: Ledger,
     private readonly rewards: {
       treasuryId: string;
-      blockReward: number;
-      authorityStake: number;
+      /** Live values (GUI-editable economics) — read at use time, not construction. */
+      blockReward: () => number;
+      authorityStake: () => number;
     } = {
       treasuryId: '',
-      blockReward: 0,
-      authorityStake: 0,
+      blockReward: () => 0,
+      authorityStake: () => 0,
     },
   ) {
     this.enabled = config.mode === 'poa';
@@ -64,17 +77,77 @@ export class ConsensusCoordinator {
    * out-of-turn once earlier authorities have missed their slots (proposer-skip keeps the chain
    * live if a node is down).
    */
-  /** Total on-ledger stake escrowed for a node key (payments to the escrow with its memo). */
+  /** Net on-ledger stake for a node key: escrow inflows minus refunds and slashes. */
   stakeOf(key: string): number {
     let total = 0;
     for (const e of this.ledger.all()) {
       if (e.type !== 'payment') continue;
-      const d = e.data as { to?: string; amount?: number; memo?: string };
+      const d = e.data as { from?: string | null; to?: string; amount?: number; memo?: string };
       if (d.to === STAKE_ESCROW_ID && d.memo === `${STAKE_MEMO_PREFIX}${key}`) {
         total += d.amount ?? 0;
       }
+      if (
+        d.from === STAKE_ESCROW_ID &&
+        (d.memo === `${UNSTAKE_MEMO_PREFIX}${key}` || d.memo === `${SLASH_MEMO_PREFIX}${key}`)
+      ) {
+        total -= d.amount ?? 0;
+      }
     }
-    return total;
+    return Math.max(0, total);
+  }
+
+  /** Queue an on-chain removal (voluntary exit) — rides in this node's next block. */
+  queueRemoval(key: string): boolean {
+    if (!this.engine) return false;
+    if (!this.engine.chain.authorities.includes(this.engine.publicKeyB64u)) return false;
+    this.engine.queueAuthorityRemove(key);
+    return true;
+  }
+
+  /**
+   * Equivocation slashing: given a block claiming an already-committed height, check whether it is
+   * a SECOND validly-signed block by the same proposer — cryptographic proof of double-signing.
+   * If so, burn the proposer's entire stake and queue its on-chain removal. Returns the slashed
+   * key, or null. Evidence is verified (hash + signature) before anyone loses anything.
+   */
+  private detectEquivocation(block: Block): string | null {
+    const committed = this.committedAt.get(block.height);
+    if (!committed) return null;
+    if (committed.proposer !== block.proposer || committed.hash === block.hash) return null;
+    if (this.slashed.has(block.proposer)) return null;
+    if (hashBlock(block) !== block.hash) return null; // forged evidence
+    if (!verifyString(fromB64u(block.proposer), block.hash, block.signature)) return null;
+    // Proven double-sign. Burn the stake (if any) and remove the authority on-chain.
+    this.slashed.add(block.proposer);
+    const stake = this.stakeOf(block.proposer);
+    if (stake > 0) {
+      this.ledger.transfer(
+        STAKE_ESCROW_ID as Parameters<Ledger['transfer']>[0],
+        BURN_SINK as Parameters<Ledger['transfer']>[0],
+        stake,
+        { memo: `${SLASH_MEMO_PREFIX}${block.proposer}` },
+      );
+    }
+    this.engine?.queueAuthorityRemove(block.proposer);
+    return block.proposer;
+  }
+
+  private recordCommitted(block: Block): void {
+    this.committedAt.set(block.height, { proposer: block.proposer, hash: block.hash });
+  }
+
+  /**
+   * State replication: apply the balance effects of a committed block's FOREIGN entries into this
+   * node's ledger (entries this node authored are already local). Dedupe by entry hash, so gossip
+   * replays and reconnect re-syncs are idempotent.
+   */
+  private replicate(block: Block): void {
+    const local = new Set(this.ledger.all().map((e) => e.hash));
+    for (const entry of block.entries) {
+      if (local.has(entry.hash) || this.appliedExternal.has(entry.hash)) continue;
+      this.ledger.applyExternal(entry);
+      this.appliedExternal.add(entry.hash);
+    }
   }
 
   /**
@@ -83,7 +156,7 @@ export class ConsensusCoordinator {
    * No admin in the loop; the "activation queue" is simply the block cadence.
    */
   private queueStakedAuthorities(): void {
-    if (!this.engine || this.rewards.authorityStake <= 0) return;
+    if (!this.engine || this.rewards.authorityStake() <= 0) return;
     const totals = new Map<string, number>();
     for (const e of this.ledger.all()) {
       if (e.type !== 'payment') continue;
@@ -93,7 +166,7 @@ export class ConsensusCoordinator {
       totals.set(key, (totals.get(key) ?? 0) + (d.amount ?? 0));
     }
     for (const [key, total] of totals) {
-      if (total >= this.rewards.authorityStake && !this.engine.chain.authorities.includes(key)) {
+      if (total >= this.rewards.authorityStake() && !this.engine.chain.authorities.includes(key)) {
         this.engine.queueAuthorityAdd(key);
       }
     }
@@ -107,13 +180,12 @@ export class ConsensusCoordinator {
     if (pending.length === 0) return null;
     const block = this.engine.proposeIfDue(pending, Date.now());
     if (block) {
+      this.recordCommitted(block);
       this.includedLocalEntries = all.length;
       // Block reward: producing a block mints aETH to this node's treasury (operator incentive).
-      if (this.rewards.blockReward > 0 && this.rewards.treasuryId) {
-        this.ledger.mint(
-          this.rewards.treasuryId as Parameters<Ledger['mint']>[0],
-          this.rewards.blockReward,
-        );
+      const reward = this.rewards.blockReward();
+      if (reward > 0 && this.rewards.treasuryId) {
+        this.ledger.mint(this.rewards.treasuryId as Parameters<Ledger['mint']>[0], reward);
       }
     }
     return block;
@@ -148,12 +220,23 @@ export class ConsensusCoordinator {
     };
   }
 
-  /** Apply a block received from a peer; returns whether it was accepted (new + valid). */
-  ingest(block: Block): { ok: boolean; reason?: string } {
+  /**
+   * Apply a block received from a peer; returns whether it was accepted (new + valid), plus the
+   * slashed key when the block is proof of a double-sign.
+   */
+  ingest(block: Block): { ok: boolean; reason?: string; slashed?: string } {
     if (!this.engine) return { ok: false, reason: 'consensus disabled' };
-    // Ignore blocks we already have (idempotent gossip).
-    if (block.height < this.engine.height) return { ok: true };
-    return this.engine.receive(block);
+    // A block for an already-committed height is either idempotent gossip — or evidence.
+    if (block.height < this.engine.height) {
+      const slashed = this.detectEquivocation(block);
+      return slashed ? { ok: true, slashed } : { ok: true };
+    }
+    const result = this.engine.receive(block);
+    if (result.ok) {
+      this.recordCommitted(block);
+      this.replicate(block);
+    }
+    return result;
   }
 
   status(): ConsensusStatus {
