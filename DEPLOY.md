@@ -100,12 +100,12 @@ sudo npm i -g pnpm pm2                   # pnpm to build, pm2 to keep it running
 
 ### 2.4 Get the code and build
 
-The backend lives in the **private** `Web3.0` repo. Use a deploy key or a fine-grained PAT to clone
-it on the server (it stays private — only your VM has it):
+The backend lives in the **private** `web3-core` repo. Use a deploy key or a fine-grained PAT to
+clone it on the server (it stays private — only your VM has it):
 
 ```bash
-git clone https://github.com/sanjaydoc/Web3.0.git
-cd Web3.0
+git clone https://github.com/sanjaydoc/web3-core.git
+cd web3-core
 pnpm install
 pnpm -r build                            # builds all workspace packages incl. @web3/node
 ```
