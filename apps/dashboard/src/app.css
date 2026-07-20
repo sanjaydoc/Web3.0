@@ -806,6 +806,53 @@ button.connector:not(:disabled):hover {
   flex-shrink: 0;
 }
 
+/* Install notes under the download buttons — light text + dark code chips (we're on a dark panel,
+   so the light-theme .hint/<code> styles don't apply here). */
+.dl-blurb {
+  margin: 14px 2px 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: #94a3b8;
+}
+.dl-blurb b {
+  color: #e2e8f0;
+}
+.dl-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dl-note {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+}
+.dl-note b {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.dl-note-os {
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.dl-panel code {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  padding: 0.08rem 0.4rem;
+  color: #cde3d3;
+  font-size: 0.85em;
+}
+
 /* platform manual-setup steps rendered inside a mini terminal */
 .term-steps {
   margin: 0;

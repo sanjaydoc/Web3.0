@@ -457,16 +457,37 @@ function DesktopApp() {
           </a>
         ))}
       </div>
-      <p className="hint" style={{ margin: '10px 2px 0' }}>
-        Installs <b>Web3.0</b> (W3 icon) with app shortcuts. Launch it and it boots a node in the
-        background and opens this dashboard in its own window — no Node.js, pnpm, or terminal needed.
-        The build is <b>unsigned</b>. On <b>Windows</b>, SmartScreen shows “unknown publisher” →{' '}
-        <b>More info → Run anyway</b>. On <b>macOS</b>, right-click the app → <b>Open</b> the first
-        time (or run <code>xattr -cr /Applications/Web3.0.app</code>). On <b>Linux</b>, either{' '}
-        <code>chmod +x</code> the <b>.AppImage</b> and double-click it, or{' '}
-        <code>sudo apt install ./web3_*.deb</code>. Runs in-memory by default; set{' '}
-        <code>WEB3_MONGODB_URI</code> to persist.
+      <p className="dl-blurb">
+        Installs as <b>Web3.0</b> (W3 icon) — launch it and it boots a node and opens this dashboard
+        in one window. No Node.js, pnpm, or terminal. The build is unsigned, so the first launch
+        needs one extra click:
       </p>
+      <div className="dl-notes">
+        <div className="dl-note">
+          <span className="dl-note-os">Windows</span>
+          <span>
+            SmartScreen shows “unknown publisher” → <b>More info → Run anyway</b>
+          </span>
+        </div>
+        <div className="dl-note">
+          <span className="dl-note-os">macOS</span>
+          <span>
+            right-click the app → <b>Open</b> · or <code>xattr -cr /Applications/Web3.0.app</code>
+          </span>
+        </div>
+        <div className="dl-note">
+          <span className="dl-note-os">Linux</span>
+          <span>
+            <code>chmod +x</code> the AppImage · or <code>sudo apt install ./web3_*.deb</code>
+          </span>
+        </div>
+        <div className="dl-note">
+          <span className="dl-note-os">Data</span>
+          <span>
+            runs in-memory by default — set <code>WEB3_MONGODB_URI</code> to persist
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
