@@ -11,7 +11,8 @@ import { type BlockValidation, Blockchain } from './chain.js';
  */
 export class ConsensusEngine {
   readonly chain: Blockchain;
-  private readonly myIndex: number;
+  /** Membership changes queued by governance, carried in the next block this node proposes. */
+  private readonly pendingAuthorityAdds: string[] = [];
 
   constructor(
     private readonly keys: Keypair,
@@ -21,7 +22,11 @@ export class ConsensusEngine {
     readonly slotMs = 0,
   ) {
     this.chain = new Blockchain(authorities, slotMs);
-    this.myIndex = authorities.indexOf(publicKeyB64u);
+  }
+
+  /** This node's position in the LIVE authority set (-1 = not an authority right now). */
+  private get myIndex(): number {
+    return this.chain.authorities.indexOf(this.publicKeyB64u);
   }
 
   get height(): number {
@@ -40,22 +45,33 @@ export class ConsensusEngine {
   }
 
   /**
+   * Queue an authority key to be seated on-chain: the next block this node proposes carries it as
+   * `authorityAdd`, and every node applies the membership change when that block lands. Ignored if
+   * the key is already an authority or already queued.
+   */
+  queueAuthorityAdd(key: string): void {
+    const k = key.trim();
+    if (!k || this.chain.authorities.includes(k) || this.pendingAuthorityAdds.includes(k)) return;
+    this.pendingAuthorityAdds.push(k);
+  }
+
+  /** The next queued membership change that is still valid to seat. */
+  private nextAuthorityAdd(): string | undefined {
+    while (this.pendingAuthorityAdds.length > 0) {
+      const k = this.pendingAuthorityAdds[0]!;
+      if (!this.chain.authorities.includes(k)) return k;
+      this.pendingAuthorityAdds.shift(); // someone else already seated it
+    }
+    return undefined;
+  }
+
+  /**
    * Propose the next block from `entries` if it's this node's turn, applying it locally and
    * returning it to broadcast. Returns null when it's another authority's turn.
    */
   proposeIfMyTurn(entries: LedgerEntry[]): Block | null {
     if (!this.isMyTurn()) return null;
-    const block = proposeBlock(
-      this.keys,
-      this.publicKeyB64u,
-      this.chain.height,
-      this.chain.head(),
-      entries,
-      this.now(),
-    );
-    const result = this.chain.apply(block);
-    if (!result.ok) throw new Error(`refused to propose an invalid block: ${result.reason}`);
-    return block;
+    return this.propose(entries, 0, this.now());
   }
 
   /**
@@ -86,6 +102,7 @@ export class ConsensusEngine {
   }
 
   private propose(entries: LedgerEntry[], round: number, ts: string): Block {
+    const authorityAdd = this.nextAuthorityAdd();
     const block = proposeBlock(
       this.keys,
       this.publicKeyB64u,
@@ -94,9 +111,11 @@ export class ConsensusEngine {
       entries,
       ts,
       round,
+      authorityAdd,
     );
     const result = this.chain.apply(block);
     if (!result.ok) throw new Error(`refused to propose an invalid block: ${result.reason}`);
+    if (authorityAdd) this.pendingAuthorityAdds.shift(); // it's on-chain now
     return block;
   }
 

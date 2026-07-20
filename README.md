@@ -339,8 +339,11 @@ and invite-only**.
 - **What it does:** signs blocks (ML-DSA / post-quantum), orders the ledger, keeps consensus.
 - **Who runs it:** you at launch, then a handful of trusted, independent partners. Not strangers —
   see **[GOVERNANCE.md](GOVERNANCE.md)**.
-- **Needs:** an always-on server with good uptime; its key must be in the authority set
-  (`WEB3_AUTHORITIES`).
+- **Needs:** an always-on server with good uptime; its key must be in the authority set.
+  `WEB3_AUTHORITIES` seeds the **genesis** set; after launch, new authorities are seated
+  **on-chain**: an operator requests authority status in the console, the admin approves, and the
+  key rides in the next block (`authorityAdd`) — every node applies the membership change
+  automatically, no restarts or config edits.
 - **Earns:** a **block reward** each time it proposes a block, plus protocol fees.
 - **How many:** ~4 to launch, keep **> ⅔ online**. Proposer-skip means one going offline won't stall
   the chain.

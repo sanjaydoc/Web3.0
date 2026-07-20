@@ -18,17 +18,28 @@ export interface BlockValidation {
  */
 export class Blockchain {
   private readonly _blocks: Block[] = [];
+  /** The genesis authority set (what the chain was constructed with) — replay starts from here. */
+  readonly genesisAuthorities: readonly string[];
+  /** The LIVE authority set: genesis + every on-chain `authorityAdd` applied so far, in order. */
+  private readonly _authorities: string[];
 
   /**
-   * @param authorities ordered proposer set (base64url pubkeys)
+   * @param authorities genesis proposer set (base64url pubkeys). The live set grows as blocks
+   *                    carrying `authorityAdd` are applied — membership is chain state.
    * @param slotMs      how long an authority's turn lasts before the next may step in. 0 disables
    *                    skipping (strict round-robin: only round-0 blocks are valid).
    */
   constructor(
-    readonly authorities: string[],
+    authorities: string[],
     readonly slotMs = 0,
   ) {
     if (authorities.length === 0) throw new Error('a PoA chain needs at least one authority');
+    this.genesisAuthorities = [...authorities];
+    this._authorities = [...authorities];
+  }
+
+  get authorities(): readonly string[] {
+    return this._authorities;
   }
 
   get blocks(): readonly Block[] {
@@ -43,7 +54,7 @@ export class Blockchain {
 
   /** The authority whose turn it is to propose the block at `height` in the given skip round. */
   expectedProposer(height: number, round = 0): string {
-    return this.authorities[(height + round) % this.authorities.length]!;
+    return this._authorities[(height + round) % this._authorities.length]!;
   }
 
   /** Validate a block against the current head without applying it. */
@@ -78,6 +89,16 @@ export class Blockchain {
         return { ok: false, reason: 'out-of-turn block is too early for its round' };
       }
     }
+    // On-chain membership change: the seated key must be plausible and genuinely new. Only a
+    // current authority can carry one (the proposer check above already guarantees that).
+    if (block.authorityAdd !== undefined) {
+      if (typeof block.authorityAdd !== 'string' || block.authorityAdd.trim().length < 32) {
+        return { ok: false, reason: 'authorityAdd is not a plausible authority key' };
+      }
+      if (this._authorities.includes(block.authorityAdd)) {
+        return { ok: false, reason: 'authorityAdd key is already an authority' };
+      }
+    }
     if (hashBlock(block) !== block.hash) {
       return { ok: false, reason: 'block hash mismatch (tampered content)' };
     }
@@ -90,13 +111,17 @@ export class Blockchain {
   /** Validate and append a block. Returns the validation result; only appends when valid. */
   apply(block: Block): BlockValidation {
     const result = this.validate(block);
-    if (result.ok) this._blocks.push(block);
+    if (result.ok) {
+      this._blocks.push(block);
+      // Seat the new authority — effective from the next height (rotation includes it from here on).
+      if (block.authorityAdd) this._authorities.push(block.authorityAdd);
+    }
     return result;
   }
 
   /** Re-validate the whole chain from genesis (what an auditor / a syncing node runs). */
   verifyChain(): BlockValidation {
-    const replay = new Blockchain(this.authorities, this.slotMs);
+    const replay = new Blockchain([...this.genesisAuthorities], this.slotMs);
     for (const block of this._blocks) {
       const result = replay.apply(block);
       if (!result.ok) return { ok: false, reason: `block #${block.height}: ${result.reason}` };

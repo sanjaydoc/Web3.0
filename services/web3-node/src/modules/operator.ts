@@ -222,11 +222,20 @@ export function operatorModule(): Web3Module {
         target.decidedAt = ctx.clock();
         target.decidedBy = admin?.address ?? 'admin-token';
         await ctx.store.saveSetting(AUTHORITY_REQUESTS_KEY, all);
+        // Approval SEATS the authority on-chain: the key rides in the next block this node
+        // proposes and every node applies the membership change — no restarts, no config edits.
+        const seat =
+          action === 'approve'
+            ? consensus.seatAuthority(target.nodePublicKey)
+            : { seated: false, note: 'rejected' };
         ctx.bus.emit({
           kind: 'authority.decided',
-          summary: `authority request from ${target.address} ${target.status}`,
+          summary:
+            action === 'approve'
+              ? `authority request from ${target.address} approved — ${seat.note}`
+              : `authority request from ${target.address} rejected`,
         });
-        return target;
+        return { ...target, seated: seat.seated, seatNote: seat.note };
       });
 
       // Remove your own position from the map.

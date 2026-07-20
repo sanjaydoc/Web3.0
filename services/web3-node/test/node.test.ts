@@ -1,5 +1,5 @@
 import { toMinorUnits } from '@web3/core';
-import { generateKeypair } from '@web3/crypto';
+import { generateKeypair, toB64u } from '@web3/crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 process.env.WEB3_LOG_LEVEL = 'silent';
@@ -349,6 +349,58 @@ describe('consensus (PoA)', () => {
     const status = k.consensus.status();
     expect(status).toMatchObject({ mode: 'poa', enabled: true, height: 1 });
     expect(status.authorities).toContain(status.authority);
+    await k.close();
+  });
+
+  it('admin approval seats the authority on-chain via the next proposed block', async () => {
+    const k = new Kernel(
+      {
+        port: 0,
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { token: string; address: string });
+    const admin = await signup('seatgov', 'admin');
+    const op = await signup('candidate', 'operator');
+
+    // The candidate's node key (a different machine's identity, not this node's own key).
+    const candidateKey = toB64u(generateKeypair().publicKey);
+    await k.http.inject({
+      method: 'POST',
+      url: '/operator/authority/request',
+      headers: { 'x-web3-token': op.token },
+      payload: { nodePublicKey: candidateKey },
+    });
+
+    // Approve → the coordinator queues an on-chain authorityAdd (this node IS an authority).
+    const decided = (await k.http
+      .inject({
+        method: 'POST',
+        url: '/operator/authority/decide',
+        headers: { 'x-web3-token': admin.token },
+        payload: { address: op.address, action: 'approve' },
+      })
+      .then((r) => r.json())) as { seated: boolean; seatNote: string };
+    expect(decided.seated).toBe(true);
+
+    // The next block this node proposes carries the membership change...
+    await k.http.inject({
+      method: 'POST',
+      url: '/agents',
+      payload: makeAgent('seed1').registration,
+    });
+    const block = k.consensus.proposeTick();
+    expect(block?.authorityAdd).toBe(candidateKey);
+
+    // ...and the live authority set now includes the new key; the chain still replays clean.
+    expect(k.consensus.status().authorities).toContain(candidateKey);
+    expect(k.consensus.engine!.chain.verifyChain()).toMatchObject({ ok: true });
     await k.close();
   });
 });

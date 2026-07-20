@@ -159,4 +159,61 @@ describe('PoA consensus', () => {
     (eng.blocks[1] as { entries: unknown[] }).entries = [];
     expect(eng.chain.verifyChain().ok).toBe(false);
   });
+
+  it('seats a new authority on-chain: every node applies it and the new node joins rotation', () => {
+    const [a, b, c] = [authority(), authority(), authority()];
+    const genesis = [a.pub, b.pub];
+    const engA = new ConsensusEngine(a.keys, a.pub, genesis);
+    const engB = new ConsensusEngine(b.keys, b.pub, genesis);
+    // C starts as a follower (relay): same genesis set, not a member.
+    const engC = new ConsensusEngine(c.keys, c.pub, genesis);
+
+    // Governance approves C → A queues the membership change and carries it in its next block.
+    engA.queueAuthorityAdd(c.pub);
+    const seatBlock = engA.proposeIfMyTurn(sampleEntries('s'));
+    expect(seatBlock?.authorityAdd).toBe(c.pub);
+
+    // Everyone applies the block — and with it, the membership change. No restarts.
+    expect(engB.receive(seatBlock!).ok).toBe(true);
+    expect(engC.receive(seatBlock!).ok).toBe(true);
+    for (const eng of [engA, engB, engC]) {
+      expect(eng.chain.authorities).toEqual([a.pub, b.pub, c.pub]);
+    }
+
+    // Rotation now includes C: height 1 → B, height 2 → C. C proposes and A/B accept.
+    const b1 = engB.proposeIfMyTurn(sampleEntries('t'));
+    expect(b1).not.toBeNull();
+    expect(engA.receive(b1!).ok).toBe(true);
+    expect(engC.receive(b1!).ok).toBe(true);
+    expect(engC.isMyTurn()).toBe(true); // the freshly-seated authority's first turn
+    const b2 = engC.proposeIfMyTurn(sampleEntries('u'));
+    expect(b2).not.toBeNull();
+    expect(engA.receive(b2!).ok).toBe(true);
+    expect(engB.receive(b2!).ok).toBe(true);
+
+    // Replay from genesis re-derives the same membership — the change is chain state, not config.
+    expect(engA.chain.verifyChain().ok).toBe(true);
+    expect(engA.chain.genesisAuthorities).toEqual(genesis);
+  });
+
+  it('rejects seating a key that is already an authority', () => {
+    const [a, b] = [authority(), authority()];
+    const chain = new Blockchain([a.pub, b.pub]);
+    const dup = proposeBlock(
+      a.keys,
+      a.pub,
+      0,
+      chain.head(),
+      [],
+      new Date().toISOString(),
+      0,
+      b.pub, // already in the set
+    );
+    expect(chain.apply(dup).ok).toBe(false);
+    // and a queued duplicate is simply dropped rather than proposed
+    const engA = new ConsensusEngine(a.keys, a.pub, [a.pub, b.pub]);
+    engA.queueAuthorityAdd(b.pub);
+    const block = engA.proposeIfMyTurn([]);
+    expect(block?.authorityAdd).toBeUndefined();
+  });
 });

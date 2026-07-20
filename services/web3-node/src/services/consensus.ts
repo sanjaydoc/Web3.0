@@ -73,6 +73,35 @@ export class ConsensusCoordinator {
     return block;
   }
 
+  /**
+   * Seat a new authority on-chain: queue an `authorityAdd` that rides in the next block this node
+   * proposes, so every node in the network applies the membership change deterministically — no
+   * restarts, no config edits. Only works when this node is itself an authority on a live chain.
+   */
+  seatAuthority(key: string): { seated: boolean; note: string } {
+    if (!this.engine) {
+      return {
+        seated: false,
+        note: 'solo node — no shared chain to seat into (recorded for when the network launches)',
+      };
+    }
+    const me = this.engine.publicKeyB64u;
+    if (!this.engine.chain.authorities.includes(me)) {
+      return {
+        seated: false,
+        note: 'this node is a relay, not an authority — approve from an authority node to seat on-chain',
+      };
+    }
+    if (this.engine.chain.authorities.includes(key)) {
+      return { seated: true, note: 'already an authority' };
+    }
+    this.engine.queueAuthorityAdd(key);
+    return {
+      seated: true,
+      note: 'queued on-chain — seated when this node next proposes a block; all nodes apply it automatically',
+    };
+  }
+
   /** Apply a block received from a peer; returns whether it was accepted (new + valid). */
   ingest(block: Block): { ok: boolean; reason?: string } {
     if (!this.engine) return { ok: false, reason: 'consensus disabled' };
@@ -82,7 +111,7 @@ export class ConsensusCoordinator {
   }
 
   status(): ConsensusStatus {
-    const authorities = this.engine?.chain.authorities ?? this.config.authorities;
+    const authorities = [...(this.engine?.chain.authorities ?? this.config.authorities)];
     const height = this.engine?.height ?? 0;
     return {
       mode: this.config.mode,

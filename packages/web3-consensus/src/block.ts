@@ -24,6 +24,13 @@ export interface BlockCore {
   entries: LedgerEntry[];
   /** ISO-8601 proposal time. */
   ts: string;
+  /**
+   * On-chain governance: a base64url authority key this block seats into the authority set,
+   * effective from the next block. Because it rides in a signed, consensus-validated block, every
+   * node applies the membership change deterministically at the same height — no restarts, no
+   * out-of-band config edits.
+   */
+  authorityAdd?: string;
 }
 
 /** A proposed, signed block. `signature` is the proposer's ML-DSA signature over `hash`. */
@@ -41,6 +48,8 @@ export function hashBlock(core: BlockCore): string {
     round: core.round,
     entries: core.entries,
     ts: core.ts,
+    // Included only when present so blocks without a membership change keep their pre-existing hash.
+    ...(core.authorityAdd ? { authorityAdd: core.authorityAdd } : {}),
   });
 }
 
@@ -56,6 +65,7 @@ export function proposeBlock(
   entries: LedgerEntry[],
   now: string,
   round = 0,
+  authorityAdd?: string,
 ): Block {
   const core: BlockCore = {
     height,
@@ -64,6 +74,7 @@ export function proposeBlock(
     round,
     entries,
     ts: now,
+    ...(authorityAdd ? { authorityAdd } : {}),
   };
   const hash = hashBlock(core);
   return { ...core, hash, signature: signString(keys.secretKey, hash) };

@@ -118,8 +118,10 @@ function AuthorityQueue() {
       {approved.length > 0 && (
         <>
           <p className="muted" style={{ margin: '14px 0 6px' }}>
-            Approved — add these keys to every node's <code>WEB3_AUTHORITIES</code>{' '}
-            (comma-separated) and restart to seat them:
+            Approved — seated <b>on-chain automatically</b> when the chain is live (the key rides in
+            the next block and every node applies it; the new authority starts signing at its turn).
+            On a solo node it's recorded for launch; these keys also seed{' '}
+            <code>WEB3_AUTHORITIES</code> at genesis:
           </p>
           {approved.map((r) => (
             <div key={r.address} className="mono-hash" style={{ padding: '2px 0' }}>
