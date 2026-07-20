@@ -230,7 +230,7 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
               <span>{c.name}</span>
               <span className={`chip ${c.on ? 'allow' : 'deny'}`}>{c.on ? 'active' : 'idle'}</span>
             </div>
-            <div className="muted" style={{ fontSize: '0.8rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
               {c.kind}
             </div>
             <div style={{ marginTop: 6 }}>{c.detail}</div>
@@ -320,7 +320,7 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
                   <span>{c.name}</span>
                   <span className="chip allow">custom</span>
                 </div>
-                <div className="muted" style={{ fontSize: '0.8rem' }}>
+                <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
                   {c.category}
                 </div>
                 {c.description && <div style={{ marginTop: 6 }}>{c.description}</div>}
@@ -344,7 +344,7 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
                     {it.supported ? 'supported' : 'available'}
                   </span>
                 </div>
-                <div className="muted" style={{ fontSize: '0.82rem' }}>
+                <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
                   {it.note}
                 </div>
               </div>

@@ -94,7 +94,13 @@ export function Operator() {
           <div className="grid-2" style={{ marginBottom: 18 }}>
             <div className="card">
               <div className="section-title">Earnings</div>
-              <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em' }}>
+              <div
+                style={{
+                  fontFamily: 'var(--serif)',
+                  fontSize: 'var(--fs-xl)',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 {e?.formatted}
               </div>
               <p className="muted" style={{ margin: '2px 0 12px' }}>

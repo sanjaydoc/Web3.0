@@ -1,5 +1,17 @@
 /* Web3.0 console shell — sidebar + views, built on the theme tokens. */
 
+/* Type scale — every font-size in the console snaps to one of these steps so text reads as one
+   system (fine print < labels < body < lead < card title < section title < page title). */
+:root {
+  --fs-xs: 0.74rem; /* fine print: eyebrows, footers, uppercase keys */
+  --fs-sm: 0.8rem; /* labels, meta, hints, chips, mono hashes */
+  --fs-base: 0.9rem; /* body: tables, nav, inputs, buttons, feed */
+  --fs-md: 1.05rem; /* leads / emphasized body */
+  --fs-title: 1.15rem; /* card + tile headings, brand */
+  --fs-lg: 1.3rem; /* section titles */
+  --fs-xl: 1.8rem; /* page titles, stat numbers */
+}
+
 body {
   background: var(--paper-2);
 }
@@ -27,7 +39,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: var(--fs-title);
   letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
@@ -43,7 +55,7 @@ body {
   font-size: 1rem;
 }
 .side .tagline {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
   margin: 0 0 14px 2px;
 }
@@ -62,7 +74,7 @@ body {
   border: none;
   background: none;
   border-radius: calc(var(--radius-sm) - 2px);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
@@ -78,7 +90,7 @@ body {
   gap: 0.5rem;
   padding: 0.5rem 0.7rem;
   border-radius: var(--radius-sm);
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
   font-weight: 500;
   color: var(--ink-2);
   cursor: pointer;
@@ -95,13 +107,13 @@ body {
   color: #fff;
 }
 .navitem .count {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: inherit;
   opacity: 0.7;
 }
 .side .foot {
   margin-top: auto;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: var(--faint);
   display: flex;
   align-items: center;
@@ -120,7 +132,7 @@ body {
   margin-bottom: 20px;
 }
 .page-head h1 {
-  font-size: 2rem;
+  font-size: var(--fs-xl);
 }
 
 /* --- stat tiles --------------------------------------------------------- */
@@ -138,14 +150,14 @@ body {
   padding: 16px 18px;
 }
 .stat .k {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 .stat .n {
   font-family: var(--serif);
-  font-size: 1.85rem;
+  font-size: var(--fs-xl);
   line-height: 1.1;
   margin-top: 6px;
   white-space: nowrap;
@@ -171,7 +183,7 @@ body {
   align-items: center;
   padding: 0.62rem 0.2rem;
   border-bottom: 1px solid var(--hair);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 .feed-row:last-child {
   border-bottom: 0;
@@ -179,7 +191,7 @@ body {
 .feed-row .when {
   color: var(--faint);
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
 }
 .feed-row .summary {
   color: var(--ink-2);
@@ -188,7 +200,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--muted);
 }
@@ -223,14 +235,14 @@ body {
 }
 .mono-hash {
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .pill-live {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--ok);
 }
@@ -248,7 +260,7 @@ body {
 }
 .section-title {
   font-family: var(--serif);
-  font-size: 1.3rem;
+  font-size: var(--fs-lg);
   margin-bottom: 12px;
 }
 .empty {
@@ -272,7 +284,7 @@ body {
   grid-column: 1 / -1;
 }
 .field label {
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   font-weight: 600;
 }
@@ -280,7 +292,7 @@ body {
 .field select,
 .field textarea {
   font-family: var(--sans);
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
   color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--hair);
@@ -298,7 +310,7 @@ body {
   min-height: 60px;
 }
 .field .hint {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: var(--faint);
 }
 .gen-actions {
@@ -308,12 +320,12 @@ body {
   margin: 16px 0 8px;
 }
 .copied {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--ok);
   font-weight: 600;
 }
 .steps {
-  font-size: 0.86rem;
+  font-size: var(--fs-base);
   color: var(--ink-2);
   padding-left: 1.1rem;
   margin: 0;
@@ -358,7 +370,7 @@ body {
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: 10px;
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
 }
 .note-ok {
   background: color-mix(in srgb, var(--ok) 12%, transparent);
@@ -373,7 +385,7 @@ body {
   grid-template-columns: auto 1fr;
   gap: 6px 16px;
   margin: 6px 0 12px;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
 }
 .kv dt {
   color: var(--muted);
@@ -393,7 +405,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   border-top: 1px solid var(--hair);
   padding-top: 5px;
 }
@@ -433,7 +445,7 @@ button.connector:not(:disabled):hover {
 }
 .conn-cta {
   margin-top: 12px;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -604,7 +616,7 @@ button.connector:not(:disabled):hover {
   line-height: 1;
 }
 .net-metrics span {
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: 0.16em;
   color: #7f93a8;
   margin-top: 4px;
@@ -655,7 +667,7 @@ button.connector:not(:disabled):hover {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   line-height: 1.7;
   overflow: hidden;
 }
@@ -903,7 +915,7 @@ button.connector:not(:disabled):hover {
   align-items: center;
   gap: 0.55rem;
   font-family: "Newsreader", serif;
-  font-size: 1.4rem;
+  font-size: var(--fs-lg);
   font-weight: 500;
 }
 .l-badge {
@@ -921,7 +933,7 @@ button.connector:not(:disabled):hover {
 .l-doclink {
   color: #9aa6bd;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 .l-doclink:hover {
   color: #e8ecf4;
@@ -947,7 +959,7 @@ button.connector:not(:disabled):hover {
 .l-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: #22e3a7;
   font-weight: 700;
 }
@@ -965,7 +977,7 @@ button.connector:not(:disabled):hover {
 }
 .l-lead {
   color: #9aa6bd;
-  font-size: 1.06rem;
+  font-size: var(--fs-md);
   max-width: 34rem;
   width: 100%;
   margin-top: 1.2rem;
@@ -986,11 +998,11 @@ button.connector:not(:disabled):hover {
 .l-stats b {
   font-family: "JetBrains Mono", monospace;
   color: #e8ecf4;
-  font-size: 1.05rem;
+  font-size: var(--fs-md);
 }
 .l-stats span {
   color: #6b7690;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
 }
 .l-card {
   min-width: 0;
@@ -1020,7 +1032,7 @@ button.connector:not(:disabled):hover {
   cursor: pointer;
   font-weight: 600;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 .l-tabs button.on {
   background: linear-gradient(135deg, #22e3a7, #4d7cff);
@@ -1034,7 +1046,7 @@ button.connector:not(:disabled):hover {
   margin-bottom: 14px;
 }
 .l-field span {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: #9aa6bd;
   font-weight: 600;
 }
@@ -1046,7 +1058,7 @@ button.connector:not(:disabled):hover {
   padding: 11px 12px;
   color: #e8ecf4;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   outline: none;
 }
 .l-field input:focus,
@@ -1057,7 +1069,7 @@ button.connector:not(:disabled):hover {
 .l-field em {
   font-style: normal;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: #6b7690;
 }
 .l-field select option {
@@ -1071,7 +1083,7 @@ button.connector:not(:disabled):hover {
   border-radius: 11px;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   font-family: inherit;
   background: linear-gradient(135deg, #22e3a7, #4d7cff);
   color: #05060a;
@@ -1095,7 +1107,7 @@ button.connector:not(:disabled):hover {
   background: rgba(224, 51, 45, 0.12);
   border: 1px solid rgba(224, 51, 45, 0.4);
   color: #ff9b96;
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
 }
 .l-guest {
   display: block;
@@ -1104,7 +1116,7 @@ button.connector:not(:disabled):hover {
   background: none;
   border: 0;
   color: #6b7690;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   font-family: inherit;
 }
@@ -1114,11 +1126,11 @@ button.connector:not(:disabled):hover {
 }
 .l-cardhead {
   font-family: "Newsreader", serif;
-  font-size: 1.3rem;
+  font-size: var(--fs-lg);
 }
 .l-sub {
   color: #9aa6bd;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   margin: 0.3rem 0 1rem;
 }
 .l-token {
@@ -1137,7 +1149,7 @@ button.connector:not(:disabled):hover {
   overflow: auto;
   white-space: nowrap;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: #22e3a7;
 }
 .l-copy {
@@ -1148,7 +1160,7 @@ button.connector:not(:disabled):hover {
   padding: 6px 10px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1160,7 +1172,7 @@ button.connector:not(:disabled):hover {
   display: flex;
   justify-content: space-between;
   color: #566074;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   max-width: 1120px;
   margin: 0 auto;
   padding: 22px clamp(18px, 4vw, 40px) 44px;
@@ -1183,7 +1195,7 @@ button.connector:not(:disabled):hover {
   display: block;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: #22e3a7;
   font-weight: 700;
 }
@@ -1234,12 +1246,12 @@ button.connector:not(:disabled):hover {
   margin: 0.7rem 0 0.4rem;
   font-family: "Newsreader", serif;
   font-weight: 500;
-  font-size: 1.15rem;
+  font-size: var(--fs-title);
   color: #e8ecf4;
 }
 .l-feat p {
   color: #9aa6bd;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   line-height: 1.5;
   margin: 0;
 }
@@ -1255,19 +1267,19 @@ button.connector:not(:disabled):hover {
 .l-step .num {
   font-family: "JetBrains Mono", monospace;
   color: #22e3a7;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 .l-step h3 {
   margin: 0.5rem 0 0.4rem;
   font-family: "Newsreader", serif;
   font-weight: 500;
-  font-size: 1.2rem;
+  font-size: var(--fs-title);
   color: #e8ecf4;
 }
 .l-step p {
   color: #9aa6bd;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   line-height: 1.5;
   margin: 0;
 }
@@ -1315,7 +1327,7 @@ button.connector:not(:disabled):hover {
   color: var(--ink-2);
   border-radius: 999px;
   padding: 0.28rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1329,7 +1341,7 @@ button.connector:not(:disabled):hover {
 }
 
 .field-lbl {
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   font-weight: 600;
 }

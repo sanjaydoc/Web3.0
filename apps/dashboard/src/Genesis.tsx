@@ -369,7 +369,7 @@ while True:
                     {h.running ? 'running' : 'stopped'}
                   </span>
                   {h.connectors && h.connectors.length > 0 && (
-                    <span className="muted" style={{ marginLeft: 6, fontSize: '0.8rem' }}>
+                    <span className="muted" style={{ marginLeft: 6, fontSize: 'var(--fs-sm)' }}>
                       · connectors: {h.connectors.join(', ')}
                     </span>
                   )}
