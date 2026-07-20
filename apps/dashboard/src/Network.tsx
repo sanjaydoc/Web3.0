@@ -33,7 +33,16 @@ function proj(lon: number, lat: number): { x: number; y: number } {
   return { x, y: 435 - 214.7 * ymerc };
 }
 
-const cityXY = CITIES.map((c) => ({ ...c, ...proj(c.lon, c.lat) }));
+// Put "you" at the city nearest the viewer, not a hardcoded one. The browser's UTC offset gives an
+// approximate longitude (15° per hour) with no geolocation permission and no external IP lookup —
+// UTC+5:30 (India) → ~82°E → BOM; UTC-8 → ~-120° → SFO.
+const viewerLon = (-new Date().getTimezoneOffset() / 60) * 15;
+const nearest = CITIES.reduce(
+  (best, c, i) => (Math.abs(c.lon - viewerLon) < Math.abs(CITIES[best]!.lon - viewerLon) ? i : best),
+  0,
+);
+const ORDERED = [CITIES[nearest]!, ...CITIES.filter((_, i) => i !== nearest)];
+const cityXY = ORDERED.map((c) => ({ ...c, ...proj(c.lon, c.lat) }));
 
 export function Network() {
   const svgRef = useRef<SVGSVGElement>(null);
