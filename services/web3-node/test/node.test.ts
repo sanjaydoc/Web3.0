@@ -413,6 +413,42 @@ describe('consensus (PoA)', () => {
     await k.close();
   });
 
+  it('collect sweeps treasury earnings into the admin wallet (operators are refused)', async () => {
+    const k = new Kernel(
+      {
+        port: 0,
+        fees: { protocolBps: 0, blockReward: 40_000, treasuryLocal: 'treasury' },
+        consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
+      },
+      generateKeypair(),
+      new MemoryStore(),
+    );
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { token: string; address: string });
+    const admin = await signup('owner', 'admin');
+    const op = await signup('lodger', 'operator');
+
+    // Produce a block → the reward lands in the treasury.
+    k.consensus.proposeTick();
+    const collect = (token: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/operator/collect',
+        headers: { 'x-web3-token': token },
+        payload: {},
+      });
+
+    expect((await collect(op.token)).statusCode).toBe(403); // not the node owner
+    const ok = (await collect(admin.token).then((r) => r.json())) as { walletBalance: number };
+    // wallet = signup faucet + the swept block reward
+    expect(ok.walletBalance).toBe(k.config.faucetGrant + 40_000);
+    expect((await collect(admin.token)).statusCode).toBe(400); // treasury now empty
+    await k.close();
+  });
+
   it('admin approval seats the authority on-chain via the next proposed block', async () => {
     const k = new Kernel(
       {

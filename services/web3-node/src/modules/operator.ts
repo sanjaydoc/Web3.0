@@ -154,6 +154,33 @@ export function operatorModule(): Web3Module {
         return loc;
       });
 
+      // Collect node earnings: sweep the treasury (fees + block rewards) into the node owner's
+      // account wallet — the wallet staking draws from. Admin-gated: the treasury belongs to
+      // whoever runs the node, and on your own node the first signup bootstraps as admin.
+      http.post('/operator/collect', async (request, reply) => {
+        if (!requireRole(request, reply, ctx.accounts, 'admin')) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'sign in to collect' });
+        const balance = ledger.balanceOf(treasuryId as Web3Id);
+        const body = (request.body ?? {}) as { amount?: number };
+        const amount = Math.round(Number(body.amount ?? balance));
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return reply.code(400).send({ error: 'nothing to collect' });
+        }
+        try {
+          ledger.transfer(treasuryId as Web3Id, acct.address as Web3Id, amount, {
+            memo: 'operator-collect',
+          });
+        } catch (err) {
+          return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+        }
+        return {
+          collected: amount,
+          collectedFormatted: formatAmount(amount),
+          walletBalance: ledger.balanceOf(acct.address as Web3Id),
+        };
+      });
+
       // --- permissionless staking (Ethereum-style authority admission) --------------------------
       // Stake aETH from your account wallet into the on-ledger escrow; once the total for a node
       // key meets the threshold, the network seats it automatically — no admin in the loop.

@@ -121,6 +121,31 @@ function AuthorityCard({ role }: { role: NodeRole }) {
                   : `Need ${formatAmount(remaining)} — earn aETH to stake`}
             </button>
           )}
+          {!stake.eligible && !canAfford && (
+            <div style={{ marginTop: 12 }}>
+              <div className="field-lbl" style={{ marginBottom: 4 }}>
+                How to earn your stake
+              </div>
+              <ol className="steps">
+                <li>
+                  <b>Signup faucet</b> — {formatAmount(100_000)} to start (already in your wallet).
+                </li>
+                <li>
+                  <b>Sell agent work</b> — launch agents in <b>Genesis</b> with an ask price; every
+                  task another agent pays for lands aETH in your agents' wallets.
+                </li>
+                <li>
+                  <b>Run this node well</b> — protocol fees (<code>WEB3_FEE_BPS</code>) on payments
+                  it processes and hosting accrue to the node treasury; block rewards too once
+                  you're an authority.
+                </li>
+                <li>
+                  <b>Collect &amp; stake</b> — sweep treasury earnings into your wallet with{' '}
+                  <b>Collect to wallet</b> (Earnings card, node owner), then stake here.
+                </li>
+              </ol>
+            </div>
+          )}
         </>
       )}
 
@@ -374,6 +399,25 @@ export function Operator() {
     }
   }
 
+  const [collectMsg, setCollectMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  async function collect() {
+    setBusy(true);
+    setCollectMsg(null);
+    try {
+      const res = await api.collectEarnings();
+      setCollectMsg({
+        kind: 'ok',
+        text: `Collected ${res.collectedFormatted} — your wallet holds ${formatAmount(res.walletBalance)}. Stake it below.`,
+      });
+      refresh();
+    } catch (err) {
+      setCollectMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const e = node?.earnings;
   const r = node?.resources;
   const budgetMb =
@@ -424,6 +468,16 @@ export function Operator() {
                   Earnings are off by default — set <code>WEB3_FEE_BPS</code> /{' '}
                   <code>WEB3_BLOCK_REWARD</code> to start earning.
                 </p>
+              )}
+              {e && e.balance > 0 && (
+                <button type="button" className="btn act" disabled={busy} onClick={collect}>
+                  {busy ? 'Collecting…' : 'Collect to wallet'}
+                </button>
+              )}
+              {collectMsg && (
+                <div className={`note ${collectMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+                  {collectMsg.text}
+                </div>
               )}
             </div>
 

@@ -283,6 +283,11 @@ export const api = {
   stats: () => get<Stats>('/stats'),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
   stakeInfo: () => get<StakeInfo>('/operator/stake'),
+  collectEarnings: () =>
+    post<{ collected: number; collectedFormatted: string; walletBalance: number }>(
+      '/operator/collect',
+      {},
+    ),
   stake: (input: { amount?: number; nodePublicKey?: string }) =>
     post<StakeResult>('/operator/stake', input),
   requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),
