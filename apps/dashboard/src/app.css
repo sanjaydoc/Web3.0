@@ -828,15 +828,17 @@ button.connector:not(:disabled):hover {
   font-family: inherit;
 }
 
-/* ── Landing / login gate ─────────────────────────────────────────────────── */
+/* ── Landing / login gate ─────────────────────────────────────────────────────
+   Same design system as the console: white paper, black serif display, hairline
+   cards, black pill buttons, the signature dark rules. */
 .landing {
   position: fixed;
   inset: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #05060a;
-  color: #e8ecf4;
-  font-family: "Hanken Grotesk", system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
 }
 .landing-bg {
   position: fixed;
@@ -845,27 +847,13 @@ button.connector:not(:disabled):hover {
   z-index: 0;
 }
 .l-aurora {
-  position: absolute;
-  inset: -20%;
-  background: radial-gradient(40% 40% at 20% 20%, rgba(34, 227, 167, 0.22), transparent 70%),
-    radial-gradient(45% 45% at 80% 25%, rgba(77, 124, 255, 0.2), transparent 70%),
-    radial-gradient(50% 50% at 60% 85%, rgba(124, 108, 255, 0.18), transparent 70%);
-  filter: blur(30px);
-  animation: l-drift 18s ease-in-out infinite alternate;
-}
-@keyframes l-drift {
-  from {
-    transform: translate3d(-3%, -2%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(3%, 2%, 0) scale(1.1);
-  }
+  display: none;
 }
 .l-grid {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(13, 13, 15, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 13, 15, 0.035) 1px, transparent 1px);
   background-size: 46px 46px;
   -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 75%);
   mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 75%);
@@ -875,24 +863,23 @@ button.connector:not(:disabled):hover {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.55;
+  opacity: 0.6;
 }
 .l-net .ln {
-  stroke: rgba(34, 227, 167, 0.22);
+  stroke: rgba(13, 13, 15, 0.08);
   stroke-width: 1;
 }
 .l-net .nd {
-  fill: #22e3a7;
-  filter: drop-shadow(0 0 6px #22e3a7);
+  fill: var(--ink);
   animation: l-pulse 3s ease-in-out infinite;
 }
 @keyframes l-pulse {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.12;
   }
   50% {
-    opacity: 1;
+    opacity: 0.35;
   }
 }
 .landing-inner {
@@ -914,9 +901,9 @@ button.connector:not(:disabled):hover {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  font-family: "Newsreader", serif;
-  font-size: var(--fs-lg);
-  font-weight: 500;
+  font-weight: 800;
+  font-size: var(--fs-title);
+  letter-spacing: -0.02em;
 }
 .l-badge {
   display: grid;
@@ -924,19 +911,25 @@ button.connector:not(:disabled):hover {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #22e3a7, #4d7cff);
-  color: #05060a;
-  font-weight: 800;
-  font-family: "Hanken Grotesk", sans-serif;
-  box-shadow: 0 0 18px rgba(34, 227, 167, 0.5);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--serif);
+  font-weight: 500;
 }
 .l-doclink {
-  color: #9aa6bd;
+  color: var(--ink);
   text-decoration: none;
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  border: 1.5px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .l-doclink:hover {
-  color: #e8ecf4;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
 }
 .l-hero {
   flex: 1;
@@ -958,25 +951,22 @@ button.connector:not(:disabled):hover {
 }
 .l-eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   font-size: var(--fs-xs);
-  color: #22e3a7;
-  font-weight: 700;
+  color: var(--muted);
+  font-weight: 600;
 }
 .l-title {
-  font-family: "Newsreader", serif;
+  font-family: var(--serif);
   font-weight: 500;
   font-size: clamp(2.8rem, 7vw, 5rem);
   line-height: 1.02;
   margin: 0.6rem 0 0;
   letter-spacing: -0.01em;
-  background: linear-gradient(180deg, #ffffff, #b9c6e6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--ink);
 }
 .l-lead {
-  color: #9aa6bd;
+  color: var(--ink-2);
   font-size: var(--fs-md);
   max-width: 34rem;
   width: 100%;
@@ -997,28 +987,27 @@ button.connector:not(:disabled):hover {
 }
 .l-stats b {
   font-family: "JetBrains Mono", monospace;
-  color: #e8ecf4;
+  color: var(--ink);
   font-size: var(--fs-md);
 }
 .l-stats span {
-  color: #6b7690;
+  color: var(--muted);
   font-size: var(--fs-sm);
 }
 .l-card {
   min-width: 0;
-  background: rgba(16, 20, 30, 0.72);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
   padding: 26px;
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow);
 }
 .l-tabs {
   display: flex;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 5px;
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  padding: 4px;
   border-radius: 12px;
   margin-bottom: 18px;
 }
@@ -1027,7 +1016,7 @@ button.connector:not(:disabled):hover {
   padding: 9px;
   border: 0;
   background: transparent;
-  color: #9aa6bd;
+  color: var(--muted);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -1035,9 +1024,8 @@ button.connector:not(:disabled):hover {
   font-size: var(--fs-base);
 }
 .l-tabs button.on {
-  background: linear-gradient(135deg, #22e3a7, #4d7cff);
-  color: #05060a;
-  box-shadow: 0 6px 18px -6px rgba(34, 227, 167, 0.6);
+  background: var(--ink);
+  color: #fff;
 }
 .l-field {
   display: flex;
@@ -1047,66 +1035,61 @@ button.connector:not(:disabled):hover {
 }
 .l-field span {
   font-size: var(--fs-sm);
-  color: #9aa6bd;
+  color: var(--muted);
   font-weight: 600;
 }
 .l-field input,
 .l-field select {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--paper);
+  border: 1px solid var(--hair);
   border-radius: 10px;
   padding: 11px 12px;
-  color: #e8ecf4;
+  color: var(--ink);
   font-family: inherit;
   font-size: var(--fs-base);
   outline: none;
 }
 .l-field input:focus,
 .l-field select:focus {
-  border-color: #22e3a7;
-  box-shadow: 0 0 0 3px rgba(34, 227, 167, 0.15);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(13, 13, 15, 0.08);
 }
 .l-field em {
   font-style: normal;
   font-family: "JetBrains Mono", monospace;
   font-size: var(--fs-sm);
-  color: #6b7690;
-}
-.l-field select option {
-  background: #10141e;
+  color: var(--faint);
 }
 .l-go {
   width: 100%;
   margin-top: 6px;
   padding: 12px;
-  border: 0;
-  border-radius: 11px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--fs-base);
   font-family: inherit;
-  background: linear-gradient(135deg, #22e3a7, #4d7cff);
-  color: #05060a;
-  box-shadow: 0 10px 26px -10px rgba(34, 227, 167, 0.55);
-  transition: transform 0.12s ease, filter 0.12s ease;
+  background: var(--ink);
+  color: #fff;
+  transition: transform 0.12s ease, opacity 0.12s ease;
 }
 .l-go:hover {
-  filter: brightness(1.08);
+  opacity: 0.9;
   transform: translateY(-1px);
 }
 .l-go:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  filter: none;
   transform: none;
 }
 .l-err {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(224, 51, 45, 0.12);
-  border: 1px solid rgba(224, 51, 45, 0.4);
-  color: #ff9b96;
+  background: var(--no-bg);
+  border: 1px solid color-mix(in srgb, var(--no) 35%, transparent);
+  color: var(--no);
   font-size: var(--fs-base);
 }
 .l-guest {
@@ -1115,21 +1098,21 @@ button.connector:not(:disabled):hover {
   margin-top: 14px;
   background: none;
   border: 0;
-  color: #6b7690;
+  color: var(--muted);
   font-size: var(--fs-sm);
   cursor: pointer;
   font-family: inherit;
 }
 .l-guest:hover {
-  color: #9aa6bd;
+  color: var(--ink);
   text-decoration: underline;
 }
 .l-cardhead {
-  font-family: "Newsreader", serif;
+  font-family: var(--serif);
   font-size: var(--fs-lg);
 }
 .l-sub {
-  color: #9aa6bd;
+  color: var(--muted);
   font-size: var(--fs-base);
   margin: 0.3rem 0 1rem;
 }
@@ -1137,8 +1120,7 @@ button.connector:not(:disabled):hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(34, 227, 167, 0.3);
+  background: var(--ink);
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 16px;
@@ -1150,12 +1132,12 @@ button.connector:not(:disabled):hover {
   white-space: nowrap;
   font-family: "JetBrains Mono", monospace;
   font-size: var(--fs-sm);
-  color: #22e3a7;
+  color: #f4f4f5;
 }
 .l-copy {
   border: 0;
-  background: rgba(34, 227, 167, 0.15);
-  color: #22e3a7;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
   border-radius: 7px;
   padding: 6px 10px;
   cursor: pointer;
@@ -1165,18 +1147,18 @@ button.connector:not(:disabled):hover {
   white-space: nowrap;
 }
 .l-copy.ok {
-  background: #22e3a7;
-  color: #05060a;
+  background: var(--ok);
+  color: #fff;
 }
 .l-foot {
   display: flex;
   justify-content: space-between;
-  color: #566074;
+  color: var(--muted);
   font-size: var(--fs-sm);
   max-width: 1120px;
   margin: 0 auto;
   padding: 22px clamp(18px, 4vw, 40px) 44px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1.5px solid var(--rule);
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -1191,19 +1173,22 @@ button.connector:not(:disabled):hover {
   margin: 0 auto;
   padding: clamp(36px, 6vw, 84px) clamp(18px, 4vw, 40px);
 }
+.l-section + .l-section {
+  border-top: 1.5px solid var(--rule);
+}
 .l-sectlabel {
   display: block;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   font-size: var(--fs-xs);
-  color: #22e3a7;
-  font-weight: 700;
+  color: var(--muted);
+  font-weight: 600;
 }
 .l-secthead {
-  font-family: "Newsreader", serif;
+  font-family: var(--serif);
   font-weight: 500;
   font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-  color: #e8ecf4;
+  color: var(--ink);
   margin: 0.5rem 0 1.8rem;
   letter-spacing: -0.01em;
 }
@@ -1213,14 +1198,15 @@ button.connector:not(:disabled):hover {
   gap: 16px;
 }
 .l-feat {
-  background: rgba(16, 20, 30, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--paper);
+  border: 1px solid var(--hair);
   border-radius: 14px;
   padding: 22px;
+  box-shadow: var(--shadow-sm);
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .l-feat:hover {
-  border-color: rgba(34, 227, 167, 0.4);
+  border-color: var(--rule);
   transform: translateY(-2px);
 }
 .l-feat .ic {
@@ -1229,28 +1215,29 @@ button.connector:not(:disabled):hover {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(34, 227, 167, 0.08);
-  border: 1px solid rgba(34, 227, 167, 0.25);
-  color: #22e3a7;
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  color: var(--ink);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .l-feat .ic svg {
   width: 22px;
   height: 22px;
-  filter: drop-shadow(0 0 5px rgba(34, 227, 167, 0.55));
 }
 .l-feat:hover .ic {
-  background: rgba(34, 227, 167, 0.14);
-  border-color: rgba(34, 227, 167, 0.5);
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
 }
 .l-feat h3 {
   margin: 0.7rem 0 0.4rem;
-  font-family: "Newsreader", serif;
+  font-family: var(--serif);
   font-weight: 500;
   font-size: var(--fs-title);
-  color: #e8ecf4;
+  color: var(--ink);
 }
 .l-feat p {
-  color: #9aa6bd;
+  color: var(--ink-2);
   font-size: var(--fs-base);
   line-height: 1.5;
   margin: 0;
@@ -1262,23 +1249,23 @@ button.connector:not(:disabled):hover {
 }
 .l-step {
   padding: 6px 20px;
-  border-left: 2px solid rgba(34, 227, 167, 0.4);
+  border-left: 2px solid var(--rule);
 }
 .l-step .num {
   font-family: "JetBrains Mono", monospace;
-  color: #22e3a7;
+  color: var(--muted);
   font-size: var(--fs-sm);
   font-weight: 700;
 }
 .l-step h3 {
   margin: 0.5rem 0 0.4rem;
-  font-family: "Newsreader", serif;
+  font-family: var(--serif);
   font-weight: 500;
   font-size: var(--fs-title);
-  color: #e8ecf4;
+  color: var(--ink);
 }
 .l-step p {
-  color: #9aa6bd;
+  color: var(--ink-2);
   font-size: var(--fs-base);
   line-height: 1.5;
   margin: 0;
