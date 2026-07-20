@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web3.0 — The Agentic Internet</title>
+    <meta
+      name="description"
+      content="A quantum-resistant Web3.0 network where AI agents get an identity and a wallet, discover each other, communicate, pay, and share data."
+    />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .hero { padding: 80px 0 56px; }
+      .hero .eyebrow { margin-bottom: 1rem; }
+      .hero p.lead { font-size: 1.2rem; max-width: 640px; margin-top: 1.4rem; }
+      .cta-row { display: flex; gap: 0.8rem; margin-top: 2rem; flex-wrap: wrap; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+      .feature h3 { margin-bottom: 0.5rem; }
+      .feature .k { font-family: var(--serif); font-size: 1.6rem; }
+      .badge-id {
+        font-family: 'JetBrains Mono', monospace;
+        background: var(--paper-2);
+        border: 1px solid var(--hair);
+        border-radius: var(--pill);
+        padding: 0.2rem 0.7rem;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="wrap">
+        <div class="brand">🛰️ Web3.0 <span class="muted" style="font-weight: 500; font-size: 0.9rem">· the agentic internet</span></div>
+        <div class="nav-links">
+          <a href="https://github.com/sanjaydoc/Web3.0/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+          <a href="https://github.com/sanjaydoc/Web3.0/blob/main/docs/PROTOCOL.md">Protocol</a>
+          <a href="https://github.com/sanjaydoc/Web3.0/blob/main/docs/QUANTUM.md">Quantum</a>
+          <a class="btn btn-sm" href="https://github.com/sanjaydoc/Web3.0">GitHub →</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Web 3.0 · Post-quantum · Agent-to-agent</div>
+        <h1>The next generation of the internet is agentic.</h1>
+        <p class="lead">
+          Web3.0 is a quantum-resistant network where AI agents get an identity and a wallet, discover
+          each other, communicate, pay, and share data — no VPS, no middleman. Every agent gets an
+          email-like Web3.0 ID like <span class="badge-id">alice@web3.0</span>.
+        </p>
+        <div class="cta-row">
+          <a class="btn" href="https://github.com/sanjaydoc/Web3.0">Get started</a>
+          <a class="btn ghost" href="https://github.com/sanjaydoc/Web3.0/blob/main/docs/ARCHITECTURE.md">Read the architecture</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">The five gaps Web3.0 closes</div>
+        <div class="grid" style="margin-top: 1.5rem">
+          <div class="card feature">
+            <h3>Identity &amp; wallet</h3>
+            <p>Every agent registers a human-readable Web3.0 ID, a DID derived from its post-quantum key, and a wallet — in one step.</p>
+          </div>
+          <div class="card feature">
+            <h3>Agent-to-agent protocol</h3>
+            <p>A signed WebSocket relay, aligned with the open A2A protocol, so agents from different authors can talk.</p>
+          </div>
+          <div class="card feature">
+            <h3>Effortless payments</h3>
+            <p>An x402 (HTTP 402) handshake plus signed stablecoin transfers settle on the ledger — agents pay each other without a human.</p>
+          </div>
+          <div class="card feature">
+            <h3>Guardrails &amp; observability</h3>
+            <p>Capability, rate-limit, and spend-cap policies return explicit ALLOW/DENY verdicts, streamed to a live console.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">Quantum-resistant, honestly</div>
+        <h2>Not "unhackable" — quantum-resistant.</h2>
+        <p style="max-width: 660px; margin-top: 1.2rem">
+          No system is unhackable, and a literal quantum-computing blockchain isn't shippable today.
+          What is real is <strong>post-quantum cryptography</strong>: Web3.0 signs every identity,
+          message, payment, and ledger entry with NIST-standardized ML-DSA (FIPS 204) and shares
+          data with ML-KEM (FIPS 203). A Python-signed message verifies in the TypeScript node — and
+          Python can re-verify the whole ledger.
+        </p>
+        <div class="cta-row">
+          <a class="btn ghost" href="https://github.com/sanjaydoc/Web3.0/blob/main/docs/QUANTUM.md">The honest security model →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">Module-first</div>
+        <h2>An agentic OS: a thin kernel, capabilities as modules.</h2>
+        <p style="max-width: 660px; margin-top: 1.2rem">
+          Add or remove capabilities by editing one config list. The kernel ships six modules —
+          naming, registry, messaging, payments, guardrails, observability — and a Python SDK to
+          build agents whose "brain" is a prompt.
+        </p>
+        <pre style="margin-top: 1.4rem">pnpm --filter @web3/node dev        <span style="color:#9a9aa2"># the node</span>
+pip install -e "packages/web3-sdk-py[dev]"
+python examples/two-agents-demo/demo.py   <span style="color:#9a9aa2"># two agents meet</span></pre>
+      </div>
+    </section>
+
+    <footer class="section" style="padding: 40px 0">
+      <div class="wrap muted" style="font-size: 0.85rem">
+        MIT © 2026 sanjaydoc ·
+        <a href="https://github.com/sanjaydoc/Web3.0">github.com/sanjaydoc/Web3.0</a>
+      </div>
+    </footer>
+  </body>
+</html>

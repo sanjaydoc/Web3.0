@@ -1,0 +1,13 @@
+{
+  "name": "web3.0",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web3.0 — the agentic internet. Public console (dashboard), Python agent SDK, and docs.",
+  "homepage": "https://github.com/sanjaydoc/Web3.0",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @web3/dashboard dev",
+    "build": "pnpm --filter @web3/dashboard build"
+  }
+}

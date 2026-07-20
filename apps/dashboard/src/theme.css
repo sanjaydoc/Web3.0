@@ -1,0 +1,380 @@
+/* Web3.0 design system — light, monochrome, editorial.
+   Elegant serif display + humanist sans body, thin dark full-width rules,
+   black pill buttons, white cards with soft shadow and hairline dividers,
+   generous whitespace. Token structure and mechanics adapted from the
+   LabSuite design system. */
+
+:root {
+  --paper: #ffffff;
+  --paper-2: #fafafa;
+  --ink: #0d0d0f; /* near-black display + primary text */
+  --ink-2: #33333b; /* dark slate for card body copy */
+  --muted: #6f6f78; /* small grey labels */
+  --faint: #9a9aa2;
+  --hair: #e7e7ea; /* light hairline dividers inside cards */
+  --rule: #111114; /* the signature strong dark full-width rule */
+
+  --accent: #0d0d0f; /* actions are black, like Merge */
+  --ok: #12a150; /* bright green (ALLOW) */
+  --ok-bg: #e8f2ec;
+  --no: #e0332d; /* bright red (DENY) */
+  --no-bg: #f6ebe9;
+
+  /* small layer-accent dots for wayfinding (kept subtle) */
+  --okta: #635bff;
+  --ad: #2f6fed;
+  --nas: #0e9f6e;
+  --pve: #d98218;
+
+  --shadow-sm: 0 1px 2px rgba(16, 16, 20, 0.05);
+  --shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 10px 34px rgba(16, 16, 20, 0.07);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --pill: 999px;
+  --maxw: 1080px;
+
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin: 0;
+}
+h1 {
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+}
+h2 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+}
+h3 {
+  font-size: 1.3rem;
+}
+
+p {
+  margin: 0 0 1rem;
+  color: var(--ink-2);
+}
+
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* --- the signature dark rule ------------------------------------------- */
+.rule {
+  border: 0;
+  border-top: 1.5px solid var(--rule);
+  margin: 0;
+}
+.section {
+  padding: 64px 0;
+}
+.section + .section {
+  border-top: 1.5px solid var(--rule);
+}
+
+/* --- small grey label (Merge "Location / Employment Type" style) -------- */
+.label {
+  font-size: .74rem;
+  color: var(--muted);
+  letter-spacing: .01em;
+  text-transform: none;
+  margin-bottom: .25rem;
+}
+.eyebrow {
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* --- buttons: Merge-style pills ---------------------------------------- *
+ * Two tiers, matching merge.io:
+ *   .btn            solid black PILL  — primary CTAs ("Join us! →")
+ *   .btn.ghost/.act white OUTLINE pill — secondary/inline ("Upload file")
+ * Everything is fully rounded (border-radius: 999px). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  white-space: nowrap;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: .9rem;
+  padding: .68rem 1.4rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform .12s ease, opacity .12s ease, background .12s ease, color .12s ease;
+}
+.btn:hover {
+  opacity: 0.9;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+.btn.ghost:hover {
+  background: var(--ink);
+  color: #fff;
+  opacity: 1;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-sm {
+  padding: .46rem 1.05rem;
+  font-size: .8rem;
+}
+
+/* Inline/secondary action pill (in tables, cards): light outline, inverts on
+   hover. This is the Merge "Upload file" look — far cleaner in a table than a
+   solid-black block, and still fully monochrome. */
+.btn.act {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--rule);
+  font-weight: 600;
+  font-size: .8rem;
+  padding: .3rem .9rem;
+}
+.btn.act:hover {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  opacity: 1;
+  transform: none;
+}
+
+/* --- cards ------------------------------------------------------------- */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+.card .divider {
+  border: 0;
+  border-top: 1px solid var(--hair);
+  margin: 14px 0;
+}
+
+/* --- chips / status ---------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: .18rem .55rem;
+  border-radius: var(--pill);
+  border: 1px solid var(--hair);
+  color: var(--ink-2);
+  background: var(--paper-2);
+}
+/* Status chips: outline pills in the same language as the action buttons —
+   bright colored border + text on a transparent ground (no filled blob). */
+.chip.allow {
+  color: var(--ok);
+  background: transparent;
+  border: 1.5px solid var(--ok);
+}
+.chip.deny {
+  color: var(--no);
+  background: transparent;
+  border: 1.5px solid var(--no);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.okta {
+  background: var(--okta);
+}
+.dot.ad {
+  background: var(--ad);
+}
+.dot.nas {
+  background: var(--nas);
+}
+.dot.pve {
+  background: var(--pve);
+}
+
+/* --- code -------------------------------------------------------------- */
+code,
+pre,
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  background: #0d0d0f;
+  color: #f4f4f5;
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-size: .85rem;
+  line-height: 1.55;
+}
+:not(pre) > code {
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: .1rem .35rem;
+  font-size: .85em;
+}
+
+/* --- nav --------------------------------------------------------------- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1.5px solid var(--rule);
+}
+.nav .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+}
+.brand svg {
+  width: 26px;
+  height: 26px;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+/* Plain nav links are grey ink; buttons (.btn) keep their own white text --
+   scope this rule so it doesn't override the button's colour (specificity clash). */
+.nav-links a:not(.btn) {
+  font-size: .9rem;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.nav-links a:not(.btn):hover {
+  color: var(--ink);
+}
+.nav-links a.btn {
+  color: #fff;
+}
+.nav-links a.btn.ghost {
+  color: var(--ink);
+}
+
+/* --- tables ------------------------------------------------------------ */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: .9rem;
+}
+th,
+td {
+  text-align: left;
+  padding: .6rem .5rem;
+  border-bottom: 1px solid var(--hair);
+}
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: .8rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+.center {
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .nav .wrap {
+    height: 56px;
+    gap: .5rem;
+    padding: 0 16px;
+  }
+  .brand {
+    font-size: 1rem;
+    gap: .4rem;
+  }
+  .brand svg {
+    width: 22px;
+    height: 22px;
+  }
+  .brand .muted {
+    display: none;
+  } /* hide the "control plane" subtitle */
+  .nav-links {
+    gap: .55rem;
+  }
+  .nav-links a:not(.btn) {
+    display: none;
+  }
+  .nav-links .btn-sm {
+    padding: .4rem .7rem;
+    font-size: .8rem;
+  }
+  .section {
+    padding: 44px 0;
+  }
+}
