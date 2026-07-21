@@ -1,0 +1,12 @@
+# Keep the build context small and free of local secrets/artifacts.
+**/node_modules
+**/dist
+**/release
+.git
+.github
+*.log
+.env
+.env.*
+network.json
+config.json
+apps/dashboard/public/sw.js
