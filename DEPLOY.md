@@ -62,17 +62,28 @@ forever. That is enough to run `@web3/node` *and*, if you ever want it, a local 
 
 ### 2.1 Create the VM
 
-1. Sign up at <https://cloud.oracle.com> and pick your home region.
+1. Sign up at <https://cloud.oracle.com> and pick your **home region** (you can't change it later —
+   pick the closest, e.g. Mumbai/Hyderabad for India).
 2. **Compute → Instances → Create Instance.**
-3. **Image:** Canonical **Ubuntu 22.04** (or 24.04).
+3. **Image:** Canonical **Ubuntu 22.04** (or 24.04) — Arm build.
 4. **Shape:** *Change shape* → **Ampere** → **VM.Standard.A1.Flex** →
-   set **2 OCPU / 12 GB** (leaves headroom in the free allocation; bump to 4/24 if you'll host the LLM).
-5. Add your **SSH public key** (upload or paste).
-6. **Create.** Note the **public IPv4 address** once it boots.
+   set **4 OCPUs / 24 GB** (the full Always-Free Arm allocation — enough to also run a local LLM).
+5. **Boot volume:** expand it to **100 GB** (Always Free includes up to 200 GB block storage, so this
+   is still free — leaves room for Docker, logs, and a `qwen2.5:7b` model). The ~47 GB default also
+   works if you'll only run the node.
+6. **Networking:** keep *Assign a public IPv4 address* checked.
+7. Add your **SSH public key** (upload your `~/.ssh/id_ed25519.pub`, or let Oracle generate a keypair
+   and download the private key).
+8. **Create.** Note the **public IPv4 address** once it boots.
 
-> If the region says "out of capacity" for A1.Flex, retry later or switch region — Arm capacity is
-> shared. An **AMD `VM.Standard.E2.1.Micro`** (1 core / 1 GB, also Always Free) works for the backend
-> alone (it's lightweight), just not for a local LLM.
+> **"Out of host capacity" for A1.Flex?** Arm capacity is shared and often full. Options: retry over a
+> few hours (a script/`while` loop helps), try a different **Availability Domain** in the dropdown, or
+> temporarily use an **AMD `VM.Standard.E2.1.Micro`** (1 core / 1 GB, also Always Free) — fine for the
+> node alone, just not for a local LLM.
+
+> **SSH key tip (do this before you travel-relax):** on your laptop run
+> `ssh-keygen -t ed25519` if you don't already have `~/.ssh/id_ed25519.pub` — you'll paste that public
+> key into step 7.
 
 ### 2.2 Open the firewall (two layers)
 
