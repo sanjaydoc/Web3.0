@@ -53,6 +53,11 @@ You already have this. Confirm these are ready:
 4. Your connection string, e.g.
    `mongodb+srv://USER:PASSWORD@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority`
 
+> **Planned:** a **PostgreSQL store backend** (roadmap) will let the node keep all state on the VM's
+> own 100 GB disk instead of Atlas's 512 MB free cap — self-hosted and uncapped. Until that lands,
+> use Atlas (above) or run in-memory (fine for a testnet you can reset). We'll switch to local
+> Postgres once the `WEB3_POSTGRES_URL` backend ships.
+
 ---
 
 ## Part 2 — Oracle Cloud Always Free (the node backend)
