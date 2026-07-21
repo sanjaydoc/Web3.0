@@ -86,6 +86,36 @@ const ICONS: Record<string, ReactNode> = {
   ),
 };
 
+// Desktop installers — the latest release on the public repo. Bump `DL_VER` on each release.
+const DL_VER = '0.1.1';
+const DL_BASE = `https://github.com/sanjaydoc/Web3.0/releases/download/v${DL_VER}`;
+const RELEASES = 'https://github.com/sanjaydoc/Web3.0/releases/latest';
+
+// Monochrome OS marks (fill = currentColor) so they read black-on-white and invert on hover.
+const WinMark = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19" aria-hidden="true">
+    <path d="M3 5.6 10.5 4.5v7H3zM11.5 4.35 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.4zM11.5 12.5H21V21l-9.5-1.3z" />
+  </svg>
+);
+const AppleMark = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19" aria-hidden="true">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+  </svg>
+);
+const LinuxMark = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19" aria-hidden="true">
+    <path d="M12 2.2c-2.1 0-3.4 1.7-3.4 4 0 1.4.3 2.2-.6 3.4-1 1.3-2.8 3.2-2.8 5.8 0 1.7.7 2.6 1.7 3.6.4.4.3.9.9 1.3.6.4 1.5.3 2.2.5.5.2 1 .5 1.9.5s1.4-.3 1.9-.5c.7-.2 1.6-.1 2.2-.5.6-.4.5-.9.9-1.3 1-1 1.7-1.9 1.7-3.6 0-2.6-1.8-4.5-2.8-5.8-.9-1.2-.6-2-.6-3.4 0-2.3-1.3-4-3.4-4z" />
+    <ellipse cx="10.4" cy="7.1" rx="1" ry="1.25" fill="var(--paper)" />
+    <ellipse cx="13.6" cy="7.1" rx="1" ry="1.25" fill="var(--paper)" />
+    <path d="M11 9.1 12 9.85l1-.75a1.4 1.4 0 0 0-2 0z" fill="var(--paper)" />
+  </svg>
+);
+const DOWNLOADS = [
+  { os: 'Windows', file: `${DL_BASE}/Web3.0.Setup.${DL_VER}.exe`, icon: <WinMark /> },
+  { os: 'macOS', file: `${DL_BASE}/Web3.0-${DL_VER}-universal.dmg`, icon: <AppleMark /> },
+  { os: 'Linux', file: `${DL_BASE}/Web3.0-${DL_VER}.AppImage`, icon: <LinuxMark /> },
+];
+
 /**
  * Landing — the front door. A high-end animated hero that gates the console behind sign-in /
  * create-account. On success it calls `onEnter()` and the app reveals the dashboard. `onGuest()`
@@ -309,6 +339,26 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
           </div>
         </div>
       </div>
+
+      <section className="l-download" aria-label="Download the desktop app">
+        <div className="l-dl-inner">
+          <div className="l-dl-head">
+            <b>Run a node in one click</b>
+            <span>Download the desktop app — it bundles a full node and this console.</span>
+          </div>
+          <div className="l-dl-row">
+            {DOWNLOADS.map((d) => (
+              <a key={d.os} className="l-dl-btn" href={d.file} target="_blank" rel="noreferrer">
+                {d.icon}
+                <span>{d.os}</span>
+              </a>
+            ))}
+            <a className="l-dl-all" href={RELEASES} target="_blank" rel="noreferrer">
+              All downloads ↗
+            </a>
+          </div>
+        </div>
+      </section>
 
       <div className="l-below">
         <section className="l-section">

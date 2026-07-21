@@ -108,9 +108,9 @@ services:
 Put it behind a reverse proxy (Caddy/Nginx/Cloudflare Tunnel) for HTTPS, then point the console at
 it (build with `VITE_WEB3_URL=https://your-node`). Full walk-through in the deploy docs.
 
-> **Docker image availability:** the `ghcr.io/sanjaydoc/web3-node` image publishes automatically on
-> each tagged release. If you're reading this before the first Docker release lands, use the desktop
-> app above in the meantime.
+> **Docker image availability:** the `ghcr.io/sanjaydoc/web3-node` image is on the [roadmap](#roadmap)
+> — the build pipeline is wired but the first image is published manually. Until it's live, use the
+> desktop app above (or the docker-compose file, once the image ships).
 
 ### What a node does once it's up
 
@@ -311,6 +311,16 @@ cryptography — **ML-DSA** (FIPS 204) for signatures and **ML-KEM** (FIPS 203) 
 the network is defensible against future quantum attacks. See
 [`docs/QUANTUM.md`](docs/QUANTUM.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the
 protocol spec in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+
+## Roadmap
+
+- [ ] **Publish the public Docker image** — run the `docker` workflow to push
+  `ghcr.io/sanjaydoc/web3-node:latest` and set the package visibility to public (manual for now).
+- [ ] **Live shared network** — bring the node backend online and point the console at it
+  (`WEB3_API_URL`), flipping the site from "node offline" to real accounts.
+- [ ] **First agent-interop test** — create an agent in Claude / OpenCode / Codex and send it onto
+  the network end-to-end.
+- [ ] Code-signed desktop builds · PyPI package for the SDK · one-click cloud deploy.
 
 ## License
 
