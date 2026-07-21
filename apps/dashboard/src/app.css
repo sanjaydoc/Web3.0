@@ -1508,3 +1508,81 @@ button.connector:not(:disabled):hover {
     white-space: normal;
   }
 }
+
+/* --- Landing download band (desktop installers, black & white) ----------- */
+.l-download {
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  background: var(--paper);
+}
+.l-dl-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.l-dl-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.l-dl-head b {
+  font-size: var(--fs-title);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.l-dl-head span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.l-dl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.l-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 0.95rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.l-dl-btn:hover {
+  background: var(--ink);
+  color: #fff;
+}
+.l-dl-all {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.l-dl-all:hover {
+  color: var(--ink);
+}
+@media (max-width: 640px) {
+  .l-dl-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .l-dl-row {
+    width: 100%;
+  }
+  .l-dl-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
