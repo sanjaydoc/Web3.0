@@ -53,10 +53,29 @@ You already have this. Confirm these are ready:
 4. Your connection string, e.g.
    `mongodb+srv://USER:PASSWORD@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority`
 
-> **Planned:** a **PostgreSQL store backend** (roadmap) will let the node keep all state on the VM's
-> own 100 GB disk instead of Atlas's 512 MB free cap — self-hosted and uncapped. Until that lands,
-> use Atlas (above) or run in-memory (fine for a testnet you can reset). We'll switch to local
-> Postgres once the `WEB3_POSTGRES_URL` backend ships.
+> **Prefer PostgreSQL?** The node also ships a **Postgres store** (`WEB3_POSTGRES_URL`), which keeps
+> all state on the VM's own 100 GB disk — no 512 MB Atlas cap, nothing external. It takes precedence
+> over MongoDB when set. See **Part 1b** below; Atlas (above) stays a fine alternative.
+
+### Part 1b — PostgreSQL on the VM (recommended for the 100 GB box)
+
+Run Postgres right on the Oracle instance so all state lives on its own disk, uncapped:
+
+```bash
+sudo apt-get install -y postgresql
+sudo -u postgres psql -c "CREATE USER web3 WITH PASSWORD 'CHANGE_ME';"
+sudo -u postgres psql -c "CREATE DATABASE web3 OWNER web3;"
+```
+
+Then set one env var for the node (Part 2.5) — no MongoDB needed:
+
+```bash
+WEB3_POSTGRES_URL="postgresql://web3:CHANGE_ME@127.0.0.1:5432/web3"
+```
+
+The node auto-creates its tables (`agents`, `ledger_entries`, `settings`) on first start. Keep
+Postgres bound to `127.0.0.1` (the default) so it's never exposed to the internet — only the node,
+running on the same box, talks to it.
 
 ---
 

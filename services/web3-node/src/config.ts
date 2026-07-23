@@ -108,6 +108,11 @@ export interface Web3Config {
   authorityStake: number;
   /** Cooldown (ms) between requesting an unstake and the escrow refund (Ethereum-style exit delay). */
   unstakeCooldownMs: number;
+  /**
+   * PostgreSQL connection string. When set, state persists in Postgres (takes precedence over
+   * MongoDB) — self-host it on the node's own disk for uncapped storage.
+   */
+  postgresUrl?: string;
   /** MongoDB connection string. When set, state persists across restarts; else in-memory. */
   mongodbUri?: string;
   /** Database name to use within the MongoDB cluster. */
@@ -151,6 +156,7 @@ interface NetworkFile {
   consensus?: Partial<ConsensusConfig>;
 }
 interface LocalConfigFile {
+  postgresUrl?: string;
   mongodbUri?: string;
   mongodbDb?: string;
 }
@@ -214,6 +220,7 @@ export const DEFAULT_CONFIG: Web3Config = {
   authorityStake: Number(process.env.WEB3_AUTHORITY_STAKE ?? 3_200_000), // 32,000.00 aETH
   unstakeCooldownMs: Number(process.env.WEB3_UNSTAKE_COOLDOWN_MS ?? 86_400_000), // 24 h
 
+  postgresUrl: process.env.WEB3_POSTGRES_URL ?? localFile.postgresUrl,
   mongodbUri: process.env.WEB3_MONGODB_URI ?? localFile.mongodbUri,
   mongodbDb: process.env.WEB3_MONGODB_DB ?? localFile.mongodbDb ?? 'web3',
 };

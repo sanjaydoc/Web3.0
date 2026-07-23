@@ -92,11 +92,13 @@ export class Kernel {
   async init(): Promise<this> {
     // Restore persisted state, then wire write-through so future mutations are durable.
     await this.store.init();
-    this.http.log.info(
-      this.store.kind === 'mongodb'
-        ? 'persistence: MongoDB connected (state survives restarts)'
-        : 'persistence: in-memory (state is lost on restart — set WEB3_MONGODB_URI to persist)',
-    );
+    const PERSISTENCE_MSG: Record<typeof this.store.kind, string> = {
+      postgres: 'persistence: PostgreSQL connected (state survives restarts)',
+      mongodb: 'persistence: MongoDB connected (state survives restarts)',
+      memory:
+        'persistence: in-memory (state is lost on restart — set WEB3_POSTGRES_URL or WEB3_MONGODB_URI to persist)',
+    };
+    this.http.log.info(PERSISTENCE_MSG[this.store.kind]);
     this.http.log.info(`settlement: ${this.settlement.describe()}`);
     for (const card of await this.store.loadAgents()) this.registry.add(card);
     this.ledger.hydrate(await this.store.loadLedger());

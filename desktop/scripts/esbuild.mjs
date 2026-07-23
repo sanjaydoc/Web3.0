@@ -68,6 +68,9 @@ await build({
     'gcp-metadata',
     'socks',
     '@aws-sdk/credential-providers',
+    'pg-native',
+    'pg-cloudflare',
+    'cloudflare:sockets',
   ],
 });
 

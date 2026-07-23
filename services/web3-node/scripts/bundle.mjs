@@ -48,8 +48,8 @@ await build({
   banner: {
     js: "const __IMPORT_META_URL__ = require('node:url').pathToFileURL(__filename).href;",
   },
-  // mongodb pulls in a pile of OPTIONAL peer deps behind try/catch — mark them external so esbuild
-  // doesn't fail resolving them; mongodb degrades gracefully if they're absent at runtime.
+  // mongodb + pg pull in OPTIONAL peer deps behind try/catch — mark them external so esbuild doesn't
+  // fail resolving them; both drivers degrade gracefully (pure-JS path) if they're absent at runtime.
   external: [
     'bufferutil',
     'utf-8-validate',
@@ -61,6 +61,9 @@ await build({
     'gcp-metadata',
     'socks',
     '@aws-sdk/credential-providers',
+    'pg-native',
+    'pg-cloudflare',
+    'cloudflare:sockets',
   ],
 });
 
