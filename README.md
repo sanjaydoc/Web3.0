@@ -314,10 +314,9 @@ protocol spec in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 
 ## Roadmap
 
-- [ ] **PostgreSQL store backend** — self-host the database on the node's own disk (e.g. Oracle's
-  free 100 GB) instead of the external MongoDB Atlas free tier (512 MB). Adds a `WEB3_POSTGRES_URL`
-  store alongside the existing in-memory and MongoDB backends, so an operator can keep all state —
-  ledger, wallets, blocks — local and uncapped.
+- [x] **PostgreSQL store backend** — self-host the database on the node's own disk (e.g. Oracle's
+  free 100 GB) instead of the external MongoDB Atlas free tier (512 MB). `WEB3_POSTGRES_URL` keeps all
+  state — ledger, wallets, settings — local and uncapped. ✅ *shipped (verified against Postgres 16).*
 - [ ] **Publish the public Docker image** — run the `docker` workflow to push
   `ghcr.io/sanjaydoc/web3-node:latest` and set the package visibility to public (manual for now).
 - [ ] **Live shared network** — bring the node backend online and point the console at it
