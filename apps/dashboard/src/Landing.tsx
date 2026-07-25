@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
-import { type Role, api, setWeb3Token } from './api.js';
 import { InstallButton } from './InstallButton.js';
+import { type Role, api, setWeb3Token } from './api.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
 const NODES: [number, number][] = [
@@ -125,7 +125,8 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [token, setToken] = useState('');
   const [local, setLocal] = useState('');
-  const [role, setRole] = useState<Role>('operator');
+  // Public sign-ups are always node operators. Admins are bootstrapped on the node, not self-served.
+  const role: Role = 'operator';
   const [fresh, setFresh] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -312,13 +313,6 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
                         onChange={(e) => setLocal(e.target.value)}
                       />
                       <em>{local || '…'}@web3.0</em>
-                    </label>
-                    <label className="l-field">
-                      <span>Role</span>
-                      <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                        <option value="operator">node operator</option>
-                        <option value="admin">admin</option>
-                      </select>
                     </label>
                     <button
                       type="button"
