@@ -185,6 +185,20 @@ export class Kernel {
     const clock = () => new Date().toISOString();
     const accounts = new AccountsService(this.store, clock);
     await accounts.load();
+    // Make the auth state visible at boot — the difference between "N accounts loaded" and "open
+    // mode" is otherwise invisible and turns a store/load hiccup into a baffling "operator works but
+    // login doesn't". If no accounts loaded and no admin token is set, the node is OPEN: privileged
+    // endpoints answer any caller. Loud on purpose.
+    const openMode = !accounts.hasAccounts() && !process.env.WEB3_ADMIN_TOKEN;
+    if (openMode) {
+      this.http.log.warn(
+        'auth: OPEN MODE — no accounts loaded and no WEB3_ADMIN_TOKEN; privileged endpoints accept any caller',
+      );
+    } else {
+      this.http.log.info(
+        `auth: ${accounts.list().length} account(s) loaded (admin present: ${accounts.hasAdmin() ? 'yes' : 'no'})`,
+      );
+    }
     const skills = new SkillsService(this.store, clock);
     await skills.load();
     const connectors = new ConnectorsService(this.store, clock);

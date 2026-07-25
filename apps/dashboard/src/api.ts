@@ -204,37 +204,62 @@ function authHeaders(base: Record<string, string> = {}): Record<string, string> 
   return t ? { ...base, 'x-web3-token': t } : base;
 }
 
+/**
+ * An API failure that carries the HTTP status so callers can tell apart the cases that used to look
+ * identical: `status === 0` means the request never reached the node (network down, wrong URL, or a
+ * CORS block — the browser rejects `fetch` before any response); `401` means the node answered but
+ * rejected the token; other codes carry the node's own error message. This is what lets sign-in say
+ * "can't reach the node" vs "token not recognized" instead of one misleading catch-all.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+/** Run a fetch, converting a network/CORS rejection into a status-0 ApiError. */
+async function doFetch(path: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${NODE_URL}${path}`, init);
+  } catch {
+    throw new ApiError(`cannot reach the node at ${NODE_URL} (network or CORS)`, 0);
+  }
+}
+
+async function readError(res: Response, path: string): Promise<never> {
+  const detail = await res.json().catch(() => ({}));
+  throw new ApiError((detail as { error?: string }).error ?? `${path} → ${res.status}`, res.status);
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${NODE_URL}${path}`, { headers: authHeaders() });
-  if (!res.ok) throw new Error(`${path} → ${res.status}`);
+  const res = await doFetch(path, { headers: authHeaders() });
+  if (!res.ok) return readError(res, path);
   return res.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown, adminToken?: string): Promise<T> {
   const headers = authHeaders({ 'content-type': 'application/json' });
   if (adminToken) headers['x-admin-token'] = adminToken;
-  const res = await fetch(`${NODE_URL}${path}`, {
+  const res = await doFetch(path, {
     method: 'POST',
     headers,
     body: JSON.stringify(body ?? {}),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error((detail as { error?: string }).error ?? `${path} → ${res.status}`);
-  }
+  if (!res.ok) return readError(res, path);
   return res.json() as Promise<T>;
 }
 
 async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${NODE_URL}${path}`, {
+  const res = await doFetch(path, {
     method,
     headers: authHeaders({ 'content-type': 'application/json' }),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new Error((detail as { error?: string }).error ?? `${path} → ${res.status}`);
-  }
+  if (!res.ok) return readError(res, path);
   return res.json() as Promise<T>;
 }
 

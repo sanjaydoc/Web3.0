@@ -1,8 +1,8 @@
 import { web3Id } from '@web3/core';
 import { generateKeypair, toB64u } from '@web3/crypto';
+import { describe, expect, it } from 'vitest';
 import type { LedgerEntry } from '../src/entry.js';
 import { Ledger, verifySnapshot } from '../src/index.js';
-import { describe, expect, it } from 'vitest';
 
 const alice = web3Id('alice');
 const bob = web3Id('bob');

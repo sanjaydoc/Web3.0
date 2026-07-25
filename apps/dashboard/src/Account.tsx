@@ -1,12 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   type Account as Acct,
+  ApiError,
+  NODE_URL,
   type Role,
   api,
   formatAmount,
   getWeb3Token,
   setWeb3Token,
 } from './api.js';
+
+/**
+ * Turn a sign-in failure into an honest, actionable message. The three cases used to collapse into
+ * one misleading "not valid on this node"; now we separate them so the user knows whether to fix
+ * their token, or that the node/CORS is the problem.
+ */
+function signinError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 0)
+      return `Couldn't reach the node at ${NODE_URL} — it may be offline, or this site's origin isn't allowed (CORS).`;
+    if (err.status === 401)
+      return 'Token not recognized by this node. Check for a missing character or an extra space, and make sure this token belongs to this node.';
+    return `Sign-in failed (${err.status}).`;
+  }
+  return 'Sign-in failed. Check the browser console for details.';
+}
 import {
   type AccountKey,
   generateAccountKey,
@@ -248,9 +266,9 @@ export function Account() {
       localStorage.setItem('web3.creatorName', acct.address);
       setTokenInput('');
       setMsg({ kind: 'ok', text: `Signed in as ${acct.address}` });
-    } catch {
+    } catch (err) {
       setWeb3Token('');
-      setMsg({ kind: 'err', text: 'That token is not valid on this node.' });
+      setMsg({ kind: 'err', text: signinError(err) });
     }
   }
 

@@ -113,6 +113,14 @@ export function operatorModule(): Web3Module {
           nodePublicKey: ctx.nodePublicKey,
           treasuryId,
           uptimeSec: resources().uptimeSec,
+          // Auth visibility (counts + booleans only, no identities): if accounts failed to load,
+          // `openMode` flips true and privileged endpoints answer any caller — the exact state that
+          // makes `/operator/*` look like it "accepts" a token while `/accounts/me` correctly 401s.
+          auth: {
+            accounts: ctx.accounts.list().length,
+            hasAdmin: ctx.accounts.hasAdmin(),
+            openMode: !ctx.accounts.hasAccounts() && !process.env.WEB3_ADMIN_TOKEN,
+          },
           earnings: earnings(),
           traffic: {
             agents: registry.size,
