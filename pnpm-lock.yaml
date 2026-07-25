@@ -29,6 +29,15 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@noble/hashes':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@noble/post-quantum':
+        specifier: ^0.6.1
+        version: 0.6.1
+      '@scure/base':
+        specifier: ^1.2.1
+        version: 1.2.6
       react:
         specifier: ^18.3.1
         version: 18.3.1

@@ -356,8 +356,19 @@ export const api = {
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
-  signup: (local: string, role: Role) => post<SignupResult>('/accounts/signup', { local, role }),
+  signup: (local: string, role: Role, pubkey?: string) =>
+    post<SignupResult>('/accounts/signup', { local, role, pubkey }),
+  /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */
+  bindKey: (pubkey: string) =>
+    post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
+  /** The next nonce this account must sign with, and whether its key is bound on-chain. */
+  txNonce: (account: string) =>
+    get<{ account: string; nonce: number; bound: boolean }>(
+      `/tx/nonce/${encodeURIComponent(account)}`,
+    ),
+  /** Submit an account-signed transfer to the network (trustless — no node login needed). */
+  submitTx: (tx: unknown) => post<{ ok: boolean; hash: string; duplicate: boolean }>('/tx', tx),
   wallet: (id: string) => get<{ wallet: Wallet }>(`/wallets/${encodeURIComponent(id)}`),
   accounts: () => get<{ accounts: Account[] }>('/accounts'),
   skills: () => get<{ skills: SkillDef[] }>('/skills'),

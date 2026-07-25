@@ -7,6 +7,157 @@ import {
   getWeb3Token,
   setWeb3Token,
 } from './api.js';
+import {
+  type AccountKey,
+  generateAccountKey,
+  loadAccountKey,
+  saveAccountKey,
+  signTransfer,
+} from './txsign.js';
+
+/**
+ * PaymentsSection — trustless "Send aETH". If the account has a signing key here AND it's bound
+ * on-chain, it shows a send form: the transfer is signed on this device with the account's ML-DSA
+ * key and submitted to the network (POST /tx), where an authority verifies ownership + balance and
+ * seals it. Otherwise it offers to enable payments (generate a key + bind its public half).
+ */
+function PaymentsSection({
+  me,
+  bound,
+  onChanged,
+}: { me: Acct; bound: boolean; onChanged: () => void }) {
+  const [localKey, setLocalKey] = useState<AccountKey | null>(() => loadAccountKey(me.address));
+  const [to, setTo] = useState('');
+  const [amount, setAmount] = useState('');
+  const [memo, setMemo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  async function enable() {
+    setBusy(true);
+    setNote(null);
+    try {
+      const key = localKey ?? generateAccountKey();
+      await api.bindKey(key.publicKey);
+      saveAccountKey(me.address, key);
+      setLocalKey(key);
+      setNote({ kind: 'ok', text: 'Payments enabled — your signing key is bound on-chain.' });
+      onChanged();
+    } catch (err) {
+      setNote({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendPayment() {
+    if (!localKey) return;
+    const minor = Math.round(Number.parseFloat(amount) * 100);
+    if (!to.trim() || !Number.isFinite(minor) || minor <= 0) {
+      setNote({ kind: 'err', text: 'Enter a valid recipient and amount.' });
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      const { nonce } = await api.txNonce(me.address);
+      const tx = signTransfer(localKey, {
+        from: me.address,
+        to: to.trim(),
+        amount: minor,
+        nonce,
+        memo: memo.trim() || undefined,
+      });
+      await api.submitTx(tx);
+      setNote({ kind: 'ok', text: `Sent ${(minor / 100).toFixed(2)} aETH to ${to.trim()}.` });
+      setTo('');
+      setAmount('');
+      setMemo('');
+      onChanged();
+    } catch (err) {
+      setNote({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ready = !!localKey && bound;
+
+  return (
+    <>
+      <div className="section-title" style={{ marginTop: 18 }}>
+        Send aETH
+      </div>
+      {ready ? (
+        <>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="p-to">To</label>
+              <input
+                id="p-to"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                placeholder="karthik@web3.0"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="p-amt">Amount (aETH)</label>
+              <input
+                id="p-amt"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="10.00"
+                inputMode="decimal"
+              />
+            </div>
+          </div>
+          <div className="field wide">
+            <label htmlFor="p-memo">Memo (optional)</label>
+            <input
+              id="p-memo"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="for the compute"
+            />
+          </div>
+          <div className="gen-actions">
+            <button type="button" className="btn act" disabled={busy} onClick={sendPayment}>
+              {busy ? 'Signing…' : 'Sign & send'}
+            </button>
+          </div>
+          <p className="hint">
+            Signed on this device with your account key (ML-DSA) and submitted to the network. An
+            authority verifies your signature, checks your balance, and seals it into a block — so a
+            peer can carry your payment without being trusted.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="hint">
+            {localKey && !bound
+              ? 'Your device has a signing key, but it isn’t bound on-chain yet. Bind it to send payments.'
+              : bound && !localKey
+                ? 'Your signing key lives on another device. Generate a new one here to send from this browser (it replaces the old key on-chain).'
+                : 'Turn on trustless payments: this generates an ML-DSA key in your browser and binds its public half on-chain. The secret half never leaves this device.'}
+          </p>
+          <div className="gen-actions">
+            <button type="button" className="btn act" disabled={busy} onClick={enable}>
+              {busy ? 'Enabling…' : 'Enable payments'}
+            </button>
+          </div>
+        </>
+      )}
+      {note && (
+        <div
+          className={`note ${note.kind === 'err' ? 'note-err' : 'note-ok'}`}
+          style={{ marginTop: 10 }}
+        >
+          {note.text}
+        </div>
+      )}
+    </>
+  );
+}
 
 /**
  * Account — sign up (mint an address + one-time Web3.0 token) or sign in (paste a token). The token is
@@ -24,6 +175,8 @@ export function Account() {
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
+  /** Whether this account's signing key is bound on-chain (can it send trustless payments). */
+  const [keyBound, setKeyBound] = useState(false);
 
   const copyToken = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(
@@ -48,6 +201,10 @@ export function Account() {
         .wallet(acct.address)
         .then((w) => setBalance(w.wallet.balance))
         .catch(() => setBalance(0));
+      api
+        .txNonce(acct.address)
+        .then((n) => setKeyBound(n.bound))
+        .catch(() => setKeyBound(false));
     } catch {
       setMe(null); // stale/invalid token
     } finally {
@@ -63,7 +220,12 @@ export function Account() {
     setMsg(null);
     setFreshToken(null);
     try {
-      const res = await api.signup(local.trim(), role);
+      // Generate the account's transaction-signing key in the browser and bind its PUBLIC half
+      // on-chain at signup; the secret half never leaves this device. This is what lets the
+      // account send trustless, owner-signed payments across the shared network.
+      const key = generateAccountKey();
+      const res = await api.signup(local.trim(), role, key.publicKey);
+      saveAccountKey(res.address, key);
       setWeb3Token(res.token);
       setFreshToken(res.token);
       setRevealed(true); // show it immediately in the signed-in view
@@ -128,6 +290,8 @@ export function Account() {
             <dt>Since</dt>
             <dd>{new Date(me.createdAt).toLocaleString()}</dd>
           </dl>
+
+          <PaymentsSection me={me} bound={keyBound} onChanged={refresh} />
 
           {token && (
             <>

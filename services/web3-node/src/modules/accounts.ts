@@ -90,6 +90,27 @@ export function accountsModule(): Web3Module {
         }
       });
 
+      // Bind (or rotate) the signing key for the SIGNED-IN account — how accounts created before
+      // keys existed (or a fresh device) enable trustless payments. Authenticated by the caller's
+      // token; the key is generated client-side and only its public half is sent.
+      http.post('/accounts/key', async (request, reply) => {
+        const acct = accounts.authenticate(request.headers['x-web3-token'] as string | undefined);
+        if (!acct) return reply.code(401).send({ error: 'authentication required' });
+        const pubkey = ((request.body ?? {}) as { pubkey?: string }).pubkey?.trim() ?? '';
+        if (!pubkey) return reply.code(400).send({ error: 'pubkey is required' });
+        try {
+          ctx.ledger.bindAccount(
+            acct.address as Parameters<typeof ctx.ledger.bindAccount>[0],
+            acct.role,
+            pubkey,
+            deriveDid(fromB64u(pubkey)),
+          );
+        } catch {
+          return reply.code(400).send({ error: 'pubkey must be base64url-encoded' });
+        }
+        return reply.send({ bound: true, address: acct.address });
+      });
+
       http.get('/accounts/me', async (request, reply) => {
         const acct = accounts.authenticate(
           (request.headers['x-web3-token'] as string | undefined) ??
