@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
 // The PUBLIC repo — the open console + Python agent SDK + docs. The node's server core (registry,
-// relay, ledger, consensus) is closed-source and ships *inside* the desktop app below; there is no
-// public "run the node from source" path, so this page centers the installers for that.
+// relay, ledger, consensus) is closed-source and runs on the canonical shared-network node; the
+// desktop app below is a native client for it, so this page centers those installers.
 const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
-// The packaged desktop app (Electron) — runs a full node + opens the dashboard in one window.
+// The packaged desktop app (Electron) — a native window that opens this console connected to the
+// ONE shared Web3.0 network. It does NOT run its own node; every install is on the same chain.
 // Published by the `desktop` workflow on every version tag, attached to the public repo's releases.
 const DESKTOP_VERSION = '0.1.2';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
@@ -220,7 +221,8 @@ function DesktopApp() {
       <p className="dl-blurb">
         Installs as <b>Web3.0</b> (W3 icon). Launch it and it opens this console as a native app,
         connected to the <b>shared Web3.0 network</b> — same accounts, agents, and ledger as
-        everyone else, no setup. The build is unsigned, so the first launch needs one extra click:
+        everyone else. Nothing to configure, no database to run: sign in and you're on the network.
+        The build is unsigned, so the first launch needs one extra click:
       </p>
       <div className="dl-notes">
         <div className="dl-note">
@@ -239,12 +241,6 @@ function DesktopApp() {
           <span className="dl-note-os">Linux</span>
           <span>
             <code>chmod +x</code> the AppImage · or <code>sudo apt install ./web3_*.deb</code>
-          </span>
-        </div>
-        <div className="dl-note">
-          <span className="dl-note-os">Data</span>
-          <span>
-            runs in-memory by default — set <code>WEB3_MONGODB_URI</code> to persist
           </span>
         </div>
       </div>
@@ -289,19 +285,19 @@ export function Download() {
   return (
     <>
       <div className="page-head">
-        <h1>Run a node</h1>
+        <h1>Get the app</h1>
         <span className="muted">
-          download the app for your device and join Web3.0 — earn aETH hosting it
+          download the native client for your device and join the shared Web3.0 network
         </span>
       </div>
 
       <DesktopApp />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
-        <b>The desktop app is the node.</b> It bundles the server core (registry · relay · ledger ·
-        consensus) and this dashboard into one installer — nothing to clone, no runtime to set up.
-        To run a node, download it above; to point it at a shared chain or persist data, set the
-        environment variables below.
+        <b>One shared network — no islands.</b> The desktop app is a native window onto the canonical
+        Web3.0 node: the same chain, accounts, agents, and ledger everyone else uses. It doesn't run
+        its own node, so there's nothing to sync and no per-install network. Just install and sign
+        in.
       </p>
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
@@ -315,29 +311,16 @@ export function Download() {
       <ClientTerminal />
 
       <div className="card" style={{ marginTop: 18 }}>
-        <div className="section-title">Configure your node</div>
+        <div className="section-title">You're on the shared network</div>
         <p className="hint" style={{ margin: '0 0 10px' }}>
-          The desktop app reads these environment variables at launch (set them in your OS, or in
-          the app's config file).
+          The desktop app connects to the canonical Web3.0 node out of the box — the same chain,
+          accounts, agents, and ledger as everyone else. There's nothing to configure and no
+          database to run; sign in and you're on the network.
         </p>
-        <ol className="steps">
-          <li>
-            The node comes up on <code>http://127.0.0.1:8787</code> — open <code>/health</code> to
-            check.
-          </li>
-          <li>
-            To join a shared chain, set <code>WEB3_CONSENSUS=poa</code>,{' '}
-            <code>WEB3_AUTHORITIES</code>, and <code>WEB3_PEERS</code>.
-          </li>
-          <li>
-            To earn, set <code>WEB3_FEE_BPS</code> and/or <code>WEB3_BLOCK_REWARD</code> — earnings
-            land in <code>treasury@web3.0</code>, visible in the dashboard.
-          </li>
-          <li>
-            To persist across restarts, set <code>WEB3_MONGODB_URI</code> (MongoDB Atlas) —
-            otherwise the node runs in-memory.
-          </li>
-        </ol>
+        <p className="hint" style={{ margin: 0 }}>
+          Want to run your own peer node and contribute to the chain? That's on the roadmap. For now
+          the app is a full-featured native client for the shared network.
+        </p>
       </div>
     </>
   );
