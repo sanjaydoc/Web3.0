@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Account } from './Account.js';
 import { Connectors } from './Connectors.js';
-import { InstallBanner } from './InstallBanner.js';
-import { InstallButton } from './InstallButton.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
 import { HostedDapps } from './HostedDapps.js';
+import { InstallBanner } from './InstallBanner.js';
+import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
 import { Network } from './Network.js';
 import { Operator } from './Operator.js';
@@ -53,15 +53,19 @@ const NAV: {
   badge?: 'agents' | 'events' | 'entries';
   operator?: boolean;
 }[] = [
-  { id: 'overview', label: 'Overview', operator: true },
+  // Operator-visible items show ONLY the signed-in account's own data (their account, their
+  // earnings, their agents/dApps). Everything network-wide or node-owner (overview aggregates,
+  // the network map, the skills/connectors registries, node Telegram config, all-agents, the full
+  // ledger, live traffic, guardrails) is admin-only — a non-admin never mounts them.
+  { id: 'overview', label: 'Overview' },
   { id: 'account', label: 'Account', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
-  { id: 'network', label: 'Network', operator: true },
-  { id: 'connectors', label: 'Connectors', operator: true },
-  { id: 'skills', label: 'Skills', operator: true },
+  { id: 'network', label: 'Network' },
+  { id: 'connectors', label: 'Connectors' },
+  { id: 'skills', label: 'Skills' },
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
-  { id: 'telegram', label: 'Telegram bot', operator: true },
+  { id: 'telegram', label: 'Telegram bot' },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
   { id: 'developers', label: 'Developers', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
@@ -69,6 +73,9 @@ const NAV: {
   { id: 'traffic', label: 'Live traffic', badge: 'events' },
   { id: 'guardrails', label: 'Guardrails' },
 ];
+
+/** Where a non-admin lands (and falls back to) — their own earnings, never an admin view. */
+const OPERATOR_HOME: View = 'mynode';
 
 interface Snapshot {
   stats?: Stats;
@@ -145,16 +152,19 @@ export function App() {
   const changeRole = (r: Role) => {
     setRolePref(r);
     localStorage.setItem(ROLE_KEY, r);
-    // If the current page isn't in the new role's menu, fall back to Overview.
-    if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView('overview');
+    // If the current page isn't in the new role's menu, fall back to the operator home.
+    if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(OPERATOR_HOME);
   };
 
   // Never leave a non-admin sitting on an admin-only view (e.g. after switching accounts).
   useEffect(() => {
-    if (role === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView('overview');
+    if (role === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(OPERATOR_HOME);
   }, [role, view]);
 
   useEffect(() => {
+    // Network-wide data feeds admin-only views only. Operators never render it, so don't even
+    // fetch it for them — keeps their session to their own data (and off the network endpoints).
+    if (!isAdmin) return;
     let active = true;
     async function poll() {
       try {
@@ -186,7 +196,7 @@ export function App() {
       active = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [isAdmin]);
 
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;

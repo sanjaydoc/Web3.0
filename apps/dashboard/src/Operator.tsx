@@ -737,45 +737,47 @@ export function Operator() {
               </div>
             )}
 
-            <div className="card">
-              <div className="section-title">Load &amp; uptime</div>
-              <dl className="kv">
-                <dt>Uptime</dt>
-                <dd>{uptime(node.uptimeSec)}</dd>
-                <dt>Memory (node)</dt>
-                <dd>
-                  {r?.processRssMb} MB{' '}
-                  <span className="muted">
-                    /{' '}
-                    {node.limits.maxRamMb > 0
-                      ? `${node.limits.maxRamMb} MB budget`
-                      : `${r?.systemTotalMb} MB system`}
-                  </span>
-                </dd>
-                <dt>CPU</dt>
-                <dd>
-                  {r?.cpus} cores · load {r?.loadAvg1}
-                </dd>
-              </dl>
-              <div
-                style={{
-                  height: 8,
-                  borderRadius: 6,
-                  background: 'var(--hair)',
-                  overflow: 'hidden',
-                  marginTop: 6,
-                }}
-              >
+            {isAdmin && (
+              <div className="card">
+                <div className="section-title">Load &amp; uptime</div>
+                <dl className="kv">
+                  <dt>Uptime</dt>
+                  <dd>{uptime(node.uptimeSec)}</dd>
+                  <dt>Memory (node)</dt>
+                  <dd>
+                    {r?.processRssMb} MB{' '}
+                    <span className="muted">
+                      /{' '}
+                      {node.limits.maxRamMb > 0
+                        ? `${node.limits.maxRamMb} MB budget`
+                        : `${r?.systemTotalMb} MB system`}
+                    </span>
+                  </dd>
+                  <dt>CPU</dt>
+                  <dd>
+                    {r?.cpus} cores · load {r?.loadAvg1}
+                  </dd>
+                </dl>
                 <div
                   style={{
-                    width: `${ramPct}%`,
-                    height: '100%',
-                    background: ramPct > 85 ? 'var(--no)' : 'var(--ok)',
+                    height: 8,
+                    borderRadius: 6,
+                    background: 'var(--hair)',
+                    overflow: 'hidden',
+                    marginTop: 6,
                   }}
-                />
+                >
+                  <div
+                    style={{
+                      width: `${ramPct}%`,
+                      height: '100%',
+                      background: ramPct > 85 ? 'var(--no)' : 'var(--ok)',
+                    }}
+                  />
+                </div>
+                <p className="hint">{ramPct}% of contributed RAM in use</p>
               </div>
-              <p className="hint">{ramPct}% of contributed RAM in use</p>
-            </div>
+            )}
           </div>
 
           {isAdmin && (
@@ -850,38 +852,41 @@ export function Operator() {
             </div>
           )}
 
-          <AuthorityCard role={node.role} />
+          {/* Node-owner / network cards — admin only. Operators see just their own earnings above. */}
+          {isAdmin && <AuthorityCard role={node.role} />}
 
-          <EconomicsCard />
+          {isAdmin && <EconomicsCard />}
 
-          <StorageCard />
+          {isAdmin && <StorageCard />}
 
           {isAdmin && <NodeLocationCard />}
 
-          <div className="card">
-            <div className="section-title">This node</div>
-            <dl className="kv">
-              <dt>Traffic</dt>
-              <dd>
-                {node.traffic.agents} agents · {node.traffic.online} online ·{' '}
-                {node.traffic.ledgerEntries} ledger entries
-              </dd>
-              <dt>Consensus</dt>
-              <dd>
-                {node.consensus.mode === 'poa'
-                  ? `PoA · ${node.consensus.authorities} authorities · height ${node.consensus.height} · ${node.consensus.peers} peers`
-                  : 'solo node'}
-              </dd>
-              <dt>Settlement</dt>
-              <dd>
-                {node.settlement.mode} · {node.settlement.network}
-              </dd>
-              <dt>Node key</dt>
-              <dd className="mono-hash">
-                {node.nodePublicKey ? `${node.nodePublicKey.slice(0, 28)}…` : '—'}
-              </dd>
-            </dl>
-          </div>
+          {isAdmin && (
+            <div className="card">
+              <div className="section-title">This node</div>
+              <dl className="kv">
+                <dt>Traffic</dt>
+                <dd>
+                  {node.traffic.agents} agents · {node.traffic.online} online ·{' '}
+                  {node.traffic.ledgerEntries} ledger entries
+                </dd>
+                <dt>Consensus</dt>
+                <dd>
+                  {node.consensus.mode === 'poa'
+                    ? `PoA · ${node.consensus.authorities} authorities · height ${node.consensus.height} · ${node.consensus.peers} peers`
+                    : 'solo node'}
+                </dd>
+                <dt>Settlement</dt>
+                <dd>
+                  {node.settlement.mode} · {node.settlement.network}
+                </dd>
+                <dt>Node key</dt>
+                <dd className="mono-hash">
+                  {node.nodePublicKey ? `${node.nodePublicKey.slice(0, 28)}…` : '—'}
+                </dd>
+              </dl>
+            </div>
+          )}
         </>
       )}
     </>
