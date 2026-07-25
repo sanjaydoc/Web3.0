@@ -43,6 +43,8 @@ function Snippet({ title, code }: { title: string; code: string }) {
 
 export function Developers() {
   const [info, setInfo] = useState<NodeInfo | null>(null);
+  // Only an admin sees the node/network infra summary; developers get the SDK + their own dApps.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [cons, setCons] = useState<ConsensusInfo | null>(null);
   const [settle, setSettle] = useState<SettlementInfo | null>(null);
   const [dapps, setDapps] = useState<HostedAgent[]>([]);
@@ -63,6 +65,10 @@ export function Developers() {
       .info()
       .then(setInfo)
       .catch(() => undefined);
+    api
+      .me()
+      .then((m) => setIsAdmin(m.role === 'admin'))
+      .catch(() => setIsAdmin(false));
     api
       .consensus()
       .then(setCons)
@@ -172,18 +178,23 @@ curl ${NODE_URL}/settlement`;
           <dd>
             {info?.name ?? '—'} · v{info?.version ?? '—'}
           </dd>
-          <dt>Consensus</dt>
-          <dd>
-            {cons
-              ? cons.enabled
-                ? `PoA · ${cons.authorities.length} authorities · height ${cons.height}`
-                : 'solo node'
-              : '—'}
-          </dd>
-          <dt>Settlement</dt>
-          <dd>{settle ? `${settle.mode} · ${settle.network}` : '—'}</dd>
-          <dt>Modules</dt>
-          <dd>{info?.modules?.join(' · ') ?? '—'}</dd>
+          {/* Node infra (consensus / settlement / modules) is admin-only. */}
+          {isAdmin && (
+            <>
+              <dt>Consensus</dt>
+              <dd>
+                {cons
+                  ? cons.enabled
+                    ? `PoA · ${cons.authorities.length} authorities · height ${cons.height}`
+                    : 'solo node'
+                  : '—'}
+              </dd>
+              <dt>Settlement</dt>
+              <dd>{settle ? `${settle.mode} · ${settle.network}` : '—'}</dd>
+              <dt>Modules</dt>
+              <dd>{info?.modules?.join(' · ') ?? '—'}</dd>
+            </>
+          )}
         </dl>
       </div>
 
