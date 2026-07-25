@@ -1,9 +1,12 @@
 import { type Block, ConsensusEngine, hashBlock } from '@web3/consensus';
+import type { SignedTx } from '@web3/core';
 import { fromB64u, verifyString } from '@web3/crypto';
 import type { Keypair } from '@web3/crypto';
 import { toB64u } from '@web3/crypto';
 import type { Ledger } from '@web3/ledger';
 import type { ConsensusConfig } from '../config.js';
+import type { AcceptResult, Mempool } from './mempool.js';
+import type { NetworkAccounts } from './network-accounts.js';
 
 export interface ConsensusStatus {
   mode: 'off' | 'poa';
@@ -48,6 +51,15 @@ export class ConsensusCoordinator {
   private readonly committedAt = new Map<number, { proposer: string; hash: string }>();
   private readonly slashed = new Set<string>();
 
+  /**
+   * Trustless-write plumbing (set by the kernel). `mempool` validates + queues account-signed txs;
+   * `accounts` is the chain-fed key/nonce index. `broadcastTx` gossips a locally-submitted tx to
+   * peers so it reaches an authority. All optional so the coordinator stays testable in isolation.
+   */
+  private readonly mempool?: Mempool;
+  private readonly accounts?: NetworkAccounts;
+  broadcastTx?: (tx: SignedTx) => void;
+
   constructor(
     private readonly config: ConsensusConfig,
     nodeKeys: Keypair,
@@ -62,14 +74,44 @@ export class ConsensusCoordinator {
       blockReward: () => 0,
       authorityStake: () => 0,
     },
+    deps: { mempool?: Mempool; accounts?: NetworkAccounts } = {},
   ) {
     this.enabled = config.mode === 'poa';
+    this.mempool = deps.mempool;
+    this.accounts = deps.accounts;
     const authority = toB64u(nodeKeys.publicKey);
     // Default to a single-authority chain (this node) if none configured, so `poa` always works.
     const authorities = config.authorities.length > 0 ? config.authorities : [authority];
     this.engine = this.enabled
       ? new ConsensusEngine(nodeKeys, authority, authorities, undefined, config.slotMs)
       : null;
+  }
+
+  /**
+   * Validate + queue an account-signed transaction (from this node's dashboard or a peer's gossip).
+   * The mempool proves ownership/nonce/balance before anything is queued. Sealing happens later:
+   * an authority seals on its turn (proposeTick); a solo node with consensus off seals immediately,
+   * since it is the only writer. Returns the mempool verdict.
+   */
+  acceptTx(tx: SignedTx): AcceptResult {
+    if (!this.mempool) return { ok: false, reason: 'transactions not enabled on this node' };
+    const result = this.mempool.accept(tx);
+    // Solo/authority-less node: no blocks will ever seal it, so apply it now (this node is the
+    // sole source of truth). PoA nodes wait for an authority's block instead.
+    if (result.ok && !result.duplicate && !this.enabled) this.mempool.drainAndSeal();
+    return result;
+  }
+
+  /** Submit a tx that originated on THIS node: accept it, then gossip it to peers (if PoA). */
+  submitTx(tx: SignedTx): AcceptResult {
+    const result = this.acceptTx(tx);
+    if (result.ok && !result.duplicate && this.enabled) this.broadcastTx?.(tx);
+    return result;
+  }
+
+  /** The next nonce a client should sign with for `account` (chain state + local queue). */
+  nextNonce(account: string): number {
+    return this.mempool?.nextNonce(account) ?? this.accounts?.nonceOf(account) ?? 0;
   }
 
   /**
@@ -144,10 +186,16 @@ export class ConsensusCoordinator {
   private replicate(block: Block): void {
     const local = new Set(this.ledger.all().map((e) => e.hash));
     for (const entry of block.entries) {
+      // Learn account key-bindings and advance sender nonces from EVERY entry in the block, even
+      // ones this node authored — this is how a peer discovers accounts created elsewhere and keeps
+      // its nonce view in sync with the chain.
+      this.accounts?.observe(entry);
       if (local.has(entry.hash) || this.appliedExternal.has(entry.hash)) continue;
       this.ledger.applyExternal(entry);
       this.appliedExternal.add(entry.hash);
     }
+    // A sealed block may have consumed nonces our mempool was still holding — drop the dead txs.
+    this.mempool?.prune();
   }
 
   /**
@@ -175,6 +223,10 @@ export class ConsensusCoordinator {
   proposeTick(): Block | null {
     if (!this.engine) return null;
     this.queueStakedAuthorities();
+    // Seal queued account-signed txs into node payments ONLY when this node is the due proposer —
+    // so exactly one authority seals each tx (drainAndSeal mutates the ledger, so an out-of-turn
+    // node must not run it). The sealed payments then batch into the block below.
+    if (this.mempool && this.engine.isDue(Date.now())) this.mempool.drainAndSeal();
     const all = this.ledger.all();
     const pending = all.slice(this.includedLocalEntries);
     if (pending.length === 0) return null;

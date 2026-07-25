@@ -1,8 +1,8 @@
 import { buildTransfer, signTransaction, web3Id } from '@web3/core';
 import type { Web3Id } from '@web3/core';
 import { deriveDid, generateKeypair, toB64u } from '@web3/crypto';
-import { Ledger } from '@web3/ledger';
 import type { Keypair } from '@web3/crypto';
+import { Ledger } from '@web3/ledger';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Mempool } from '../src/services/mempool.js';
 import { NetworkAccounts } from '../src/services/network-accounts.js';
@@ -66,7 +66,10 @@ describe('Mempool validation (the security gate)', () => {
   it("rejects Mallory forging a spend from Alice's account", () => {
     // from: ALICE, but signed with Mallory's key → embedded pubkey is Mallory's, which is NOT
     // the key bound to alice on-chain. This is the core attack the mempool must stop.
-    const tx = signTransaction(malloryKeys, buildTransfer({ from: ALICE, to: web3Id('mallory'), amount: 900, nonce: 0 }));
+    const tx = signTransaction(
+      malloryKeys,
+      buildTransfer({ from: ALICE, to: web3Id('mallory'), amount: 900, nonce: 0 }),
+    );
     const res = mempool.accept(tx);
     expect(res.ok).toBe(false);
     expect(res.reason).toMatch(/does not match/);

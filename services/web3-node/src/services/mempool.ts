@@ -40,6 +40,22 @@ export class Mempool {
     return this.pending.size;
   }
 
+  /** The next nonce a client should use for `from` (chain nonce + anything already queued here). */
+  nextNonce(from: string): number {
+    return this.expectedNonce(from);
+  }
+
+  /**
+   * Drop pending txs that can never seal because the sender's on-chain nonce has moved past them —
+   * e.g. an authority already sealed this tx (or an equivalent one) into a block we just replicated.
+   * Keeps the mempool from re-forwarding dead txs after a block lands.
+   */
+  prune(): void {
+    for (const [hash, tx] of this.pending) {
+      if (tx.nonce < this.accounts.nonceOf(tx.from)) this.pending.delete(hash);
+    }
+  }
+
   /** Validate a tx and queue it if it passes. Idempotent for an already-pending hash. */
   accept(tx: SignedTx): AcceptResult {
     if (this.pending.has(tx.hash)) return { ok: true, duplicate: true };

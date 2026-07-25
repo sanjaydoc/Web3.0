@@ -101,23 +101,36 @@ export class ConsensusEngine {
    * so the caller controls the clock (and tests are deterministic).
    */
   proposeIfDue(entries: LedgerEntry[], nowMs: number): Block | null {
+    const round = this.dueRound(nowMs);
+    if (round === null) return null;
+    return this.propose(entries, round, isoFromMs(nowMs, this.now));
+  }
+
+  /**
+   * Would this node propose right now? True when it's this node's slot (in-turn, or an out-of-turn
+   * round it owns once earlier authorities have missed their slots). Pure — no mutation — so a
+   * caller can decide to do sealing/side-effects ONLY when it will actually produce the block.
+   */
+  isDue(nowMs: number): boolean {
+    return this.dueRound(nowMs) !== null;
+  }
+
+  /** The round (offset from this node's index) this node may propose at now, or null if not due. */
+  private dueRound(nowMs: number): number | null {
     if (this.myIndex < 0) return null;
     const height = this.chain.height;
     const n = this.chain.authorities.length;
     const myRound = (((this.myIndex - height) % n) + n) % n; // r such that (height + r) % n == me
 
     if (height === 0) {
-      if (myRound !== 0) return null; // genesis is bootstrapped only by the in-turn authority
-    } else {
-      if (this.slotMs <= 0) {
-        if (myRound !== 0) return null; // skipping disabled → in-turn only
-      } else {
-        const prevMs = Date.parse(this.chain.blocks.at(-1)!.ts);
-        const elapsedRounds = Math.floor((nowMs - prevMs) / this.slotMs);
-        if (elapsedRounds < myRound) return null; // not this node's turn yet
-      }
+      return myRound === 0 ? 0 : null; // genesis is bootstrapped only by the in-turn authority
     }
-    return this.propose(entries, myRound, isoFromMs(nowMs, this.now));
+    if (this.slotMs <= 0) {
+      return myRound === 0 ? 0 : null; // skipping disabled → in-turn only
+    }
+    const prevMs = Date.parse(this.chain.blocks.at(-1)!.ts);
+    const elapsedRounds = Math.floor((nowMs - prevMs) / this.slotMs);
+    return elapsedRounds >= myRound ? myRound : null; // this node's turn once enough slots elapsed
   }
 
   private propose(entries: LedgerEntry[], round: number, ts: string): Block {

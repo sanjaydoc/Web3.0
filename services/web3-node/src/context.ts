@@ -5,9 +5,11 @@ import type { AccountsService } from './services/accounts.js';
 import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
 import type { ConnectorsService } from './services/connectors.js';
-import type { EconomicsService } from './services/economics.js';
 import type { ConsensusCoordinator } from './services/consensus.js';
+import type { EconomicsService } from './services/economics.js';
 import type { Guardrails } from './services/guardrails.js';
+import type { Mempool } from './services/mempool.js';
+import type { NetworkAccounts } from './services/network-accounts.js';
 import type { Registry } from './services/registry.js';
 import type { ReplayGuard } from './services/replay.js';
 import type { SettlementProvider } from './services/settlement.js';
@@ -29,6 +31,10 @@ export interface ModuleContext {
   replay: ReplayGuard;
   settlement: SettlementProvider;
   consensus: ConsensusCoordinator;
+  /** Chain-fed index of account keys + nonces (identical on every node). */
+  networkAccounts: NetworkAccounts;
+  /** Validating mempool for account-signed transactions (trustless writes). */
+  mempool: Mempool;
   connections: ConnectionHub;
   store: Store;
   /** Sign-up + authentication: resolves accounts, addresses, and roles from Web3.0 tokens. */

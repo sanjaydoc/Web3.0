@@ -1,4 +1,5 @@
 import type { Block } from '@web3/consensus';
+import type { SignedTx } from '@web3/core';
 import WebSocket from 'ws';
 import type { WebSocket as WsSocket } from 'ws';
 import type { ModuleContext, Web3Module } from '../context.js';
@@ -26,17 +27,28 @@ export function consensusModule(): Web3Module {
 
       if (!consensus.enabled) return;
 
-      const broadcast = (block: Block): void => {
-        const frame = JSON.stringify({ kind: 'block', block });
+      const sendAll = (frame: string): void => {
         for (const s of subscribers) if (s.readyState === s.OPEN) s.send(frame);
         for (const s of dialed) if (s.readyState === WebSocket.OPEN) s.send(frame);
       };
+      const broadcast = (block: Block): void => sendAll(JSON.stringify({ kind: 'block', block }));
+      const broadcastTx = (tx: SignedTx): void => sendAll(JSON.stringify({ kind: 'tx', tx }));
+
+      // Let the coordinator gossip locally-submitted txs (via POST /tx) out to the mesh.
+      consensus.broadcastTx = broadcastTx;
 
       const onInbound = (raw: unknown, gossip: boolean): void => {
-        let frame: { kind?: string; block?: Block };
+        let frame: { kind?: string; block?: Block; tx?: SignedTx };
         try {
           frame = JSON.parse(String(raw));
         } catch {
+          return;
+        }
+        // A forwarded account-signed transaction. Validate + queue it; if it's genuinely new,
+        // re-gossip so it keeps flowing toward an authority through relays (dedupe stops loops).
+        if (frame.kind === 'tx' && frame.tx) {
+          const res = consensus.acceptTx(frame.tx);
+          if (res.ok && !res.duplicate && gossip) broadcastTx(frame.tx);
           return;
         }
         if (frame.kind !== 'block' || !frame.block) return;

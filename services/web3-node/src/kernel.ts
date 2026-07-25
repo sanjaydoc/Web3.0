@@ -17,6 +17,8 @@ import { ConnectorsService } from './services/connectors.js';
 import { ConsensusCoordinator } from './services/consensus.js';
 import { EconomicsService } from './services/economics.js';
 import { Guardrails } from './services/guardrails.js';
+import { Mempool } from './services/mempool.js';
+import { NetworkAccounts } from './services/network-accounts.js';
 import { RateLimiter } from './services/ratelimit.js';
 import { Registry } from './services/registry.js';
 import { ReplayGuard } from './services/replay.js';
@@ -39,6 +41,10 @@ export class Kernel {
   readonly replay: ReplayGuard;
   readonly settlement: SettlementProvider;
   readonly consensus: ConsensusCoordinator;
+  /** Chain-fed index of account keys + nonces — identical on every node. */
+  readonly networkAccounts: NetworkAccounts;
+  /** Validating mempool for account-signed transactions (trustless writes). */
+  readonly mempool: Mempool;
   readonly economics: EconomicsService;
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
@@ -73,11 +79,19 @@ export class Kernel {
       burnBps: this.config.fees.burnBps,
       authorityStake: this.config.authorityStake,
     });
-    this.consensus = new ConsensusCoordinator(this.config.consensus, this.nodeKeys, this.ledger, {
-      treasuryId: this.treasuryId,
-      blockReward: () => this.economics.blockReward,
-      authorityStake: () => this.economics.authorityStake,
-    });
+    this.networkAccounts = new NetworkAccounts();
+    this.mempool = new Mempool(this.ledger, this.networkAccounts);
+    this.consensus = new ConsensusCoordinator(
+      this.config.consensus,
+      this.nodeKeys,
+      this.ledger,
+      {
+        treasuryId: this.treasuryId,
+        blockReward: () => this.economics.blockReward,
+        authorityStake: () => this.economics.authorityStake,
+      },
+      { mempool: this.mempool, accounts: this.networkAccounts },
+    );
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
       this.config.auth.httpRateWindowMs,
@@ -102,7 +116,12 @@ export class Kernel {
     this.http.log.info(`settlement: ${this.settlement.describe()}`);
     for (const card of await this.store.loadAgents()) this.registry.add(card);
     this.ledger.hydrate(await this.store.loadLedger());
+    // Rebuild the account key/nonce index from persisted history, so key bindings and replay
+    // protection survive a restart before any new entry is appended.
+    for (const entry of this.ledger.all()) this.networkAccounts.observe(entry);
     this.ledger.onAppend = (entry) => {
+      // Keep the network-account index current with every local write (bindings + tx nonces).
+      this.networkAccounts.observe(entry);
       const p = this.store
         .appendEntry(entry)
         .catch((err) => this.http.log.error({ err }, 'ledger persistence failed'));
@@ -177,6 +196,8 @@ export class Kernel {
       replay: this.replay,
       settlement: this.settlement,
       consensus: this.consensus,
+      networkAccounts: this.networkAccounts,
+      mempool: this.mempool,
       connections: this.connections,
       store: this.store,
       accounts,

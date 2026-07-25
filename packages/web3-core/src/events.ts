@@ -24,6 +24,7 @@ export type EventKind =
   | 'economics.updated'
   | 'message.routed'
   | 'task.updated'
+  | 'tx.submitted'
   | 'payment.settled'
   | 'guardrail.decision'
   | 'auth.rejected'

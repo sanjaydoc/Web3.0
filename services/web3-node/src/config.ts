@@ -10,6 +10,7 @@ export const ALL_MODULES = [
   'guardrails',
   'observability',
   'consensus',
+  'tx',
   'telegram',
   'hosted',
   'operator',

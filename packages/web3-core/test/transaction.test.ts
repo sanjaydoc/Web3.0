@@ -1,12 +1,6 @@
 import { generateKeypair, toB64u } from '@web3/crypto';
 import { describe, expect, it } from 'vitest';
-import {
-  buildTransfer,
-  hashTx,
-  signTransaction,
-  verifyTransaction,
-  web3Id,
-} from '../src/index.js';
+import { buildTransfer, hashTx, signTransaction, verifyTransaction, web3Id } from '../src/index.js';
 
 const alice = generateKeypair(new Uint8Array(32).fill(1));
 const mallory = generateKeypair(new Uint8Array(32).fill(2));
@@ -70,7 +64,10 @@ describe('transaction signing', () => {
 
   it('rejects a mutated hash', () => {
     const signed = tx();
-    const forged = { ...signed, hash: hashTx(buildTransfer({ from: A, to: B, amount: 1, nonce: 0 })) };
+    const forged = {
+      ...signed,
+      hash: hashTx(buildTransfer({ from: A, to: B, amount: 1, nonce: 0 })),
+    };
     expect(verifyTransaction(forged).ok).toBe(false);
   });
 
@@ -81,7 +78,10 @@ describe('transaction signing', () => {
   });
 
   it('memo is covered by the signature', () => {
-    const withMemo = signTransaction(alice, buildTransfer({ from: A, to: B, amount: 10, nonce: 1, memo: 'lunch' }));
+    const withMemo = signTransaction(
+      alice,
+      buildTransfer({ from: A, to: B, amount: 10, nonce: 1, memo: 'lunch' }),
+    );
     expect(verifyTransaction(withMemo).ok).toBe(true);
     expect(verifyTransaction({ ...withMemo, memo: 'rent' }).ok).toBe(false);
   });
