@@ -1511,6 +1511,8 @@ button.connector:not(:disabled):hover {
 
 /* --- Landing download band (desktop installers, black & white) ----------- */
 .l-download {
+  position: relative;
+  z-index: 1; /* lift above the fixed .landing-bg overlay so the buttons are clickable */
   border-top: 1px solid var(--hair);
   border-bottom: 1px solid var(--hair);
   background: var(--paper);
