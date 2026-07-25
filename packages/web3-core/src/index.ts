@@ -12,3 +12,4 @@ export * from './identity.js';
 export * from './envelope.js';
 export * from './messages.js';
 export * from './events.js';
+export * from './transaction.js';
