@@ -7,7 +7,7 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
 // The packaged desktop app (Electron) — runs a full node + opens the dashboard in one window.
 // Published by the `desktop` workflow on every version tag, attached to the public repo's releases.
-const DESKTOP_VERSION = '0.1.1';
+const DESKTOP_VERSION = '0.1.2';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
@@ -145,7 +145,7 @@ const W3Logo = () => (
   </svg>
 );
 
-/** The featured one-click desktop app — the only setup-free way to run a node (it bundles one). */
+/** The featured one-click desktop app — a native client for the shared Web3.0 network. */
 function DesktopApp() {
   const btns = [
     {
@@ -218,9 +218,9 @@ function DesktopApp() {
         ))}
       </div>
       <p className="dl-blurb">
-        Installs as <b>Web3.0</b> (W3 icon). Launch it and it boots a full node — registry, relay,
-        payments, ledger, consensus — and opens this dashboard in one window. No Node.js, pnpm, or
-        terminal. The build is unsigned, so the first launch needs one extra click:
+        Installs as <b>Web3.0</b> (W3 icon). Launch it and it opens this console as a native app,
+        connected to the <b>shared Web3.0 network</b> — same accounts, agents, and ledger as
+        everyone else, no setup. The build is unsigned, so the first launch needs one extra click:
       </p>
       <div className="dl-notes">
         <div className="dl-note">
