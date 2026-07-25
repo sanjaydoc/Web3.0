@@ -176,7 +176,10 @@ export class Kernel {
       modules: this.loaded,
       nodePublicKey: toB64u(this.nodeKeys.publicKey),
     }));
-    this.http.get('/health', () => ({ ok: true, ledgerVerified: this.ledger.verifyChain().ok }));
+    this.http.get('/health', () => ({
+      ok: true,
+      ledgerVerified: this.ledger.verifyChainCached().ok,
+    }));
 
     const clock = () => new Date().toISOString();
     const accounts = new AccountsService(this.store, clock);

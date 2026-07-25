@@ -41,7 +41,7 @@ export function observabilityModule(): Web3Module {
         return {
           size: ledger.size,
           head: ledger.head(),
-          verify: ledger.verifyChain(),
+          verify: ledger.verifyChainCached(),
           wallets: ledger.wallets(),
           entries: recent,
         };
@@ -56,7 +56,7 @@ export function observabilityModule(): Web3Module {
           agents: registry.size,
           online: connections.online().length,
           ledgerEntries: ledger.size,
-          ledgerVerified: ledger.verifyChain().ok,
+          ledgerVerified: ledger.verifyChainCached().ok,
           totalValue,
           totalValueFormatted: formatAmount(totalValue),
           burned,

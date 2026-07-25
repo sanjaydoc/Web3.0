@@ -186,6 +186,24 @@ export class Ledger {
     return verifyEntries(this.keys.publicKey, this.entries);
   }
 
+  /** Cached by entry count: the last full verification, kept in `_verifyCache`. */
+  private _verifyCache?: { size: number; report: VerifyReport };
+
+  /**
+   * Like `verifyChain()`, but memoised by entry count: the append-only log only ever grows, so a
+   * cached result stays valid until a new entry lands. This makes hot, frequently-polled paths
+   * (`/health`, `/stats`) O(1) instead of re-verifying every ML-DSA signature on each request —
+   * which otherwise pegs a CPU on a large chain. A fresh append invalidates the cache naturally.
+   */
+  verifyChainCached(): VerifyReport {
+    if (this._verifyCache && this._verifyCache.size === this.entries.length) {
+      return this._verifyCache.report;
+    }
+    const report = verifyEntries(this.keys.publicKey, this.entries);
+    this._verifyCache = { size: this.entries.length, report };
+    return report;
+  }
+
   toJSON(): LedgerSnapshot {
     return { publicKey: this.publicKeyB64u, entries: this.all() };
   }

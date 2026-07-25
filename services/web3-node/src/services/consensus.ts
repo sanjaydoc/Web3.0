@@ -226,19 +226,28 @@ export class ConsensusCoordinator {
     // Seal queued account-signed txs into node payments ONLY when this node is the due proposer —
     // so exactly one authority seals each tx (drainAndSeal mutates the ledger, so an out-of-turn
     // node must not run it). The sealed payments then batch into the block below.
-    if (this.mempool && this.engine.isDue(Date.now())) this.mempool.drainAndSeal();
-    const all = this.ledger.all();
-    const pending = all.slice(this.includedLocalEntries);
-    if (pending.length === 0) return null;
-    const block = this.engine.proposeIfDue(pending, Date.now());
-    if (block) {
-      this.recordCommitted(block);
-      this.includedLocalEntries = all.length;
-      // Block reward: producing a block mints aETH to this node's treasury (operator incentive).
+    const now = Date.now();
+    const due = this.engine.isDue(now);
+    if (this.mempool && due) this.mempool.drainAndSeal();
+    // Nothing new since our last block? Don't propose. Reward mints are marked included the instant
+    // they're minted (below), so a block reward can never masquerade as pending activity — this is
+    // what prevents an endless chain of empty, self-rewarding blocks.
+    if (this.ledger.all().length === this.includedLocalEntries) return null;
+    // Real pending activity on our slot: mint the block reward so it is sealed INTO this block (not
+    // appended AFTER it, where it would trigger the next block), then propose activity + reward
+    // together.
+    if (due) {
       const reward = this.rewards.blockReward();
       if (reward > 0 && this.rewards.treasuryId) {
         this.ledger.mint(this.rewards.treasuryId as Parameters<Ledger['mint']>[0], reward);
       }
+    }
+    const pending = this.ledger.all().slice(this.includedLocalEntries);
+    const block = this.engine.proposeIfDue(pending, now);
+    if (block) {
+      this.recordCommitted(block);
+      // Mark EVERYTHING committed — including the reward mint — so it never re-triggers a block.
+      this.includedLocalEntries = this.ledger.all().length;
     }
     return block;
   }
