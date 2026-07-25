@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  type Account as Acct,
   type AuthorityRequest,
   type Economics,
+  type MyEarnings,
   type NodeLocation,
   type NodeOperator,
   type NodeRole,
@@ -540,6 +542,11 @@ function uptime(sec: number): string {
 
 export function Operator() {
   const [node, setNode] = useState<NodeOperator | null>(null);
+  // The signed-in account's role decides what this page shows: an admin sees the node OWNER's
+  // console (treasury, collect, contribution caps); everyone else sees only their OWN earnings.
+  const [me, setMe] = useState<Acct | null>(null);
+  const [mine, setMine] = useState<MyEarnings | null>(null);
+  const isAdmin = me?.role === 'admin';
   const [admin, setAdmin] = useState(() => localStorage.getItem(ADMIN_KEY) ?? '');
   const [adminReq, setAdminReq] = useState(false);
   const [contribute, setContribute] = useState(true);
@@ -564,6 +571,14 @@ export function Operator() {
     api
       .telegram()
       .then((t) => setAdminReq(t.adminRequired))
+      .catch(() => undefined);
+    api
+      .me()
+      .then(setMe)
+      .catch(() => setMe(null));
+    api
+      .myEarnings()
+      .then(setMine)
       .catch(() => undefined);
   }, [touched]);
 
@@ -629,11 +644,17 @@ export function Operator() {
     <>
       <div className="page-head">
         <h1>
-          My node{' '}
-          {node && <span className={`role-badge ${node.role}`}>{node.role.toUpperCase()}</span>}
+          {isAdmin ? 'My node' : 'Earnings'}{' '}
+          {isAdmin && node && (
+            <span className={`role-badge ${node.role}`}>{node.role.toUpperCase()}</span>
+          )}
         </h1>
         <span className="muted">
-          {node ? ROLE_HELP[node.role] : 'what this node earns, carries, and contributes to Web3.0'}
+          {isAdmin
+            ? node
+              ? ROLE_HELP[node.role]
+              : 'what this node earns, carries, and contributes to Web3.0'
+            : 'your wallet and income on the Web3.0 network'}
         </span>
       </div>
 
@@ -644,43 +665,77 @@ export function Operator() {
       {node && (
         <>
           <div className="grid-2" style={{ marginBottom: 18 }}>
-            <div className="card">
-              <div className="section-title">Earnings</div>
-              <div
-                style={{
-                  fontFamily: 'var(--serif)',
-                  fontSize: 'var(--fs-xl)',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {e?.formatted}
-              </div>
-              <p className="muted" style={{ margin: '2px 0 12px' }}>
-                in <code>{node.treasuryId}</code>
-              </p>
-              <dl className="kv">
-                <dt>Protocol fees</dt>
-                <dd>{formatAmount(e?.fees ?? 0)}</dd>
-                <dt>Block rewards</dt>
-                <dd>{formatAmount(e?.rewards ?? 0)}</dd>
-              </dl>
-              {e && e.balance === 0 && (
-                <p className="hint">
-                  Earnings are off by default — set <code>WEB3_FEE_BPS</code> /{' '}
-                  <code>WEB3_BLOCK_REWARD</code> to start earning.
-                </p>
-              )}
-              {e && e.balance > 0 && (
-                <button type="button" className="btn act" disabled={busy} onClick={collect}>
-                  {busy ? 'Collecting…' : 'Collect to wallet'}
-                </button>
-              )}
-              {collectMsg && (
-                <div className={`note ${collectMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
-                  {collectMsg.text}
+            {isAdmin ? (
+              // Node OWNER (admin): the node treasury — fees + block rewards it collects — and the
+              // sweep-to-wallet action. This is the owner's money; only admins see it.
+              <div className="card">
+                <div className="section-title">Node earnings</div>
+                <div
+                  style={{
+                    fontFamily: 'var(--serif)',
+                    fontSize: 'var(--fs-xl)',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {e?.formatted}
                 </div>
-              )}
-            </div>
+                <p className="muted" style={{ margin: '2px 0 12px' }}>
+                  in <code>{node.treasuryId}</code>
+                </p>
+                <dl className="kv">
+                  <dt>Protocol fees</dt>
+                  <dd>{formatAmount(e?.fees ?? 0)}</dd>
+                  <dt>Block rewards</dt>
+                  <dd>{formatAmount(e?.rewards ?? 0)}</dd>
+                </dl>
+                {e && e.balance === 0 && (
+                  <p className="hint">
+                    Earnings are off by default — set <code>WEB3_FEE_BPS</code> /{' '}
+                    <code>WEB3_BLOCK_REWARD</code> to start earning.
+                  </p>
+                )}
+                {e && e.balance > 0 && (
+                  <button type="button" className="btn act" disabled={busy} onClick={collect}>
+                    {busy ? 'Collecting…' : 'Collect to wallet'}
+                  </button>
+                )}
+                {collectMsg && (
+                  <div className={`note ${collectMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+                    {collectMsg.text}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Everyone else: YOUR earnings — your wallet balance and income on the network. Never
+              // the node treasury or a Collect button (that money isn't yours).
+              <div className="card">
+                <div className="section-title">Your earnings</div>
+                <div
+                  style={{
+                    fontFamily: 'var(--serif)',
+                    fontSize: 'var(--fs-xl)',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {formatAmount(mine?.balance ?? 0)}
+                </div>
+                <p className="muted" style={{ margin: '2px 0 12px' }}>
+                  in your wallet <code>{mine?.address ?? me?.address ?? ''}</code>
+                </p>
+                <dl className="kv">
+                  <dt>Received</dt>
+                  <dd>{formatAmount(mine?.received ?? 0)}</dd>
+                  <dt>Sent</dt>
+                  <dd>{formatAmount(mine?.sent ?? 0)}</dd>
+                  <dt>Transactions</dt>
+                  <dd>{mine?.txCount ?? 0}</dd>
+                </dl>
+                <p className="hint">
+                  Send and receive aETH from the <b>Account</b> page. The node treasury belongs to
+                  the node owner.
+                </p>
+              </div>
+            )}
 
             <div className="card">
               <div className="section-title">Load &amp; uptime</div>
@@ -723,75 +778,77 @@ export function Operator() {
             </div>
           </div>
 
-          <div className="card" style={{ marginBottom: 18 }}>
-            <div className="section-title">Contribution</div>
-            <p className="muted" style={{ margin: '2px 0 12px' }}>
-              Choose how much of this machine you lend to the network. Limits are enforced — the
-              node won't host past your caps.
-            </p>
-            {adminReq && (
-              <div className="field wide">
-                <label htmlFor="o-admin">Admin token</label>
-                <input
-                  id="o-admin"
-                  type="password"
-                  value={admin}
-                  onChange={(ev) => rememberAdmin(ev.target.value)}
-                  placeholder="required to change limits"
-                />
+          {isAdmin && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <div className="section-title">Contribution</div>
+              <p className="muted" style={{ margin: '2px 0 12px' }}>
+                Choose how much of this machine you lend to the network. Limits are enforced — the
+                node won't host past your caps.
+              </p>
+              {adminReq && (
+                <div className="field wide">
+                  <label htmlFor="o-admin">Admin token</label>
+                  <input
+                    id="o-admin"
+                    type="password"
+                    value={admin}
+                    onChange={(ev) => rememberAdmin(ev.target.value)}
+                    placeholder="required to change limits"
+                  />
+                </div>
+              )}
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="o-ram">Max RAM to contribute (GB)</label>
+                  <input
+                    id="o-ram"
+                    value={maxRamGb}
+                    onChange={(ev) => {
+                      setMaxRamGb(ev.target.value);
+                      setTouched(true);
+                    }}
+                  />
+                  <span className="hint">0 = no cap</span>
+                </div>
+                <div className="field">
+                  <label htmlFor="o-agents">Max agents to host</label>
+                  <input
+                    id="o-agents"
+                    value={maxAgents}
+                    onChange={(ev) => {
+                      setMaxAgents(ev.target.value);
+                      setTouched(true);
+                    }}
+                  />
+                  <span className="hint">0 = no cap</span>
+                </div>
+                <div className="field">
+                  <label htmlFor="o-contrib">Offer spare compute</label>
+                  <select
+                    id="o-contrib"
+                    value={contribute ? 'yes' : 'no'}
+                    onChange={(ev) => {
+                      setContribute(ev.target.value === 'yes');
+                      setTouched(true);
+                    }}
+                  >
+                    <option value="yes">Yes — host others' agents</option>
+                    <option value="no">No — my agents only</option>
+                  </select>
+                </div>
               </div>
-            )}
-            <div className="form-grid">
-              <div className="field">
-                <label htmlFor="o-ram">Max RAM to contribute (GB)</label>
-                <input
-                  id="o-ram"
-                  value={maxRamGb}
-                  onChange={(ev) => {
-                    setMaxRamGb(ev.target.value);
-                    setTouched(true);
-                  }}
-                />
-                <span className="hint">0 = no cap</span>
+              <div className="gen-actions">
+                <button type="button" className="btn act" disabled={busy} onClick={save}>
+                  {busy ? 'Saving…' : 'Save contribution'}
+                </button>
               </div>
-              <div className="field">
-                <label htmlFor="o-agents">Max agents to host</label>
-                <input
-                  id="o-agents"
-                  value={maxAgents}
-                  onChange={(ev) => {
-                    setMaxAgents(ev.target.value);
-                    setTouched(true);
-                  }}
-                />
-                <span className="hint">0 = no cap</span>
-              </div>
-              <div className="field">
-                <label htmlFor="o-contrib">Offer spare compute</label>
-                <select
-                  id="o-contrib"
-                  value={contribute ? 'yes' : 'no'}
-                  onChange={(ev) => {
-                    setContribute(ev.target.value === 'yes');
-                    setTouched(true);
-                  }}
-                >
-                  <option value="yes">Yes — host others' agents</option>
-                  <option value="no">No — my agents only</option>
-                </select>
-              </div>
+              {msg && (
+                <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+                  {msg.text}
+                </div>
+              )}
             </div>
-            <div className="gen-actions">
-              <button type="button" className="btn act" disabled={busy} onClick={save}>
-                {busy ? 'Saving…' : 'Save contribution'}
-              </button>
-            </div>
-            {msg && (
-              <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
-                {msg.text}
-              </div>
-            )}
-          </div>
+          )}
 
           <AuthorityCard role={node.role} />
 
@@ -799,7 +856,7 @@ export function Operator() {
 
           <StorageCard />
 
-          <NodeLocationCard />
+          {isAdmin && <NodeLocationCard />}
 
           <div className="card">
             <div className="section-title">This node</div>

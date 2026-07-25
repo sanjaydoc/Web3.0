@@ -1,7 +1,9 @@
+import type { Web3Id } from '@web3/core';
 import { deriveDid, fromB64u } from '@web3/crypto';
+import type { LedgerEntry } from '@web3/ledger';
 import type { ModuleContext, Web3Module } from '../context.js';
 import type { Role } from '../services/accounts.js';
-import { requireRole } from '../services/auth.js';
+import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
 
 /**
  * accounts — sign-up + identity. `POST /accounts/signup` mints a human address (`local@web3.0`) and a
@@ -194,6 +196,40 @@ export function accountsModule(): Web3Module {
         );
         if (!acct) return reply.code(401).send({ error: 'authentication required' });
         return accounts.view(acct);
+      });
+
+      // The signed-in account's OWN earnings — what THEY hold and have received, derived from the
+      // ledger for their address. This is the personal view (any role), distinct from the node
+      // owner's treasury console under /operator (admin-only). Lets an operator see their wallet +
+      // income without ever being shown the node treasury or a Collect button that isn't theirs.
+      http.get('/accounts/me/earnings', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct) return reply.code(401).send({ error: 'authentication required' });
+        const address = acct.address as Web3Id;
+        let received = 0;
+        let sent = 0;
+        let txCount = 0;
+        for (const entry of ctx.ledger.all() as LedgerEntry<'payment'>[]) {
+          if (entry.type !== 'payment') continue;
+          const d = entry.data;
+          if (d.to === address) {
+            received += d.amount;
+            txCount++;
+          }
+          if (d.from === address) {
+            sent += d.amount;
+            txCount++;
+          }
+        }
+        return {
+          address,
+          role: acct.role,
+          balance: ctx.ledger.balanceOf(address),
+          received,
+          sent,
+          txCount,
+        };
       });
 
       http.get('/accounts', async (request, reply) => {

@@ -122,6 +122,16 @@ export interface NodeLimits {
   maxAgents: number;
 }
 
+/** An account's OWN earnings — what it holds and has received/sent — from `/accounts/me/earnings`. */
+export interface MyEarnings {
+  address: string;
+  role: Role;
+  balance: number;
+  received: number;
+  sent: number;
+  txCount: number;
+}
+
 export type NodeRole = 'solo' | 'relay' | 'authority';
 
 export interface NodeOperator {
@@ -387,6 +397,8 @@ export const api = {
   bindKey: (pubkey: string) =>
     post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
+  /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
+  myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */
   txNonce: (account: string) =>
     get<{ account: string; nonce: number; bound: boolean }>(

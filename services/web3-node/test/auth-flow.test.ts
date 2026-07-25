@@ -6,6 +6,9 @@ process.env.WEB3_LOG_LEVEL = 'silent';
 // These tests exercise real account auth (no legacy master key), so the admin-token bypass must be off.
 process.env.WEB3_ADMIN_TOKEN = undefined;
 process.env.WEB3_ADMIN_TOKEN = '';
+// Point the store-downgrade marker at a path that won't exist, so booting these memory kernels never
+// trips the "refuse to downgrade" guard on a machine that happens to have a real marker.
+process.env.WEB3_STORE_MODE_FILE = '/nonexistent/web3-authflow/store-mode';
 import { Kernel } from '../src/kernel.js';
 import { MemoryStore } from '../src/store/index.js';
 
@@ -133,6 +136,53 @@ describe('account auth end-to-end', () => {
     expect(
       (await kernel.http.inject({ method: 'GET', url: '/accounts/me', headers: tok(oldToken) }))
         .statusCode,
+    ).toBe(401);
+    await kernel.close();
+  });
+
+  it('exposes the caller OWN earnings (wallet + income), separate from the node treasury', async () => {
+    const store = new MemoryStore();
+    const kernel = boot(store);
+    await kernel.init();
+
+    // An operator account (not admin) — the case that was wrongly shown the node treasury.
+    const su = await kernel.http.inject({
+      method: 'POST',
+      url: '/accounts/signup',
+      headers: jsonHdr(),
+      payload: { local: 'alice', role: 'operator' },
+    });
+    const token = su.json().token as string;
+    const address = su.json().address as string;
+
+    // Give alice income and an outgoing payment straight on the ledger.
+    const bob = await kernel.http.inject({
+      method: 'POST',
+      url: '/accounts/signup',
+      headers: jsonHdr(),
+      payload: { local: 'bob', role: 'operator' },
+    });
+    const bobAddr = bob.json().address as string;
+    kernel.ledger.mint(address as never, 500);
+    kernel.ledger.transfer(address as never, bobAddr as never, 100);
+
+    const earn = await kernel.http.inject({
+      method: 'GET',
+      url: '/accounts/me/earnings',
+      headers: tok(token),
+    });
+    expect(earn.statusCode).toBe(200);
+    const j = earn.json();
+    expect(j.address).toBe(address);
+    expect(j.role).toBe('operator');
+    expect(j.balance).toBe(kernel.ledger.balanceOf(address as never));
+    expect(j.received).toBeGreaterThanOrEqual(500); // faucet grant + the 500 mint
+    expect(j.sent).toBe(100);
+    expect(j.txCount).toBeGreaterThanOrEqual(2);
+
+    // Never exposed to an anonymous caller.
+    expect(
+      (await kernel.http.inject({ method: 'GET', url: '/accounts/me/earnings' })).statusCode,
     ).toBe(401);
     await kernel.close();
   });
