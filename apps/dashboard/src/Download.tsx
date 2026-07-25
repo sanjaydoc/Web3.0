@@ -5,10 +5,11 @@ import { useState } from 'react';
 // desktop app below is a native client for it, so this page centers those installers.
 const REPO = 'https://github.com/sanjaydoc/Web3.0';
 
-// The packaged desktop app (Electron) — a native window that opens this console connected to the
-// ONE shared Web3.0 network. It does NOT run its own node; every install is on the same chain.
-// Published by the `desktop` workflow on every version tag, attached to the public repo's releases.
-const DESKTOP_VERSION = '0.1.2';
+// The packaged desktop app (Electron) — runs a real Web3.0 peer node and opens this console against
+// it. The node joins the ONE shared chain (replicates, relays, forwards signed txs); every install
+// is a first-class participant. Published by the `desktop` workflow on every version tag, to the
+// public repo's releases.
+const DESKTOP_VERSION = '0.1.3';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
@@ -294,10 +295,10 @@ export function Download() {
       <DesktopApp />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
-        <b>One shared network — no islands.</b> The desktop app is a native window onto the canonical
-        Web3.0 node: the same chain, accounts, agents, and ledger everyone else uses. It doesn't run
-        its own node, so there's nothing to sync and no per-install network. Just install and sign
-        in.
+        <b>A real peer node — one shared network.</b> The desktop app runs a full Web3.0 node that
+        joins the shared chain: it replicates the whole ledger, relays gossip to other peers, and
+        forwards your account-signed transactions to be sealed. Same chain, accounts, and ledger as
+        everyone else — you're a first-class participant, not an island. Just install and sign in.
       </p>
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
@@ -311,15 +312,16 @@ export function Download() {
       <ClientTerminal />
 
       <div className="card" style={{ marginTop: 18 }}>
-        <div className="section-title">You're on the shared network</div>
+        <div className="section-title">You're running a node on the shared network</div>
         <p className="hint" style={{ margin: '0 0 10px' }}>
-          The desktop app connects to the canonical Web3.0 node out of the box — the same chain,
-          accounts, agents, and ledger as everyone else. There's nothing to configure and no
-          database to run; sign in and you're on the network.
+          The app starts a Web3.0 peer node on your machine and opens this console against it. The
+          node syncs the full chain from the network's authority, relays gossip, and forwards the
+          transactions you sign here — there's nothing to configure and no database to run.
         </p>
         <p className="hint" style={{ margin: 0 }}>
-          Want to run your own peer node and contribute to the chain? That's on the roadmap. For now
-          the app is a full-featured native client for the shared network.
+          Your payments are signed on this device with your account key (ML-DSA) and sealed by an
+          authority. Want to become an authority yourself and produce blocks? Stake aETH from{' '}
+          <b>My node</b> — the network seats you automatically.
         </p>
       </div>
     </>
