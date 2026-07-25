@@ -93,4 +93,17 @@ export class AccountsService {
     await this.persist();
     return { address, role, token };
   }
+
+  /**
+   * Mirror an account that was actually created on another node (an authority) so that its token
+   * still authenticates here. Used by a follower after it forwards a signup upstream: the on-chain
+   * identity + faucet come from the authority (via block replication), but the token must resolve
+   * locally too. No-op if the address already exists.
+   */
+  async adopt(address: string, role: Role, token: string): Promise<void> {
+    if (this.byAddress.has(address)) return;
+    const account: Account = { address, role, tokenHash: sha256(token), createdAt: this.clock() };
+    this.index(account);
+    await this.persist();
+  }
 }

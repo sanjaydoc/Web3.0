@@ -291,6 +291,16 @@ export class ConsensusCoordinator {
     return result;
   }
 
+  /**
+   * Is this node allowed to seal writes itself? True for a solo/consensus-off node (it's the only
+   * writer) and for a PoA node that is in the live authority set. A PoA FOLLOWER returns false —
+   * its privileged writes (account registration, faucet) must be forwarded to an authority.
+   */
+  isAuthority(): boolean {
+    if (!this.engine) return true;
+    return this.engine.chain.authorities.includes(this.engine.publicKeyB64u);
+  }
+
   status(): ConsensusStatus {
     const authorities = [...(this.engine?.chain.authorities ?? this.config.authorities)];
     const height = this.engine?.height ?? 0;

@@ -15,10 +15,32 @@ export function accountsModule(): Web3Module {
     register(ctx: ModuleContext) {
       const { http, accounts } = ctx;
 
+      // On a PoA FOLLOWER, account registration + key binding are authority-privileged (they mint
+      // faucet and write on-chain identity), so this node can't do them itself — it forwards them
+      // to the authority and lets the result replicate back in a block. Returns the authority's
+      // base URL when this node must forward, or undefined when it may handle writes locally
+      // (solo / consensus-off / this node IS an authority).
+      const authorityUrl = (): string | undefined =>
+        ctx.consensus.enabled && !ctx.consensus.isAuthority()
+          ? ctx.config.consensus.peers[0]?.replace(/\/$/, '')
+          : undefined;
+      const passHeaders = (request: { headers: Record<string, unknown> }): Record<
+        string,
+        string
+      > => {
+        const h: Record<string, string> = { 'content-type': 'application/json' };
+        const t = request.headers['x-web3-token'];
+        if (typeof t === 'string') h['x-web3-token'] = t;
+        const a = request.headers['x-admin-token'];
+        if (typeof a === 'string') h['x-admin-token'] = a;
+        return h;
+      };
+
       // Faucet backfill: accounts created before wallets existed never received the signup grant.
       // Mint it once to any account with NO mint in its ledger history — idempotent (an account
       // that received its grant and spent it to zero has a mint entry, so it is never re-granted).
-      if (ctx.config.faucetGrant > 0) {
+      // Authorities only: a follower must never mint (its faucet arrives via block replication).
+      if (ctx.consensus.isAuthority() && ctx.config.faucetGrant > 0) {
         const minted = new Set<string>();
         for (const e of ctx.ledger.all()) {
           if (e.type !== 'payment') continue;
@@ -48,6 +70,31 @@ export function accountsModule(): Web3Module {
             fromB64u(pubkey); // reject a malformed key before it reaches the chain
           } catch {
             return reply.code(400).send({ error: 'pubkey must be base64url-encoded' });
+          }
+        }
+
+        // Follower: forward the signup to the authority (which mints + binds on-chain), then mirror
+        // the returned account locally so its token still authenticates here. The wallet + key
+        // binding arrive via block replication.
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts/signup`, {
+              method: 'POST',
+              headers: passHeaders(request),
+              body: JSON.stringify({ local, role, pubkey: pubkey || undefined }),
+            });
+            const data = (await res.json().catch(() => ({}))) as {
+              address?: string;
+              role?: Role;
+              token?: string;
+            };
+            if (res.ok && data.address && data.role && data.token) {
+              await accounts.adopt(data.address, data.role, data.token);
+            }
+            return reply.code(res.status).send(data);
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority to register' });
           }
         }
 
@@ -98,6 +145,21 @@ export function accountsModule(): Web3Module {
         if (!acct) return reply.code(401).send({ error: 'authentication required' });
         const pubkey = ((request.body ?? {}) as { pubkey?: string }).pubkey?.trim() ?? '';
         if (!pubkey) return reply.code(400).send({ error: 'pubkey is required' });
+        // Follower: the binding is an on-chain write — forward it to the authority (which knows this
+        // token from the forwarded signup). The `account` entry replicates back to this node.
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts/key`, {
+              method: 'POST',
+              headers: passHeaders(request),
+              body: JSON.stringify({ pubkey }),
+            });
+            return reply.code(res.status).send(await res.json().catch(() => ({})));
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority to bind the key' });
+          }
+        }
         try {
           ctx.ledger.bindAccount(
             acct.address as Parameters<typeof ctx.ledger.bindAccount>[0],
