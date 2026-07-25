@@ -1,6 +1,6 @@
 {
   "name": "web3",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Web3.0 desktop — an Electron app that runs a node and shows the dashboard.",
   "private": true,
   "author": "DR SANJAY ANBU",
