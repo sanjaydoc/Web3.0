@@ -1,0 +1,7 @@
+{
+  "consensus": {
+    "mode": "poa",
+    "authorities": ["REPLACE_AT_DEPLOY_WITH_GCP_AUTHORITY_PUBLIC_KEY"],
+    "peers": ["https://104.197.128.113.nip.io"]
+  }
+}

@@ -82,9 +82,10 @@ await build({
   external: ['electron'],
 });
 
-// Bundle the network's genesis file when the repo has one (network.json at the root) so installed
-// nodes join the network instead of booting solo. Absent file → the node still boots solo.
-const genesis = resolve(repo, 'network.json');
+// Bundle the network's genesis/peer config (desktop/network.json) so installed nodes JOIN the
+// shared network instead of booting solo. It lives under desktop/ (not the repo root) so it never
+// leaks into a from-source node's cwd. Absent file → the node still boots solo.
+const genesis = resolve(root, 'network.json');
 if (existsSync(genesis)) {
   cpSync(genesis, resolve(out, 'network.json'));
   console.log('✓ bundled network.json (genesis defaults)');
