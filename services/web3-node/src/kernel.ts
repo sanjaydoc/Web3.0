@@ -53,8 +53,6 @@ export class Kernel {
   readonly store: Store;
   readonly startedAt = Date.now();
   readonly loaded: string[] = [];
-  /** In-flight write-behind persistence, drained on close(). */
-  private readonly inflight = new Set<Promise<void>>();
 
   constructor(
     config: Partial<Web3Config> = {},
@@ -119,15 +117,18 @@ export class Kernel {
     // Rebuild the account key/nonce index from persisted history, so key bindings and replay
     // protection survive a restart before any new entry is appended.
     for (const entry of this.ledger.all()) this.networkAccounts.observe(entry);
-    this.ledger.onAppend = (entry) => {
-      // Keep the network-account index current with every local write (bindings + tx nonces).
-      this.networkAccounts.observe(entry);
-      const p = this.store
-        .appendEntry(entry)
-        .catch((err) => this.http.log.error({ err }, 'ledger persistence failed'));
-      this.inflight.add(p);
-      void p.finally(() => this.inflight.delete(p));
-    };
+    // Synchronous, in-memory side effect: keep the network-account index current with every local
+    // write (key bindings + tx nonces) so the mempool sees them immediately.
+    this.ledger.onAppend = (entry) => this.networkAccounts.observe(entry);
+    // Durable persistence runs through the ledger's serialized, retrying write queue — ordered,
+    // awaited, and retried on a transient store failure — so a dropped write can never leave a
+    // seq-gap that breaks the hash chain on restart. Await `ledger.flush()` at commit boundaries.
+    this.ledger.onPersist = (entry) => this.store.appendEntry(entry);
+    this.ledger.onPersistError = (entry, err) =>
+      this.http.log.error(
+        { err, seq: entry.seq },
+        'ledger persistence permanently failed after retries — store may be unavailable',
+      );
     // The node treasury collects protocol fees + block rewards. Register it once (idempotent) so
     // earnings are visible in the registry and wallets.
     this.ensureTreasury();
@@ -261,8 +262,11 @@ export class Kernel {
 
   async close(): Promise<void> {
     await this.http.close();
-    // Drain write-behind persistence before releasing the store.
-    await Promise.allSettled([...this.inflight]);
+    // Drain the durable-write queue before releasing the store, so nothing appended in memory is
+    // left unpersisted (which would restart as a seq-gap).
+    await this.ledger
+      .flush()
+      .catch((err) => this.http.log.error({ err }, 'ledger flush on close failed'));
     await this.store.close();
   }
 }

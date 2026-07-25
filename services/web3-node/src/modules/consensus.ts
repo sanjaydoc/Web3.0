@@ -18,7 +18,7 @@ export function consensusModule(): Web3Module {
     name: 'consensus',
     version: '0.1.0',
     register(ctx: ModuleContext) {
-      const { http, consensus, config, log, bus } = ctx;
+      const { http, consensus, config, log, bus, ledger } = ctx;
       const subscribers = new Set<WsSocket>();
       const dialed = new Set<WebSocket>();
       let closing = false;
@@ -99,13 +99,23 @@ export function consensusModule(): Web3Module {
       }
 
       // Propose on our turn, on an interval. Blocks batch this node's new ledger entries.
-      const timer = setInterval(() => {
+      const proposeAndBroadcast = async (): Promise<void> => {
         const block = consensus.proposeTick();
-        if (block) {
-          log.info(`consensus: proposed block #${block.height} (${block.entries.length} entries)`);
-          broadcast(block);
+        if (!block) return;
+        // Durability boundary: the block's entries (including the reward mint) must be on disk
+        // before we announce the block to peers. Awaiting the write here is what makes a committed
+        // block crash-safe — a node that dies right after broadcasting can't come back with a
+        // persisted seq-gap, because the write already landed.
+        try {
+          await ledger.flush();
+        } catch (err) {
+          log.error({ err }, 'consensus: not broadcasting block — ledger persistence failed');
+          return;
         }
-      }, config.consensus.blockMs);
+        log.info(`consensus: proposed block #${block.height} (${block.entries.length} entries)`);
+        broadcast(block);
+      };
+      const timer = setInterval(() => void proposeAndBroadcast(), config.consensus.blockMs);
       if (typeof timer.unref === 'function') timer.unref();
 
       http.addHook('onClose', async () => {

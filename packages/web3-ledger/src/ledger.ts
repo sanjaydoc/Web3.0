@@ -46,14 +46,41 @@ export class Ledger {
   private readonly entries: LedgerEntry[] = [];
   private readonly balances = new Map<Web3Id, Wallet>();
 
-  /** Called after every newly-appended entry — the write-through hook for persistence. */
+  /**
+   * Synchronous, in-memory side effect for every newly-appended entry (e.g. the network-account
+   * index). Runs inline during `append()`. Durable persistence is separate — see `onPersist`.
+   */
   onAppend?: (entry: LedgerEntry) => void;
+
+  /**
+   * Durable-write hook for every newly-appended entry. Unlike `onAppend`, this returns a promise
+   * and runs through a **serialized, retrying queue**: writes are awaited in seq order (never
+   * concurrent, never reordered), and a transient failure is retried before the next entry lands.
+   * This closes the gap that a fire-and-forget write-behind left — a dropped or out-of-order write
+   * could persist a hole (missing seq) that breaks the hash chain on the next restart. Await
+   * `flush()` at a commit boundary to guarantee everything appended so far is on disk.
+   */
+  onPersist?: (entry: LedgerEntry) => Promise<void>;
+
+  /** Notified once when the persistence queue gives up on an entry (retries exhausted). */
+  onPersistError?: (entry: LedgerEntry, err: Error) => void;
+
+  /** Serialized tail of the persistence queue — each write chains onto this, in seq order. */
+  private persistTail: Promise<void> = Promise.resolve();
+  /** A fatal, unrecoverable persistence failure (retries exhausted). Surfaced by `flush()`. */
+  private persistFailure?: Error;
+  private readonly persistRetryDelaysMs: number[];
 
   constructor(
     private readonly keys: Keypair,
     private readonly publicKeyB64u: string,
     private readonly now: () => string = () => new Date().toISOString(),
-  ) {}
+    opts: { persistRetryDelaysMs?: number[] } = {},
+  ) {
+    // Backoff schedule for a failing durable write (a DB blip). Length = max retries; a store that
+    // is genuinely down eventually exhausts these and the failure surfaces through `flush()`.
+    this.persistRetryDelaysMs = opts.persistRetryDelaysMs ?? [100, 300, 1000, 3000, 8000];
+  }
 
   /**
    * Load previously-persisted entries on startup, rebuilding wallet balances by replaying them.
@@ -228,7 +255,53 @@ export class Ledger {
     };
     this.entries.push(entry);
     this.onAppend?.(entry);
+    this.enqueuePersist(entry);
     return entry;
+  }
+
+  /**
+   * Chain this entry's durable write onto the serialized persistence queue. Because every write
+   * `.then`s off the previous one, they run strictly in seq order and never overlap — so the store
+   * can never receive entry N+1 before N, and a transient failure is retried (below) before the
+   * next write proceeds. This is the structural guarantee against a persisted seq-gap.
+   */
+  private enqueuePersist(entry: LedgerEntry): void {
+    const persist = this.onPersist;
+    if (!persist) return;
+    this.persistTail = this.persistTail.then(() => this.persistWithRetry(persist, entry));
+  }
+
+  private async persistWithRetry(
+    persist: (entry: LedgerEntry) => Promise<void>,
+    entry: LedgerEntry,
+  ): Promise<void> {
+    // Already given up on an earlier entry: the chain is already holed, so don't pile writes on top
+    // of a gap. `flush()` will surface the original failure to the caller.
+    if (this.persistFailure) return;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await persist(entry);
+        return;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        if (attempt >= this.persistRetryDelaysMs.length) {
+          this.persistFailure = error;
+          this.onPersistError?.(entry, error);
+          return;
+        }
+        await sleep(this.persistRetryDelaysMs[attempt]!);
+      }
+    }
+  }
+
+  /**
+   * Resolve once every entry appended so far is durably persisted; reject if persistence has
+   * permanently failed. Await this at a durability boundary (a committed block, process shutdown)
+   * so the in-memory chain never advances past the store in a way a crash could turn into a gap.
+   */
+  async flush(): Promise<void> {
+    await this.persistTail;
+    if (this.persistFailure) throw this.persistFailure;
   }
 
   /**
@@ -261,6 +334,14 @@ export class Ledger {
  */
 function pruneUndefined<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+/** Backoff delay for the persistence retry queue. Unref'd so a pending retry never holds the process open. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    (timer as { unref?: () => void }).unref?.();
+  });
 }
 
 /**
