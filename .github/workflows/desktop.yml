@@ -8,6 +8,11 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# The desktop app is a client of the shared network: the bundled dashboard is built with this URL,
+# so every install talks to the same canonical node — one shared network, no per-app islands.
+env:
+  VITE_WEB3_URL: https://104.197.128.113.nip.io
+
 jobs:
   windows:
     runs-on: windows-latest
