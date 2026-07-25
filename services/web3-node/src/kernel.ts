@@ -24,7 +24,7 @@ import { Registry } from './services/registry.js';
 import { ReplayGuard } from './services/replay.js';
 import { type SettlementProvider, createSettlement } from './services/settlement.js';
 import { SkillsService } from './services/skills.js';
-import { type Store, createStore } from './store/index.js';
+import { type Store, createStore, recordStoreMode } from './store/index.js';
 
 /**
  * The Web3.0 kernel — a thin core that owns the shared services (ledger, registry, event bus,
@@ -104,6 +104,9 @@ export class Kernel {
   async init(): Promise<this> {
     // Restore persisted state, then wire write-through so future mutations are durable.
     await this.store.init();
+    // Remember the backend that just connected, so a future boot that loses its database URL fails
+    // loud (see createStore's downgrade guard) instead of silently coming up empty on memory.
+    if (this.store.kind !== 'memory') recordStoreMode(this.store.kind);
     const PERSISTENCE_MSG: Record<typeof this.store.kind, string> = {
       postgres: 'persistence: PostgreSQL connected (state survives restarts)',
       mongodb: 'persistence: MongoDB connected (state survives restarts)',
