@@ -337,8 +337,11 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
       <section className="l-download" aria-label="Download the desktop app">
         <div className="l-dl-inner">
           <div className="l-dl-head">
-            <b>Run a node in one click</b>
-            <span>Download the desktop app — it bundles a full node and this console.</span>
+            <b>Get the desktop app</b>
+            <span>
+              A native window onto the shared Web3.0 network — same accounts, agents, and ledger as
+              everyone else.
+            </span>
           </div>
           <div className="l-dl-row">
             {DOWNLOADS.map((d) => (
