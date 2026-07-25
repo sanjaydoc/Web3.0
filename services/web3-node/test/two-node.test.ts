@@ -108,6 +108,27 @@ describe('two-node network: follower writes reach the shared chain', () => {
     expect(meGet.statusCode).toBe(200);
   });
 
+  it('a follower resolves login for an account it never adopted (survives a peer restart)', async () => {
+    // Create carol directly on the AUTHORITY — the follower never adopts her locally, exactly as if
+    // the follower had restarted and lost its in-memory account records.
+    const carolKeys = generateKeypair(seed(4));
+    const c = await send(authority, '/accounts/signup', {
+      local: 'carol',
+      role: 'operator',
+      pubkey: toB64u(carolKeys.publicKey),
+    });
+    expect(c.status).toBe(201);
+    const carolToken = c.json.token as string;
+    // /accounts/me on the FOLLOWER must still resolve carol — it forwards login to the authority.
+    const me = await follower.http.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { 'x-web3-token': carolToken },
+    });
+    expect(me.statusCode).toBe(200);
+    expect((me.json() as { address: string }).address).toBe(web3Id('carol'));
+  });
+
   it('a follower-submitted transfer is sealed by the authority and converges on both nodes', async () => {
     // Alice signs a transfer on the follower and submits it to the FOLLOWER's /tx. The follower
     // can't seal (not an authority) — it gossips the tx to the authority, which seals it.

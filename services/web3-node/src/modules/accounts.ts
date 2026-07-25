@@ -174,6 +174,17 @@ export function accountsModule(): Web3Module {
       });
 
       http.get('/accounts/me', async (request, reply) => {
+        // On a follower, accounts live on the authority (this node's store is a transient replica),
+        // so resolve login upstream — that's what makes sign-in survive a peer restart.
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts/me`, { headers: passHeaders(request) });
+            return reply.code(res.status).send(await res.json().catch(() => ({})));
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority to sign in' });
+          }
+        }
         const acct = accounts.authenticate(
           (request.headers['x-web3-token'] as string | undefined) ??
             (typeof request.headers.authorization === 'string' &&
@@ -186,6 +197,16 @@ export function accountsModule(): Web3Module {
       });
 
       http.get('/accounts', async (request, reply) => {
+        // Follower: the account list lives on the authority — forward (admin role checked there).
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts`, { headers: passHeaders(request) });
+            return reply.code(res.status).send(await res.json().catch(() => ({})));
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority' });
+          }
+        }
         if (!requireRole(request, reply, accounts, 'admin')) return;
         return { accounts: accounts.list() };
       });
