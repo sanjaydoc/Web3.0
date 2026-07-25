@@ -480,6 +480,14 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   (no terminal). Built on Windows + macOS + Linux CI runners and attached to each
   [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
   [`desktop/README.md`](desktop/README.md) has the build details.
+- ✅ **Trustless peer writes** — accounts hold their own **ML-DSA** signing key (bound on-chain); a
+  transaction is signed by the account owner, `POST /tx`'d to any node, gossiped to an authority, and
+  sealed only after the authority verifies the signature, nonce (replay-proof), and balance. So a
+  desktop **peer node** can contribute writes to the shared chain **without being trusted** — it
+  can't forge someone else's payment. Desktop installs now run a real peer node (replicate · relay ·
+  forward), not a thin client.
+- ✅ **Live shared network** — the reference node runs as a PoA **authority** (PostgreSQL-backed,
+  HTTPS via Caddy); desktop peers dial it over `wss` and converge on one chain.
 
 Now wired for production (GUI-managed, no restarts): **live economics** (protocol fee, EIP-1559-style
 burn, block reward, authority stake — all admin-editable in the console), **staking with voluntary
