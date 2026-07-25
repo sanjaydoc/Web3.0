@@ -23,6 +23,27 @@ export interface PaymentData {
   currency: Currency;
   memo?: string;
   taskId?: string;
+  /**
+   * When this payment was sealed from an account-signed transaction, the sender's tx nonce. It
+   * makes the sender's next expected nonce derivable from the chain (replay protection survives a
+   * restart) and marks the entry as owner-authorised rather than node-originated. Absent on
+   * node-originated payments (faucet mints, fees, block rewards, staking moves).
+   */
+  nonce?: number;
+}
+
+/**
+ * An account's on-chain identity: binds a human/agent address to the ML-DSA public key that
+ * authorises its transactions. Carried in a replicated block entry so EVERY node — including
+ * untrusted peers — learns each account's key by replaying the chain, and can therefore verify
+ * account-signed transactions without trusting whoever forwarded them. No balance effect.
+ */
+export interface AccountData {
+  web3Id: Web3Id;
+  role: string;
+  /** base64url ML-DSA public key that signs this account's transactions. */
+  pubkey: string;
+  did: string;
 }
 
 /** Provenance for a routed message: only its hash is recorded, never its content. */
@@ -34,12 +55,13 @@ export interface MessageData {
   contentHash: string;
 }
 
-export type EntryType = 'register' | 'payment' | 'message';
+export type EntryType = 'register' | 'payment' | 'message' | 'account';
 
 export interface EntryData {
   register: RegisterData;
   payment: PaymentData;
   message: MessageData;
+  account: AccountData;
 }
 
 /** The signed, hash-linked body of the fields covered by the entry hash. */

@@ -113,7 +113,7 @@ export class Ledger {
     from: Web3Id,
     to: Web3Id,
     amount: Amount,
-    opts: { memo?: string; taskId?: string; currency?: Currency } = {},
+    opts: { memo?: string; taskId?: string; currency?: Currency; nonce?: number } = {},
   ): LedgerEntry<'payment'> {
     const currency = opts.currency ?? DEFAULT_CURRENCY;
     const balance = this.balanceOf(from);
@@ -125,10 +125,20 @@ export class Ledger {
       currency,
       memo: opts.memo,
       taskId: opts.taskId,
+      nonce: opts.nonce,
     });
     this.debit(from, amount, currency);
     this.credit(to, amount, currency);
     return entry;
+  }
+
+  /**
+   * Bind an account's address to the public key that authorises its transactions. Appended as a
+   * replicated `account` entry so every node learns the key from the chain (see AccountData). No
+   * balance effect — the opening faucet grant is a separate mint.
+   */
+  bindAccount(web3Id: Web3Id, role: string, pubkey: string, did: string): LedgerEntry<'account'> {
+    return this.append('account', { web3Id, role, pubkey, did });
   }
 
   /** Mint new credits into an account (faucet). `from` is null on the resulting entry. */
