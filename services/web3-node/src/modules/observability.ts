@@ -11,7 +11,7 @@ export function observabilityModule(): Web3Module {
   return {
     name: 'observability',
     version: '0.1.0',
-    register({ http, bus, ledger, registry, connections }: ModuleContext) {
+    register({ http, bus, ledger, registry, connections, contribution }: ModuleContext) {
       http.get('/events', (request) => {
         const { limit } = request.query as { limit?: string };
         return { events: bus.recent(limit ? Number(limit) : 100) };
@@ -55,6 +55,10 @@ export function observabilityModule(): Web3Module {
         return {
           agents: registry.size,
           online: connections.online().length,
+          // Live NODES in the network (peers heard from via a fresh signed contribution heartbeat,
+          // within the freshness window) — distinct from `online`, which counts connected agents.
+          // A running desktop peer shows up here even though it hosts no agents.
+          nodes: contribution.size,
           ledgerEntries: ledger.size,
           ledgerVerified: ledger.verifyChainCached().ok,
           totalValue,

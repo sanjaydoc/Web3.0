@@ -187,8 +187,14 @@ export function App() {
   const mainNodeLocked = adminOnly && !isAdmin;
   const operatorHome: View = mainNodeLocked ? 'download' : OPERATOR_HOME;
 
+  // You get the FULL node console (network, ledger, connectors, skills, telegram, …) whenever you
+  // run THIS node: an admin on any node, OR any operator on a node that isn't the reserved main node
+  // — i.e. their own desktop/self-hosted node. On the admin-only main node an operator stays limited
+  // to their personal items. (ownsNode === !mainNodeLocked, named for readability.)
+  const ownsNode = !mainNodeLocked;
+
   const visibleNav = NAV.filter(
-    (n) => (role === 'admin' || n.operator) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)),
+    (n) => (ownsNode || n.operator) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)),
   );
 
   const changeRole = (r: Role) => {
@@ -202,14 +208,15 @@ export function App() {
   useEffect(() => {
     const item = NAV.find((n) => n.id === view);
     const blocked =
-      (role === 'operator' && !item?.operator) || (mainNodeLocked && LOCKED_ON_MAIN.has(view));
+      (!ownsNode && !item?.operator) || (mainNodeLocked && LOCKED_ON_MAIN.has(view));
     if (blocked) setView(operatorHome);
-  }, [role, view, mainNodeLocked, operatorHome]);
+  }, [ownsNode, view, mainNodeLocked, operatorHome]);
 
   useEffect(() => {
-    // Network-wide data feeds admin-only views only. Operators never render it, so don't even
-    // fetch it for them — keeps their session to their own data (and off the network endpoints).
-    if (!isAdmin) return;
+    // The console's network/ledger views need this feed. Fetch it whenever the viewer owns this node
+    // (admin, or an operator on their own node). On the main node a plain operator never renders
+    // these views, so we skip the fetch — keeping their session to their own data.
+    if (!ownsNode) return;
     let active = true;
     async function poll() {
       try {
@@ -353,7 +360,7 @@ export function App() {
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
-        {view === 'ledger' && <LedgerView snap={snap} />}
+        {view === 'ledger' && <LedgerView snap={snap} admin={isAdmin} />}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
@@ -419,8 +426,9 @@ function Overview({ snap }: { snap: Snapshot }) {
         </span>
       </div>
       <div className="stats">
+        <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
         <Stat k="Agents" n={s ? String(s.agents) : '—'} />
-        <Stat k="Online now" n={s ? String(s.online) : '—'} />
+        <Stat k="Agents online" n={s ? String(s.online) : '—'} />
         <Stat
           k="Value in network"
           n={
@@ -541,7 +549,7 @@ function Feed({ events }: { events: Web3Event[] }) {
   );
 }
 
-function LedgerView({ snap }: { snap: Snapshot }) {
+function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
   return (
     <>
       <div className="page-head">
@@ -550,30 +558,34 @@ function LedgerView({ snap }: { snap: Snapshot }) {
           <span className="dot" /> {snap.ledgerVerified ? 'chain verified' : 'chain BROKEN'}
         </span>
       </div>
-      <div className="grid-2">
-        <div className="card">
-          <div className="section-title">Wallets</div>
-          {snap.wallets.length === 0 ? (
-            <div className="empty">No wallets yet.</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Owner</th>
-                  <th>Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snap.wallets.map((w) => (
-                  <tr key={w.owner}>
-                    <td>{w.owner}</td>
-                    <td>{formatAmount(w.balance, w.currency)}</td>
+      {/* Only the node's admin sees the Wallets balance table (everyone's balances). A plain node
+          operator sees the ledger ACTIVITY but not other people's balances. */}
+      <div className={admin ? 'grid-2' : ''}>
+        {admin && (
+          <div className="card">
+            <div className="section-title">Wallets</div>
+            {snap.wallets.length === 0 ? (
+              <div className="empty">No wallets yet.</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Owner</th>
+                    <th>Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody>
+                  {snap.wallets.map((w) => (
+                    <tr key={w.owner}>
+                      <td>{w.owner}</td>
+                      <td>{formatAmount(w.balance, w.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
         <div className="card">
           <div className="section-title">Ledger entries</div>
           {snap.entries.length === 0 ? (
