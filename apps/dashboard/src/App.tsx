@@ -162,6 +162,9 @@ export function App() {
   // can learn it even as a guest. When true and the viewer isn't admin, we steer them to run their
   // own node instead of operating against the main node (hosting there is refused server-side).
   const [adminOnly, setAdminOnly] = useState(false);
+  // The node's treasury address (fees + block rewards). It's node infrastructure, not a user agent,
+  // and the treasury concept is admin-only — so a non-admin never sees it listed among the agents.
+  const [treasuryId, setTreasuryId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     const ping = () =>
@@ -170,6 +173,7 @@ export function App() {
         .then((n) => {
           if (!active) return;
           setAdminOnly(Boolean(n.auth?.adminOnly));
+          setTreasuryId(n.treasuryId ?? null);
           setNodeOnline(true);
         })
         .catch(() => active && setNodeOnline(false));
@@ -185,6 +189,11 @@ export function App() {
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
   const role: Role = isAdmin ? rolePref : 'operator';
+
+  // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
+  // list (and the nav badge count) for operators. Admins still see it.
+  const agentsForView =
+    isAdmin || !treasuryId ? snap.agents : snap.agents.filter((a) => a.web3Id !== treasuryId);
 
   // A non-admin on the main node: hosting/publishing here is reserved for the admin, so hide those
   // views and make "Run a node" their home — participation happens on their own node.
@@ -341,7 +350,7 @@ export function App() {
             set={go}
             count={
               n.badge === 'agents'
-                ? snap.agents.length
+                ? agentsForView.length
                 : n.badge === 'events'
                   ? snap.events.length
                   : n.badge === 'entries'
@@ -362,10 +371,10 @@ export function App() {
         {mainNodeLocked && (
           <MainNodeNotice go={() => setView('download')} onDownload={view === 'download'} />
         )}
-        {view === 'overview' && <Overview snap={snap} />}
+        {view === 'overview' && <Overview snap={snap} agentsCount={agentsForView.length} />}
         {view === 'mynode' && <Operator />}
-        {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
-        {view === 'skills' && <Skills agents={snap.agents} />}
+        {view === 'agents' && <Agents agents={agentsForView} wallets={snap.wallets} />}
+        {view === 'skills' && <Skills agents={agentsForView} />}
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
@@ -426,7 +435,7 @@ function NavItem(props: {
   );
 }
 
-function Overview({ snap }: { snap: Snapshot }) {
+function Overview({ snap, agentsCount }: { snap: Snapshot; agentsCount: number }) {
   const s = snap.stats;
   return (
     <>
@@ -438,7 +447,7 @@ function Overview({ snap }: { snap: Snapshot }) {
       </div>
       <div className="stats">
         <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
-        <Stat k="Agents" n={s ? String(s.agents) : '—'} />
+        <Stat k="Agents" n={s ? String(agentsCount) : '—'} />
         <Stat k="Agents online" n={s ? String(s.online) : '—'} />
         <Stat
           k="Value in network"
