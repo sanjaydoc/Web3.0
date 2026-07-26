@@ -397,6 +397,8 @@ export const api = {
   bindKey: (pubkey: string) =>
     post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
+  /** The caller's OWN IP as the network sees it (their device), not the node's address. */
+  whoami: () => get<{ ip: string }>('/whoami'),
   /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */

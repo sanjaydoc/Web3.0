@@ -97,7 +97,14 @@ export class Kernel {
     );
     this.connections = new ConnectionHub();
     const level = process.env.WEB3_LOG_LEVEL ?? 'info';
-    this.http = Fastify({ logger: level === 'silent' ? false : { level } });
+    // trustProxy: 'loopback' — the node runs behind a same-box reverse proxy (Caddy on 127.0.0.1),
+    // so trust its X-Forwarded-For to recover the REAL client IP. Only the loopback hop is trusted,
+    // so a direct-to-port client on the open port can't spoof its IP. This gives per-client rate
+    // limiting (previously everything keyed on the proxy's 127.0.0.1) and powers GET /whoami.
+    this.http = Fastify({
+      logger: level === 'silent' ? false : { level },
+      trustProxy: 'loopback',
+    });
   }
 
   /** Register base plugins and every configured module. Call once before `listen`. */
@@ -184,6 +191,10 @@ export class Kernel {
       ok: true,
       ledgerVerified: this.ledger.verifyChainCached().ok,
     }));
+    // Echo the caller's own IP (as the network sees it). Lets a user's console show THEIR device's
+    // address instead of the node/authority address. Returns only the caller's own IP — no other
+    // client's — so it exposes nothing sensitive.
+    this.http.get('/whoami', (request) => ({ ip: request.ip }));
 
     const clock = () => new Date().toISOString();
     const accounts = new AccountsService(this.store, clock);
