@@ -510,6 +510,15 @@ bundles it), and **GUI storage settings** (MongoDB URI saved from the console; r
 
 Still ahead:
 
+- **🚧 In progress — network-wide agent visibility**: an agent spun up on **any** operator's node
+  must count toward the whole network's agent total — visible to the admin in **Overview**
+  ("agents running") and on the **Network** view — not just on its host node. Today `/stats.agents`
+  reports only the local node's `registry.size`, so an operator's Genesis agent never surfaces in the
+  admin console. The consensus heartbeat already advertises each node's `agentsHosted`, so the fix is
+  the same shape as the network-wide **node** count that just shipped: aggregate `agentsHosted` across
+  live contributors on the authority (freshness-windowed), report that as the network agent total, and
+  surface per-node agent counts on the world map. Registry replication (full agent cards network-wide,
+  for discovery) is the follow-on.
 - **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
   **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
   (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid
