@@ -207,6 +207,20 @@ export function accountsModule(): Web3Module {
       // owner's treasury console under /operator (admin-only). Lets an operator see their wallet +
       // income without ever being shown the node treasury or a Collect button that isn't theirs.
       http.get('/accounts/me/earnings', async (request, reply) => {
+        // Follower: the caller's token lives on the authority (same class as /accounts/me), so a
+        // token this node never adopted can't authenticate locally — forward upstream. The numbers
+        // come off the shared chain, so the authority computes identical values.
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts/me/earnings`, {
+              headers: passHeaders(request),
+            });
+            return reply.code(res.status).send(await res.json().catch(() => ({})));
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority' });
+          }
+        }
         if (!requireAuthed(request, reply, ctx.accounts)) return;
         const acct = currentAccount(request, ctx.accounts);
         if (!acct) return reply.code(401).send({ error: 'authentication required' });
