@@ -64,6 +64,7 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="scope-bar">
           {canToggle ? (
+            // biome-ignore lint/a11y/useSemanticElements: styled segmented toggle; <fieldset> would break the flex layout
             <div className="role-toggle" role="group" aria-label="Scope">
               <button
                 type="button"

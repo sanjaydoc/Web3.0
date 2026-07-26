@@ -6,7 +6,10 @@ const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png',
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(SHELL))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -37,7 +40,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       const network = fetch(request)
         .then((res) => {
-          if (res && res.ok) {
+          if (res?.ok) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(request, copy));
           }

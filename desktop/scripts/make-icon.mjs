@@ -25,9 +25,11 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" 
 
 const CHROME =
   process.env.CHROME ||
-  ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(
-    (p) => existsSync(p),
-  );
+  [
+    '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+  ].find((p) => existsSync(p));
 if (!CHROME) throw new Error('Chromium not found — set CHROME=/path/to/chrome');
 
 // --- render the SVG to a PNG at `size` px via headless Chromium ------------------------------------
