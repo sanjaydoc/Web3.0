@@ -14,6 +14,9 @@
 
 body {
   background: var(--paper-2);
+  /* Never scroll sideways — the mobile nav drawer parks off the left edge (translateX(-100%))
+     and a stray wide child shouldn't drag the whole page horizontally. */
+  overflow-x: hidden;
 }
 
 .app {
@@ -444,8 +447,21 @@ body {
     grid-template-columns: 1fr;
   }
 
+  /* minmax(0,…) lets the column shrink below its content's intrinsic width — without it a
+     wide child (long heading, table) blows the page past the viewport and everything scrolls
+     sideways (which also pushed the hamburger off-screen). */
   .app {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .main {
+    min-width: 0;
+    padding: 20px 16px 48px;
+  }
+  /* Stack the page title over its subtitle instead of fighting for one row. */
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
   /* The mobile top bar takes over; the sidebar becomes a slide-in drawer. */
   .mobile-bar {
