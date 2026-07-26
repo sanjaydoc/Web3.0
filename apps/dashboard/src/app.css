@@ -458,6 +458,30 @@ body {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+  /* Tighter side gutters on phones so cards use the full width. min-width:0
+     lets the grid cell shrink; overflow-x:clip is a belt-and-suspenders guard
+     against any stray element forcing a horizontal page scroll. */
+  .main {
+    padding: 22px 16px 56px;
+    min-width: 0;
+    overflow-x: clip;
+  }
+  /* Stack the page title above its tagline so the tagline wraps within the
+     viewport instead of being cut off at the right edge. */
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  /* Let grid/flex children shrink and long mono tokens (ids, hashes) wrap,
+     so a card can never push wider than its column. */
+  .grid-2 > *,
+  .stats > * {
+    min-width: 0;
+  }
+  .card {
+    overflow-wrap: anywhere;
+  }
   .feed-row {
     grid-template-columns: 1fr;
     gap: 2px;
