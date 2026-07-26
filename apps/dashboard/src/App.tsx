@@ -120,6 +120,9 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  // Is the node reachable? Polled for EVERYONE (the admin data-poll below is admin-only, so operators
+  // would otherwise always read snap.online === false and see a wrong "node offline" in the footer).
+  const [nodeOnline, setNodeOnline] = useState(false);
   // Mobile nav drawer (the sidebar collapses behind a hamburger below 760px).
   const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
@@ -156,10 +159,22 @@ export function App() {
   // own node instead of operating against the main node (hosting there is refused server-side).
   const [adminOnly, setAdminOnly] = useState(false);
   useEffect(() => {
-    api
-      .node()
-      .then((n) => setAdminOnly(Boolean(n.auth?.adminOnly)))
-      .catch(() => undefined);
+    let active = true;
+    const ping = () =>
+      api
+        .node()
+        .then((n) => {
+          if (!active) return;
+          setAdminOnly(Boolean(n.auth?.adminOnly));
+          setNodeOnline(true);
+        })
+        .catch(() => active && setNodeOnline(false));
+    ping();
+    const t = setInterval(ping, 4000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
   }, []);
 
   // The signed-in account's real role governs access: only an admin account sees admin sections
@@ -320,8 +335,8 @@ export function App() {
           />
         ))}
         <div className="foot">
-          <span className={`pill-live ${snap.online ? '' : 'pill-off'}`}>
-            <span className="dot" /> {snap.online ? 'node online' : 'node offline'}
+          <span className={`pill-live ${nodeOnline ? '' : 'pill-off'}`}>
+            <span className="dot" /> {nodeOnline ? 'node online' : 'node offline'}
           </span>
           <InstallButton className="btn act btn-install" />
         </div>
