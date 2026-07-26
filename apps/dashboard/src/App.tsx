@@ -162,6 +162,9 @@ export function App() {
   // can learn it even as a guest. When true and the viewer isn't admin, we steer them to run their
   // own node instead of operating against the main node (hosting there is refused server-side).
   const [adminOnly, setAdminOnly] = useState(false);
+  // The node's treasury address (fees + block rewards). It's node infrastructure, not a user agent,
+  // and the treasury concept is admin-only — so a non-admin never sees it listed among the agents.
+  const [treasuryId, setTreasuryId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     const ping = () =>
@@ -170,6 +173,7 @@ export function App() {
         .then((n) => {
           if (!active) return;
           setAdminOnly(Boolean(n.auth?.adminOnly));
+          setTreasuryId(n.treasuryId ?? null);
           setNodeOnline(true);
         })
         .catch(() => active && setNodeOnline(false));
@@ -185,6 +189,11 @@ export function App() {
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
   const role: Role = isAdmin ? rolePref : 'operator';
+
+  // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
+  // list (and the nav badge count) for operators. Admins still see it.
+  const agentsForView =
+    isAdmin || !treasuryId ? snap.agents : snap.agents.filter((a) => a.web3Id !== treasuryId);
 
   // A non-admin on the main node: hosting/publishing here is reserved for the admin, so hide those
   // views and make "Run a node" their home — participation happens on their own node.
@@ -341,7 +350,7 @@ export function App() {
             set={go}
             count={
               n.badge === 'agents'
-                ? snap.agents.length
+                ? agentsForView.length
                 : n.badge === 'events'
                   ? snap.events.length
                   : n.badge === 'entries'
@@ -362,14 +371,16 @@ export function App() {
         {mainNodeLocked && (
           <MainNodeNotice go={() => setView('download')} onDownload={view === 'download'} />
         )}
-        {view === 'overview' && <Overview snap={snap} />}
+        {view === 'overview' && <Overview snap={snap} agentsCount={agentsForView.length} />}
         {view === 'mynode' && <Operator />}
-        {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
-        {view === 'skills' && <Skills agents={snap.agents} />}
+        {view === 'agents' && <Agents agents={agentsForView} wallets={snap.wallets} />}
+        {view === 'skills' && <Skills agents={agentsForView} />}
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
-        {view === 'ledger' && <LedgerView snap={snap} admin={isAdmin} />}
+        {view === 'ledger' && (
+          <LedgerView snap={snap} admin={isAdmin} me={account?.address ?? null} />
+        )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
@@ -424,7 +435,7 @@ function NavItem(props: {
   );
 }
 
-function Overview({ snap }: { snap: Snapshot }) {
+function Overview({ snap, agentsCount }: { snap: Snapshot; agentsCount: number }) {
   const s = snap.stats;
   return (
     <>
@@ -436,7 +447,7 @@ function Overview({ snap }: { snap: Snapshot }) {
       </div>
       <div className="stats">
         <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
-        <Stat k="Agents" n={s ? String(s.agents) : '—'} />
+        <Stat k="Agents" n={s ? String(agentsCount) : '—'} />
         <Stat k="Agents online" n={s ? String(s.online) : '—'} />
         <Stat
           k="Value in network"
@@ -558,7 +569,85 @@ function Feed({ events }: { events: Web3Event[] }) {
   );
 }
 
-function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
+/**
+ * Decode a ledger entry into a readable From → To · Amount · label, straight from `entry.data`
+ * (no server change needed — payments already carry from/to/amount). This is what turns the
+ * opaque "payment / <hash>" rows into an auditable payments table: a transfer to sanjay@web3.0
+ * reads as `you → sanjay@web3.0 · 5.00 aETH`, a faucet/reward as a `mint`.
+ */
+function describeEntry(e: LedgerEntry): {
+  label: string;
+  from: string;
+  to: string;
+  amount: string;
+  note?: string;
+} {
+  const d = e.data as Record<string, unknown>;
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+  const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
+  const cur = str(d.currency) || 'aETH';
+  switch (e.type) {
+    case 'payment': {
+      const amt = num(d.amount);
+      const isMint = d.from === null || d.from === undefined;
+      return {
+        label: isMint ? 'mint' : 'transfer',
+        from: isMint ? 'network' : str(d.from) || '—',
+        to: str(d.to) || '—',
+        amount: amt !== undefined ? formatAmount(amt, cur) : '—',
+        note: str(d.memo) || undefined,
+      };
+    }
+    case 'register': {
+      const amt = num(d.openingBalance);
+      return {
+        label: 'register',
+        from: 'network',
+        to: str(d.web3Id) || '—',
+        amount: amt && amt > 0 ? formatAmount(amt, cur) : '—',
+        note: 'joined network',
+      };
+    }
+    case 'account':
+      return {
+        label: 'key bind',
+        from: '—',
+        to: str(d.web3Id) || '—',
+        amount: '—',
+        note: str(d.role) ? `role: ${str(d.role)}` : undefined,
+      };
+    case 'message':
+      return {
+        label: 'message',
+        from: str(d.from) || '—',
+        to: str(d.to) || '—',
+        amount: '—',
+        note: str(d.bodyType) || undefined,
+      };
+    default:
+      return { label: e.type, from: '—', to: '—', amount: '—' };
+  }
+}
+
+/** Does a ledger entry reference this account (as sender, recipient, or subject)? */
+function entryInvolves(e: LedgerEntry, address: string): boolean {
+  const d = e.data as Record<string, unknown>;
+  return d.from === address || d.to === address || d.web3Id === address;
+}
+
+function LedgerView({
+  snap,
+  admin,
+  me,
+}: {
+  snap: Snapshot;
+  admin: boolean;
+  me: string | null;
+}) {
+  // Admin sees the whole network's ledger; a node operator sees ONLY their own account's
+  // transactions (their address as sender, recipient, or subject). The node holds the full
+  // replicated chain, so this is a UI scope — same pattern as the admin-only Wallets table.
+  const entries = admin ? snap.entries : me ? snap.entries.filter((e) => entryInvolves(e, me)) : [];
   return (
     <>
       <div className="page-head">
@@ -596,30 +685,61 @@ function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
           </div>
         )}
         <div className="card">
-          <div className="section-title">Ledger entries</div>
-          {snap.entries.length === 0 ? (
-            <div className="empty">No entries yet.</div>
+          <div className="section-title">
+            {admin ? 'Ledger entries' : 'Your transactions'}
+            <span className="muted" style={{ fontWeight: 400 }}>
+              {admin ? ' — entire network' : me ? ` — ${me}` : ''}
+            </span>
+          </div>
+          {entries.length === 0 ? (
+            <div className="empty">
+              {admin
+                ? 'No entries yet.'
+                : me
+                  ? 'No transactions for your account yet.'
+                  : 'Sign in to see your transactions.'}
+            </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Type</th>
-                  <th>Hash</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snap.entries.map((e) => (
-                  <tr key={e.hash}>
-                    <td>{e.seq}</td>
-                    <td>
-                      <span className="chip">{e.type}</span>
-                    </td>
-                    <td className="mono-hash">{e.hash.slice(0, 18)}…</td>
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>From → To</th>
+                    <th>Amount</th>
+                    <th>Time</th>
+                    <th>Hash</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {entries.map((e) => {
+                    const d = describeEntry(e);
+                    return (
+                      <tr key={e.hash}>
+                        <td>{e.seq}</td>
+                        <td>
+                          <span className="chip">{d.label}</span>
+                        </td>
+                        <td>
+                          <span>{d.from}</span>
+                          <span className="muted"> → </span>
+                          <span>{d.to}</span>
+                          {d.note && (
+                            <div className="muted" style={{ fontSize: '0.8em' }}>
+                              {d.note}
+                            </div>
+                          )}
+                        </td>
+                        <td>{d.amount}</td>
+                        <td className="muted">{shortTime(e.ts)}</td>
+                        <td className="mono-hash">{e.hash.slice(0, 12)}…</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

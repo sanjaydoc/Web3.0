@@ -498,6 +498,12 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   forward), not a thin client.
 - ✅ **Live shared network** — the reference node runs as a PoA **authority** (PostgreSQL-backed,
   HTTPS via Caddy); desktop peers dial it over `wss` and converge on one chain.
+- ✅ **Network-wide agent count** — an agent spun up on **any** node (e.g. via **Genesis** on an
+  operator's node) counts toward the whole-network total the admin sees in **Overview** and
+  **Network**, not just its host node. Each node advertises its `agentsHosted` + online figure in its
+  signed heartbeat, so `/stats` sums them across live contributors (same pattern as the network-wide
+  **node** count) — no new signed fields, fully back-compatible. Full agent-card replication (for
+  cross-node discovery) is the follow-on.
 
 Now wired for production (GUI-managed, no restarts): **live economics** (protocol fee, EIP-1559-style
 burn, block reward, authority stake — all admin-editable in the console), **staking with voluntary
@@ -510,6 +516,9 @@ bundles it), and **GUI storage settings** (MongoDB URI saved from the console; r
 
 Still ahead:
 
+- **Agent-card replication** — network-wide agent *counts* now aggregate across nodes; the follow-on
+  is replicating the full agent **cards** (skills, endpoints) so any node can *discover* and route to
+  an agent hosted on another node, not just count it.
 - **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
   **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
   (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid

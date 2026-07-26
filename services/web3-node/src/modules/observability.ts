@@ -52,9 +52,15 @@ export function observabilityModule(): Web3Module {
         // Burned aETH has left circulation — it is not "value in network".
         const burned = wallets.find((w) => w.owner === BURN_ID)?.balance ?? 0;
         const totalValue = wallets.reduce((sum, w) => sum + w.balance, 0) - burned;
+        // Network-wide agent counts: when this node is in a consensus network it hears a signed
+        // heartbeat from every live node (including itself), so summing each node's advertised
+        // `agentsHosted` / online figure gives the whole network's totals — an agent spun up on ANY
+        // operator's node then shows in the admin's Overview / Network. A solo node (no consensus,
+        // so no heartbeats) falls back to its own local counts.
+        const networked = contribution.size > 0;
         return {
-          agents: registry.size,
-          online: connections.online().length,
+          agents: networked ? contribution.totalAgents() : registry.size,
+          online: networked ? contribution.totalOnline() : connections.online().length,
           // Live NODES in the network (peers heard from via a fresh signed contribution heartbeat,
           // within the freshness window) — distinct from `online`, which counts connected agents.
           // A running desktop peer shows up here even though it hosts no agents.
