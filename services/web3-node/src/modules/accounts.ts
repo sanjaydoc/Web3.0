@@ -143,12 +143,13 @@ export function accountsModule(): Web3Module {
       // keys existed (or a fresh device) enable trustless payments. Authenticated by the caller's
       // token; the key is generated client-side and only its public half is sent.
       http.post('/accounts/key', async (request, reply) => {
-        const acct = accounts.authenticate(request.headers['x-web3-token'] as string | undefined);
-        if (!acct) return reply.code(401).send({ error: 'authentication required' });
         const pubkey = ((request.body ?? {}) as { pubkey?: string }).pubkey?.trim() ?? '';
         if (!pubkey) return reply.code(400).send({ error: 'pubkey is required' });
-        // Follower: the binding is an on-chain write — forward it to the authority (which knows this
-        // token from the forwarded signup). The `account` entry replicates back to this node.
+        // Follower: the caller's TOKEN lives on the authority, not here — this node's account store is
+        // a transient chain replica that knows addresses/pubkeys but not tokens. So forward the bind
+        // upstream FIRST (like /accounts/me) and let the authority authenticate + write it on-chain;
+        // the `account` entry then replicates back. Authenticating locally here would wrongly 401 a
+        // perfectly valid token that this follower simply hasn't been told about.
         const upstream = authorityUrl();
         if (upstream) {
           try {
@@ -162,6 +163,9 @@ export function accountsModule(): Web3Module {
             return reply.code(502).send({ error: 'could not reach an authority to bind the key' });
           }
         }
+        // Authority (or solo): authenticate locally — the token IS held here — then write on-chain.
+        const acct = accounts.authenticate(request.headers['x-web3-token'] as string | undefined);
+        if (!acct) return reply.code(401).send({ error: 'authentication required' });
         try {
           ctx.ledger.bindAccount(
             acct.address as Parameters<typeof ctx.ledger.bindAccount>[0],

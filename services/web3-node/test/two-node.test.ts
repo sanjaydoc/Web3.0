@@ -129,6 +129,35 @@ describe('two-node network: follower writes reach the shared chain', () => {
     expect((me.json() as { address: string }).address).toBe(web3Id('carol'));
   });
 
+  it('a key re-bind on the follower is forwarded to the authority (not locally 401d)', async () => {
+    // Sign up dave straight on the AUTHORITY so the follower never holds his token — the exact case
+    // of a fresh desktop (follower) whose account/token live upstream. Re-binding a NEW signing key
+    // via the FOLLOWER must forward to the authority (which knows the token), NOT reject it locally.
+    const daveKeys = generateKeypair(seed(5));
+    const d = await send(authority, '/accounts/signup', {
+      local: 'dave',
+      role: 'operator',
+      pubkey: toB64u(daveKeys.publicKey),
+    });
+    expect(d.status).toBe(201);
+    const daveToken = d.json.token as string;
+
+    // A different device's key — rotate to it by re-binding through the follower.
+    const daveKeys2 = generateKeypair(seed(6));
+    const rebind = await follower.http.inject({
+      method: 'POST',
+      url: '/accounts/key',
+      headers: { 'x-web3-token': daveToken },
+      payload: { pubkey: toB64u(daveKeys2.publicKey) },
+    });
+    expect(rebind.statusCode).toBe(200); // regression: was 401 "authentication required"
+
+    // The authority recorded the new key on-chain, and it replicates to the follower.
+    const DAVE = web3Id('dave');
+    await waitFor(() => follower.networkAccounts.pubkeyOf(DAVE) === toB64u(daveKeys2.publicKey));
+    expect(authority.networkAccounts.pubkeyOf(DAVE)).toBe(toB64u(daveKeys2.publicKey));
+  });
+
   it('a follower-submitted transfer is sealed by the authority and converges on both nodes', async () => {
     // Alice signs a transfer on the follower and submits it to the FOLLOWER's /tx. The follower
     // can't seal (not an authority) — it gossips the tx to the authority, which seals it.
