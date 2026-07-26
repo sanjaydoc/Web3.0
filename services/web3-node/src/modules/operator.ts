@@ -159,6 +159,9 @@ export function operatorModule(): Web3Module {
             accounts: ctx.accounts.list().length,
             hasAdmin: ctx.accounts.hasAdmin(),
             openMode: !ctx.accounts.hasAccounts() && !process.env.WEB3_ADMIN_TOKEN,
+            // When true, this is the network's main node: non-admins are directed to run their own
+            // node instead of operating against it (compute/hosting here is admin-only).
+            adminOnly: config.adminOnly,
           },
           earnings: earnings(),
           contribution: contributionSummary(),

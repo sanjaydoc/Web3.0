@@ -1,6 +1,6 @@
 import type { ModuleContext, Web3Module } from '../context.js';
 import { adminRequired, checkAdmin } from '../services/admin.js';
-import { currentAccount, requireAuthed } from '../services/auth.js';
+import { currentAccount, requireParticipation } from '../services/auth.js';
 import { type HostedAgentConfig, HostedAgentService } from '../services/hosted.js';
 
 /**
@@ -27,8 +27,9 @@ export function hostedModule(): Web3Module {
       });
 
       ctx.http.post('/hosted/launch', async (request, reply) => {
-        // Any signed-in account may publish; an open node (no accounts) allows it too.
-        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        // Any signed-in account may launch — except on an admin-only node (the network's main node),
+        // where hosting is reserved for the admin so operators run agents on their OWN node instead.
+        if (!requireParticipation(request, reply, ctx.accounts, ctx.config.adminOnly)) return;
         // The publishing account's address becomes the dApp's owner (authoritative, not free-text).
         const acct = currentAccount(request, ctx.accounts);
         const body = request.body as HostedAgentConfig;

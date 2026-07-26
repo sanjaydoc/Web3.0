@@ -109,6 +109,13 @@ export interface Web3Config {
   modules: ModuleName[];
   /** Opening balance minted to every new account (a testnet faucet). */
   faucetGrant: number;
+  /**
+   * Admin-only mode. When true, this node is reserved for its admin: non-admins may still sign up
+   * and read public data, but compute/hosting actions (launching agents) are refused with a prompt
+   * to run their own node. Set on the network's main node so operators contribute from their own
+   * devices instead of leaning on it. Default false (a normal permissionless node).
+   */
+  adminOnly: boolean;
   guardrails: GuardrailConfig;
   auth: AuthConfig;
   settlement: SettlementConfig;
@@ -192,6 +199,7 @@ export const DEFAULT_CONFIG: Web3Config = {
   port: Number(process.env.WEB3_PORT ?? 8787),
   modules: [...ALL_MODULES],
   faucetGrant: Number(process.env.WEB3_FAUCET ?? 100_000), // 1,000.00 aETH
+  adminOnly: envBool('WEB3_ADMIN_ONLY', false),
   corsOrigins: (process.env.WEB3_CORS_ORIGIN ?? '')
     .split(',')
     .map((o) => o.trim())

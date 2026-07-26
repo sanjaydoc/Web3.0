@@ -170,6 +170,8 @@ export interface NodeOperator {
     formatted: string;
   };
   contribution?: ContributionInfo;
+  /** Node auth posture — including whether this is the admin-only main node. */
+  auth?: { accounts: number; hasAdmin: boolean; openMode: boolean; adminOnly: boolean };
   traffic: { agents: number; online: number; ledgerEntries: number };
   consensus: {
     mode: string;

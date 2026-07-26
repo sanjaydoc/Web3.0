@@ -49,6 +49,28 @@ export function requireAuthed(
   return false;
 }
 
+/**
+ * Guard for compute/hosting actions on an admin-only node. When `adminOnly` is off it behaves like
+ * `requireAuthed` (any signed-in account may participate). When on, only an admin may — everyone
+ * else gets a 403 telling them to run their own node. This is what reserves the network's main node
+ * for its admin so operators contribute from their own devices instead of leaning on it.
+ */
+export function requireParticipation(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  accounts: AccountsService,
+  adminOnly: boolean,
+): boolean {
+  if (!requireAuthed(request, reply, accounts)) return false;
+  if (!adminOnly || hasRole(request, accounts, 'admin')) return true;
+  reply.code(403).send({
+    error:
+      "this is the network's main node — it's reserved for the admin. Download the app and run your own node to launch and host agents (you'll earn aETH for the compute it contributes).",
+    adminOnly: true,
+  });
+  return false;
+}
+
 /** Guard: allow the request if it satisfies `role`, else reply 401/403 and return false. */
 export function requireRole(
   request: FastifyRequest,
