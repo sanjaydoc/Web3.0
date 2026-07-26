@@ -1,5 +1,5 @@
 import type { Block } from '@web3/consensus';
-import type { SignedTx, Web3Id } from '@web3/core';
+import type { SignedTx } from '@web3/core';
 import WebSocket from 'ws';
 import type { WebSocket as WsSocket } from 'ws';
 import type { ModuleContext, Web3Module } from '../context.js';
@@ -143,10 +143,11 @@ export function consensusModule(): Web3Module {
         const report: ContributionReport = {
           nodeKey: ctx.nodePublicKey,
           uptimeSec: Math.floor((Date.now() - ctx.startedAt) / 1000),
-          // Real agents hosted here — the node treasury is registered as a card for its identity +
-          // wallet but is infrastructure, not an agent, so exclude it. Keeps the network-wide agent
-          // total (summed from these heartbeats) counting only real agents.
-          agentsHosted: registry.size - (registry.has(ctx.treasuryId as Web3Id) ? 1 : 0),
+          // registry.size includes this node's treasury card (infrastructure, not a real agent). We
+          // keep it in the raw heartbeat for cross-version consistency — EVERY node reports one
+          // treasury — and the aggregator (`/stats`) subtracts exactly one treasury per live node.
+          // This stays correct even while nodes run mixed versions during a rollout.
+          agentsHosted: registry.size,
           txServed: connections.online().length,
           ts: Date.now(),
           ...(loc ? { lat: loc.lat, lon: loc.lon, label: loc.label } : {}),

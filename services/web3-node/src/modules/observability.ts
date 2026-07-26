@@ -21,10 +21,14 @@ export function observabilityModule(): Web3Module {
       treasuryId,
     }: ModuleContext) {
       // The node treasury is registered as an agent card (so it has an identity + wallet) but it is
-      // infrastructure, not a real agent — never count it among "agents". Each node's heartbeat also
-      // excludes it, so the network-wide sum is real agents only.
+      // infrastructure, not a real agent — never count it among "agents". Every node has EXACTLY one
+      // treasury (ensureTreasury), so real agents = registry.size − 1 locally, and network-wide =
+      // (sum of every node's agentsHosted) − (one treasury per live node). Doing the subtraction on
+      // the aggregator keeps the count correct even while nodes run mixed versions.
       const localAgents = (): number =>
-        registry.size - (registry.has(treasuryId as Web3Id) ? 1 : 0);
+        Math.max(0, registry.size - (registry.has(treasuryId as Web3Id) ? 1 : 0));
+      const networkAgents = (): number =>
+        Math.max(0, contribution.totalAgents() - contribution.size);
       http.get('/events', (request) => {
         const { limit } = request.query as { limit?: string };
         return { events: bus.recent(limit ? Number(limit) : 100) };
@@ -72,7 +76,7 @@ export function observabilityModule(): Web3Module {
         // so no heartbeats) falls back to its own local counts.
         const networked = contribution.size > 0;
         return {
-          agents: networked ? contribution.totalAgents() : localAgents(),
+          agents: networked ? networkAgents() : localAgents(),
           online: networked ? contribution.totalOnline() : connections.online().length,
           // Live NODES in the network (peers heard from via a fresh signed contribution heartbeat,
           // within the freshness window) — distinct from `online`, which counts connected agents.
