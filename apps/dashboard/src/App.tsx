@@ -120,6 +120,8 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  // Mobile nav drawer (the sidebar collapses behind a hamburger below 760px).
+  const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
@@ -237,15 +239,51 @@ export function App() {
     );
   }
 
+  // Navigate + collapse the mobile drawer in one gesture.
+  const go = (v: View) => {
+    setView(v);
+    setMenuOpen(false);
+  };
+
   return (
-    <div className="app">
+    <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
       <InstallBanner />
-      <aside className="side">
+
+      {/* Mobile top bar — only visible below 760px (CSS). Hosts the brand + hamburger. */}
+      <header className="mobile-bar">
+        <div className="brand">
+          <span className="badge">W</span> Web3.0
+        </div>
+        <button
+          type="button"
+          className="hamburger"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <span className="hamburger-box">
+            <span className="hamburger-inner" />
+          </span>
+        </button>
+      </header>
+
+      {/* Tap-away backdrop for the open drawer (mobile only). */}
+      {menuOpen && (
+        <button
+          type="button"
+          className="nav-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`side ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span className="badge">W</span> Web3.0
         </div>
         <p className="tagline">the agentic internet · console</p>
         {isAdmin && (
+          // biome-ignore lint/a11y/useSemanticElements: styled segmented toggle; <fieldset> would break the flex layout
           <div className="role-toggle" role="group" aria-label="View mode">
             <button
               type="button"
@@ -269,7 +307,7 @@ export function App() {
             id={n.id}
             label={n.label}
             view={view}
-            set={setView}
+            set={go}
             count={
               n.badge === 'agents'
                 ? snap.agents.length

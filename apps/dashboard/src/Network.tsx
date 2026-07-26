@@ -200,12 +200,12 @@ export function Network() {
   const agentDots = useMemo(() => {
     const shown = Math.min(agentCount, 80);
     const anchors = markers.length > 0 ? markers : cityXY;
-    const out: { x: number; y: number }[] = [];
+    const out: { id: string; x: number; y: number }[] = [];
     for (let i = 0; i < shown; i++) {
       const c = anchors[(i * 3) % anchors.length]!;
       const a = i * 2.399;
       const r = 6 + ((i * 37) % 22);
-      out.push({ x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r * 0.7 });
+      out.push({ id: `a${i}`, x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r * 0.7 });
     }
     return out;
   }, [agentCount, markers]);
@@ -286,12 +286,12 @@ export function Network() {
           <title>Web3.0 network map</title>
           <g transform={`translate(${view.x} ${view.y}) scale(${view.s})`}>
             <g className="world">
-              {WORLD_PATHS.map((d, i) => (
-                <path key={i} d={d} vectorEffect="non-scaling-stroke" />
+              {WORLD_PATHS.map((d) => (
+                <path key={d} d={d} vectorEffect="non-scaling-stroke" />
               ))}
             </g>
-            {agentDots.map((a, i) => (
-              <circle key={`a${i}`} className="net-agent" cx={a.x} cy={a.y} r={1.6 / view.s} />
+            {agentDots.map((a) => (
+              <circle key={a.id} className="net-agent" cx={a.x} cy={a.y} r={1.6 / view.s} />
             ))}
             {markers.map((c) => (
               <g key={c.key}>

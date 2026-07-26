@@ -75,6 +75,7 @@ export function InstallBanner() {
   if (!show) return null;
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: transient PWA install prompt; native <dialog> semantics/backdrop aren't wanted here
     <div className="pwa-banner" role="dialog" aria-label="Install Web3.0">
       <span className="pwa-badge">W3</span>
       <div className="pwa-text">
