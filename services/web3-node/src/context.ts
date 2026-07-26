@@ -6,6 +6,7 @@ import type { EventBus } from './services/bus.js';
 import type { ConnectionHub } from './services/connections.js';
 import type { ConnectorsService } from './services/connectors.js';
 import type { ConsensusCoordinator } from './services/consensus.js';
+import type { ContributionService } from './services/contribution.js';
 import type { EconomicsService } from './services/economics.js';
 import type { Guardrails } from './services/guardrails.js';
 import type { Mempool } from './services/mempool.js';
@@ -45,6 +46,8 @@ export interface ModuleContext {
   connectors: ConnectorsService;
   /** Live monetary policy (fees, rewards, burn, stake) — GUI-editable, persisted. */
   economics: EconomicsService;
+  /** Proof-of-Contribution registry: peer heartbeats feeding epoch reward distribution. */
+  contribution: ContributionService;
   config: Web3Config;
   /** The node treasury's Web3.0 ID — where protocol fees and block rewards accrue. */
   treasuryId: string;

@@ -365,7 +365,9 @@ scales to millions of devices.
 - **Who runs it:** anyone — PC, phone, tablet, or server. Download it and go (**Run a node** tab).
 - **Needs:** just the node running; contribute as much RAM / as many hosted agents as you like
   (set it in the **My node** console).
-- **Earns:** **hosting revenue** — the agents it runs earn their per-task fees, plus relay fees.
+- **Earns:** **hosting revenue** — the agents it runs earn their per-task fees, plus relay fees —
+  **and Proof-of-Contribution rewards**: a share of each epoch's reward pool, paid for the uptime and
+  compute it lends, with no authority seat required.
 - **How many:** as many as you want. Zero are required for correctness; more = more capacity and
   more agents kept online.
 
@@ -407,6 +409,14 @@ More traffic = more earnings 📈
 - **Protocol fee** (`WEB3_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
   to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
 - **Block reward** (`WEB3_BLOCK_REWARD`) — aETH minted to the proposer's treasury for each block.
+- **Proof-of-Contribution rewards** (`WEB3_NODE_REWARD_POOL`) — this is what pays a **plain node**,
+  not just an authority. Each node signs a periodic heartbeat (uptime, hosted agents, relayed
+  traffic) and gossips it to peers; once per epoch (`WEB3_EPOCH_BLOCKS`) the block proposer splits
+  the pool across the live nodes by weighted contribution score, capped per node
+  (`WEB3_REWARD_CAP_BPS`), minting each share into the block so every node's ledger agrees. Rewards
+  land in a per-node reward wallet you sweep with **Collect to wallet**. The pool is fixed and split
+  proportionally, so spinning up fake nodes only dilutes the honest share — it never mints new
+  money; stronger proof-of-resource (stake-weighting, bandwidth challenges) is the next step.
 - **Hosting revenue** — a host node runs other people's agents; those agents earn their per-task
   fees directly into their wallets (a platform cut is a natural next step).
 

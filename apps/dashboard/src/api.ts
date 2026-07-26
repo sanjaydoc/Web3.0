@@ -134,12 +134,42 @@ export interface MyEarnings {
 
 export type NodeRole = 'solo' | 'relay' | 'authority';
 
+/** Live Proof-of-Contribution status for a node: what it's contributing and earning per epoch. */
+export interface ContributionInfo {
+  /** Whether the earning engine is on (reward pool > 0). */
+  enabled: boolean;
+  /** aETH minted per epoch and split across live contributing nodes. */
+  pool: number;
+  /** Epoch length in blocks. */
+  epochBlocks: number;
+  /** Nodes seen contributing within the freshness window. */
+  liveContributors: number;
+  /** This node's weighted contribution score. */
+  myScore: number;
+  /** Sum of all live nodes' scores (this node's share = myScore / totalScore). */
+  totalScore: number;
+  /** Projected payout to this node at the next epoch (after the per-node cap). */
+  projectedPerEpoch: number;
+  /** This node's contribution-reward wallet (derived from its node key). */
+  walletId: string;
+  /** aETH earned by this node from contribution rewards, awaiting collection. */
+  walletBalance: number;
+  walletFormatted: string;
+}
+
 export interface NodeOperator {
   role: NodeRole;
   nodePublicKey?: string;
   treasuryId: string;
   uptimeSec: number;
-  earnings: { balance: number; fees: number; rewards: number; formatted: string };
+  earnings: {
+    balance: number;
+    fees: number;
+    rewards: number;
+    contribution: number;
+    formatted: string;
+  };
+  contribution?: ContributionInfo;
   traffic: { agents: number; online: number; ledgerEntries: number };
   consensus: {
     mode: string;
@@ -279,6 +309,16 @@ export interface Economics {
   blockReward: number;
   burnBps: number;
   authorityStake: number;
+  /** Proof-of-Contribution: aETH minted per epoch and split across live contributing nodes. */
+  nodeRewardPool: number;
+  /** Epoch length in blocks. */
+  epochBlocks: number;
+  /** Contribution-score weights. */
+  uptimeWeight: number;
+  hostWeight: number;
+  relayWeight: number;
+  /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
+  rewardCapBps: number;
   blockRewardFormatted?: string;
   authorityStakeFormatted?: string;
 }
@@ -344,6 +384,8 @@ export const api = {
     ),
   economics: () => get<Economics>('/operator/economics'),
   updateEconomics: (patch: Partial<Economics>) => post<Economics>('/operator/economics', patch),
+  /** Live Proof-of-Contribution status for this node (score, live peers, reward wallet). */
+  contribution: () => get<ContributionInfo>('/operator/contribution'),
   storageInfo: () => get<StorageInfo>('/operator/storage'),
   saveStorage: (input: { mongodbUri?: string; mongodbDb?: string }) =>
     post<{ saved: boolean; restartRequired: boolean; configPath: string }>(
@@ -351,10 +393,13 @@ export const api = {
       input,
     ),
   collectEarnings: () =>
-    post<{ collected: number; collectedFormatted: string; walletBalance: number }>(
-      '/operator/collect',
-      {},
-    ),
+    post<{
+      collected: number;
+      collectedFormatted: string;
+      fromTreasury?: number;
+      fromContribution?: number;
+      walletBalance: number;
+    }>('/operator/collect', {}),
   stake: (input: { amount?: number; nodePublicKey?: string }) =>
     post<StakeResult>('/operator/stake', input),
   requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),

@@ -168,9 +168,18 @@ export class Ledger {
     return this.append('account', { web3Id, role, pubkey, did });
   }
 
-  /** Mint new credits into an account (faucet). `from` is null on the resulting entry. */
-  mint(to: Web3Id, amount: Amount, currency: Currency = DEFAULT_CURRENCY): LedgerEntry<'payment'> {
-    const entry = this.append('payment', { from: null, to, amount, currency });
+  /**
+   * Mint new credits into an account (faucet / block reward / contribution reward). `from` is null
+   * on the resulting entry. An optional `memo` labels the mint on-chain (e.g. a contribution-reward
+   * epoch tag) so it is self-describing and auditable.
+   */
+  mint(
+    to: Web3Id,
+    amount: Amount,
+    currency: Currency = DEFAULT_CURRENCY,
+    memo?: string,
+  ): LedgerEntry<'payment'> {
+    const entry = this.append('payment', { from: null, to, amount, currency, memo });
     this.credit(to, amount, currency);
     return entry;
   }

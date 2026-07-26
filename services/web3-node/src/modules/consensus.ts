@@ -3,6 +3,7 @@ import type { SignedTx } from '@web3/core';
 import WebSocket from 'ws';
 import type { WebSocket as WsSocket } from 'ws';
 import type { ModuleContext, Web3Module } from '../context.js';
+import type { ContributionReport, Heartbeat } from '../services/contribution.js';
 
 /**
  * consensus — the distributed L1 surface. Always exposes `GET /consensus` (status). When
@@ -18,7 +19,7 @@ export function consensusModule(): Web3Module {
     name: 'consensus',
     version: '0.1.0',
     register(ctx: ModuleContext) {
-      const { http, consensus, config, log, bus, ledger } = ctx;
+      const { http, consensus, config, log, bus, ledger, registry, connections } = ctx;
       const subscribers = new Set<WsSocket>();
       const dialed = new Set<WebSocket>();
       let closing = false;
@@ -33,12 +34,16 @@ export function consensusModule(): Web3Module {
       };
       const broadcast = (block: Block): void => sendAll(JSON.stringify({ kind: 'block', block }));
       const broadcastTx = (tx: SignedTx): void => sendAll(JSON.stringify({ kind: 'tx', tx }));
+      const broadcastHeartbeat = (hb: Heartbeat): void =>
+        sendAll(JSON.stringify({ kind: 'heartbeat', hb }));
 
-      // Let the coordinator gossip locally-submitted txs (via POST /tx) out to the mesh.
+      // Let the coordinator gossip locally-submitted txs (via POST /tx) out to the mesh, and let it
+      // push this node's own contribution heartbeat.
       consensus.broadcastTx = broadcastTx;
+      consensus.broadcastHeartbeat = broadcastHeartbeat;
 
       const onInbound = (raw: unknown, gossip: boolean): void => {
-        let frame: { kind?: string; block?: Block; tx?: SignedTx };
+        let frame: { kind?: string; block?: Block; tx?: SignedTx; hb?: Heartbeat };
         try {
           frame = JSON.parse(String(raw));
         } catch {
@@ -49,6 +54,13 @@ export function consensusModule(): Web3Module {
         if (frame.kind === 'tx' && frame.tx) {
           const res = consensus.acceptTx(frame.tx);
           if (res.ok && !res.duplicate && gossip) broadcastTx(frame.tx);
+          return;
+        }
+        // A peer's Proof-of-Contribution heartbeat. Verify + register it; re-gossip only if it was
+        // new (newer than what we held), so the mesh converges on live contributors without loops.
+        if (frame.kind === 'heartbeat' && frame.hb) {
+          const fresh = consensus.ingestHeartbeat(frame.hb);
+          if (fresh && gossip) broadcastHeartbeat(frame.hb);
           return;
         }
         if (frame.kind !== 'block' || !frame.block) return;
@@ -118,9 +130,30 @@ export function consensusModule(): Web3Module {
       const timer = setInterval(() => void proposeAndBroadcast(), config.consensus.blockMs);
       if (typeof timer.unref === 'function') timer.unref();
 
+      // Proof-of-Contribution: periodically publish this node's live contribution (uptime, hosted
+      // agents, connected agents relayed) as a signed heartbeat. We register our own report locally
+      // too, so a proposing authority always counts itself, then gossip it to peers.
+      const emitHeartbeat = (): void => {
+        const report: ContributionReport = {
+          nodeKey: ctx.nodePublicKey,
+          uptimeSec: Math.floor((Date.now() - ctx.startedAt) / 1000),
+          agentsHosted: registry.size,
+          txServed: connections.online().length,
+          ts: Date.now(),
+        };
+        const hb = consensus.signContribution(report);
+        consensus.ingestHeartbeat(hb);
+        broadcastHeartbeat(hb);
+      };
+      emitHeartbeat(); // announce ourselves immediately on boot
+      const heartbeatMs = Math.max(config.consensus.blockMs, 15_000);
+      const hbTimer = setInterval(emitHeartbeat, heartbeatMs);
+      if (typeof hbTimer.unref === 'function') hbTimer.unref();
+
       http.addHook('onClose', async () => {
         closing = true;
         clearInterval(timer);
+        clearInterval(hbTimer);
         for (const s of dialed) s.close();
       });
 

@@ -87,6 +87,19 @@ export interface FeesConfig {
   burnBps: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
+  // ── Proof-of-Contribution: reward plain nodes for lending uptime/compute (all 0/off default) ──
+  /** aETH minted per epoch and split across live contributing nodes by contribution score. */
+  nodeRewardPool: number;
+  /** Epoch length in blocks — the pool is distributed once every this many blocks. */
+  epochBlocks: number;
+  /** Contribution-score weight per hour of node uptime. */
+  uptimeWeight: number;
+  /** Contribution-score weight per hosted agent. */
+  hostWeight: number;
+  /** Contribution-score weight per served request/tx. */
+  relayWeight: number;
+  /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
+  rewardCapBps: number;
 }
 
 export interface Web3Config {
@@ -217,6 +230,12 @@ export const DEFAULT_CONFIG: Web3Config = {
     blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0),
     burnBps: Number(process.env.WEB3_BURN_BPS ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
+    nodeRewardPool: Number(process.env.WEB3_NODE_REWARD_POOL ?? 0),
+    epochBlocks: Math.max(1, Number(process.env.WEB3_EPOCH_BLOCKS ?? 20)),
+    uptimeWeight: Number(process.env.WEB3_UPTIME_WEIGHT ?? 1),
+    hostWeight: Number(process.env.WEB3_HOST_WEIGHT ?? 2),
+    relayWeight: Number(process.env.WEB3_RELAY_WEIGHT ?? 1),
+    rewardCapBps: Number(process.env.WEB3_REWARD_CAP_BPS ?? 2_000), // 20% per node by default
   },
   authorityStake: Number(process.env.WEB3_AUTHORITY_STAKE ?? 3_200_000), // 32,000.00 aETH
   unstakeCooldownMs: Number(process.env.WEB3_UNSTAKE_COOLDOWN_MS ?? 86_400_000), // 24 h

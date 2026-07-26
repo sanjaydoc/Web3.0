@@ -12,6 +12,26 @@ export interface EconomicsSettings {
   burnBps: number;
   /** Stake (minor units) required for permissionless authority admission. */
   authorityStake: number;
+  // ── Proof-of-Contribution: rewarding plain nodes for lending uptime/compute ──────────────────
+  /**
+   * aETH (minor units) minted once per epoch and split across live contributing nodes by their
+   * weighted contribution score. This is how running a node — not just being an authority — earns.
+   * 0 disables the whole engine (default).
+   */
+  nodeRewardPool: number;
+  /** Epoch length, in blocks. The pool is distributed once every `epochBlocks` blocks (min 1). */
+  epochBlocks: number;
+  /** Weight on a node's uptime (per hour online) in its contribution score. */
+  uptimeWeight: number;
+  /** Weight on each agent a node hosts in its contribution score. */
+  hostWeight: number;
+  /** Weight on each request/tx a node has served in its contribution score. */
+  relayWeight: number;
+  /**
+   * Anti-whale cap: the maximum share of a single epoch's pool one node may take, in basis points
+   * (2000 = 20%). 0 = no cap. Bounds how much any one (possibly Sybil) node can drain.
+   */
+  rewardCapBps: number;
 }
 
 const SETTING_KEY = 'economics';
@@ -51,6 +71,24 @@ export class EconomicsService {
   get authorityStake(): number {
     return this.current.authorityStake;
   }
+  get nodeRewardPool(): number {
+    return this.current.nodeRewardPool;
+  }
+  get epochBlocks(): number {
+    return this.current.epochBlocks;
+  }
+  get uptimeWeight(): number {
+    return this.current.uptimeWeight;
+  }
+  get hostWeight(): number {
+    return this.current.hostWeight;
+  }
+  get relayWeight(): number {
+    return this.current.relayWeight;
+  }
+  get rewardCapBps(): number {
+    return this.current.rewardCapBps;
+  }
 
   /** Update (partial) and persist. Values are clamped to sane ranges. */
   async update(patch: Partial<EconomicsSettings>): Promise<EconomicsSettings> {
@@ -58,23 +96,29 @@ export class EconomicsService {
       Number.isFinite(Number(v)) ? Math.max(0, Math.min(10_000, Math.round(Number(v)))) : fallback;
     const clampAmt = (v: unknown, fallback: number) =>
       Number.isFinite(Number(v)) ? Math.max(0, Math.round(Number(v))) : fallback;
+    // Weights are non-negative reals (not clamped to a ceiling) — only their ratios matter.
+    const clampWeight = (v: unknown, fallback: number) =>
+      Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : fallback;
+    const pick = <K extends keyof EconomicsSettings>(
+      key: K,
+      clamp: (v: unknown, fallback: number) => number,
+    ): number =>
+      patch[key] !== undefined ? clamp(patch[key], this.current[key]) : this.current[key];
     this.current = {
-      feeBps:
-        patch.feeBps !== undefined
-          ? clampBps(patch.feeBps, this.current.feeBps)
-          : this.current.feeBps,
-      blockReward:
-        patch.blockReward !== undefined
-          ? clampAmt(patch.blockReward, this.current.blockReward)
-          : this.current.blockReward,
-      burnBps:
-        patch.burnBps !== undefined
-          ? clampBps(patch.burnBps, this.current.burnBps)
-          : this.current.burnBps,
-      authorityStake:
-        patch.authorityStake !== undefined
-          ? clampAmt(patch.authorityStake, this.current.authorityStake)
-          : this.current.authorityStake,
+      feeBps: pick('feeBps', clampBps),
+      blockReward: pick('blockReward', clampAmt),
+      burnBps: pick('burnBps', clampBps),
+      authorityStake: pick('authorityStake', clampAmt),
+      nodeRewardPool: pick('nodeRewardPool', clampAmt),
+      // At least one block per epoch — a 0/NaN epoch would divide by zero in the scheduler.
+      epochBlocks:
+        patch.epochBlocks !== undefined
+          ? Math.max(1, Math.round(Number(patch.epochBlocks) || this.current.epochBlocks))
+          : this.current.epochBlocks,
+      uptimeWeight: pick('uptimeWeight', clampWeight),
+      hostWeight: pick('hostWeight', clampWeight),
+      relayWeight: pick('relayWeight', clampWeight),
+      rewardCapBps: pick('rewardCapBps', clampBps),
     };
     await this.store.saveSetting(SETTING_KEY, this.current);
     return this.get();

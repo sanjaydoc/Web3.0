@@ -5,6 +5,13 @@ import type { Keypair } from '@web3/crypto';
 import { toB64u } from '@web3/crypto';
 import type { Ledger } from '@web3/ledger';
 import type { ConsensusConfig } from '../config.js';
+import {
+  type ContributionReport,
+  ContributionService,
+  type ContributionWeights,
+  type Heartbeat,
+  signHeartbeat,
+} from './contribution.js';
 import type { AcceptResult, Mempool } from './mempool.js';
 import type { NetworkAccounts } from './network-accounts.js';
 
@@ -40,6 +47,24 @@ export const UNSTAKE_MEMO_PREFIX = 'authority-unstake:';
 export const SLASH_MEMO_PREFIX = 'authority-slash:';
 /** Where slashed stakes go — same sink as the fee burn. */
 const BURN_SINK = 'burn@web3.0';
+/** Memo tagging a Proof-of-Contribution reward mint: `node-reward:<epoch>`. */
+export const NODE_REWARD_MEMO_PREFIX = 'node-reward:';
+
+/** Live Proof-of-Contribution policy, read at use-time (GUI-editable economics). */
+export interface RewardPolicy {
+  treasuryId: string;
+  /** Live values (GUI-editable economics) — read at use time, not construction. */
+  blockReward: () => number;
+  authorityStake: () => number;
+  /** aETH minted per epoch and split across live contributing nodes (0 = engine off). */
+  nodeRewardPool?: () => number;
+  /** Epoch length in blocks — the pool is distributed once every this many blocks. */
+  epochBlocks?: () => number;
+  /** Contribution-score weights (uptime per hour / hosted agent / served request). */
+  weights?: () => ContributionWeights;
+  /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
+  rewardCapBps?: () => number;
+}
 
 export class ConsensusCoordinator {
   readonly enabled: boolean;
@@ -60,25 +85,32 @@ export class ConsensusCoordinator {
   private readonly accounts?: NetworkAccounts;
   broadcastTx?: (tx: SignedTx) => void;
 
+  /** Registry of peer contribution heartbeats — the input to epoch reward distribution. */
+  readonly contribution: ContributionService;
+  /** Set by the networking module so this coordinator can gossip its own heartbeat to peers. */
+  broadcastHeartbeat?: (hb: Heartbeat) => void;
+  private readonly nodeKeys: Keypair;
+
   constructor(
     private readonly config: ConsensusConfig,
     nodeKeys: Keypair,
     private readonly ledger: Ledger,
-    private readonly rewards: {
-      treasuryId: string;
-      /** Live values (GUI-editable economics) — read at use time, not construction. */
-      blockReward: () => number;
-      authorityStake: () => number;
-    } = {
+    private readonly rewards: RewardPolicy = {
       treasuryId: '',
       blockReward: () => 0,
       authorityStake: () => 0,
     },
-    deps: { mempool?: Mempool; accounts?: NetworkAccounts } = {},
+    deps: {
+      mempool?: Mempool;
+      accounts?: NetworkAccounts;
+      contribution?: ContributionService;
+    } = {},
   ) {
     this.enabled = config.mode === 'poa';
     this.mempool = deps.mempool;
     this.accounts = deps.accounts;
+    this.nodeKeys = nodeKeys;
+    this.contribution = deps.contribution ?? new ContributionService();
     const authority = toB64u(nodeKeys.publicKey);
     // Default to a single-authority chain (this node) if none configured, so `poa` always works.
     const authorities = config.authorities.length > 0 ? config.authorities : [authority];
@@ -112,6 +144,21 @@ export class ConsensusCoordinator {
   /** The next nonce a client should sign with for `account` (chain state + local queue). */
   nextNonce(account: string): number {
     return this.mempool?.nextNonce(account) ?? this.accounts?.nonceOf(account) ?? 0;
+  }
+
+  // ── Proof-of-Contribution heartbeats ─────────────────────────────────────────────────────────
+
+  /** Sign a contribution report with this node's key, ready to gossip to peers. */
+  signContribution(report: ContributionReport): Heartbeat {
+    return signHeartbeat(this.nodeKeys, report);
+  }
+
+  /**
+   * Ingest a peer's (or our own) contribution heartbeat into the registry. Returns whether it was
+   * accepted AND newer than what we held — the networking module re-gossips only in that case.
+   */
+  ingestHeartbeat(hb: Heartbeat): boolean {
+    return this.contribution.ingest(hb);
   }
 
   /**
@@ -220,6 +267,48 @@ export class ConsensusCoordinator {
     }
   }
 
+  /**
+   * Has ANY authority already minted the Proof-of-Contribution reward for `epoch`? Derived from the
+   * replicated ledger (not local memory), so once one authority pays an epoch, every node — the
+   * next proposer included — sees it and never double-pays. Blocks apply in strict height order, so
+   * a proposer always holds the prior block (and its reward mint) before it can propose the next.
+   */
+  private epochAlreadyRewarded(epoch: number): boolean {
+    const memo = `${NODE_REWARD_MEMO_PREFIX}${epoch}`;
+    for (const e of this.ledger.all()) {
+      if (e.type !== 'payment') continue;
+      if ((e.data as { memo?: string }).memo === memo) return true;
+    }
+    return false;
+  }
+
+  /**
+   * At an epoch boundary, split the reward pool across live contributing nodes and mint each share
+   * INTO the block being proposed (so it replicates to every node). `nextHeight` is the height of
+   * the block about to be proposed. Returns the number of shares minted (0 = nothing to do).
+   */
+  private distributeEpochRewards(nextHeight: number): number {
+    const pool = this.rewards.nodeRewardPool?.() ?? 0;
+    const epochBlocks = Math.max(1, this.rewards.epochBlocks?.() ?? 0);
+    // Reward only on the block that first completes an epoch (heights are strictly sequential, so
+    // every multiple is hit exactly once). Nothing to pay at genesis or mid-epoch.
+    if (pool <= 0 || nextHeight <= 0 || nextHeight % epochBlocks !== 0) return 0;
+    const epoch = nextHeight / epochBlocks - 1; // the epoch that just finished
+    if (this.epochAlreadyRewarded(epoch)) return 0;
+    const weights = this.rewards.weights?.() ?? { uptime: 1, host: 1, relay: 1 };
+    const capBps = this.rewards.rewardCapBps?.() ?? 0;
+    const shares = this.contribution.distribute(pool, weights, capBps);
+    for (const share of shares) {
+      this.ledger.mint(
+        share.wallet as Parameters<Ledger['mint']>[0],
+        share.amount,
+        undefined,
+        `${NODE_REWARD_MEMO_PREFIX}${epoch}`,
+      );
+    }
+    return shares.length;
+  }
+
   proposeTick(): Block | null {
     if (!this.engine) return null;
     this.queueStakedAuthorities();
@@ -241,6 +330,9 @@ export class ConsensusCoordinator {
       if (reward > 0 && this.rewards.treasuryId) {
         this.ledger.mint(this.rewards.treasuryId as Parameters<Ledger['mint']>[0], reward);
       }
+      // Proof-of-Contribution: at an epoch boundary, pay live contributing nodes from the pool.
+      // Minted into THIS block so every node applies the same payouts deterministically.
+      this.distributeEpochRewards(this.engine.height);
     }
     const pending = this.ledger.all().slice(this.includedLocalEntries);
     const block = this.engine.proposeIfDue(pending, now);

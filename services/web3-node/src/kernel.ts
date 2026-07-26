@@ -15,6 +15,7 @@ import { EventBus } from './services/bus.js';
 import { ConnectionHub } from './services/connections.js';
 import { ConnectorsService } from './services/connectors.js';
 import { ConsensusCoordinator } from './services/consensus.js';
+import { ContributionService } from './services/contribution.js';
 import { EconomicsService } from './services/economics.js';
 import { Guardrails } from './services/guardrails.js';
 import { Mempool } from './services/mempool.js';
@@ -46,6 +47,8 @@ export class Kernel {
   /** Validating mempool for account-signed transactions (trustless writes). */
   readonly mempool: Mempool;
   readonly economics: EconomicsService;
+  /** Proof-of-Contribution registry: peer heartbeats feeding epoch reward distribution. */
+  readonly contribution: ContributionService;
   readonly httpLimiter: RateLimiter;
   readonly connections: ConnectionHub;
   readonly nodeKeys: Keypair;
@@ -76,9 +79,17 @@ export class Kernel {
       blockReward: this.config.fees.blockReward,
       burnBps: this.config.fees.burnBps,
       authorityStake: this.config.authorityStake,
+      nodeRewardPool: this.config.fees.nodeRewardPool,
+      epochBlocks: this.config.fees.epochBlocks,
+      uptimeWeight: this.config.fees.uptimeWeight,
+      hostWeight: this.config.fees.hostWeight,
+      relayWeight: this.config.fees.relayWeight,
+      rewardCapBps: this.config.fees.rewardCapBps,
     });
     this.networkAccounts = new NetworkAccounts();
     this.mempool = new Mempool(this.ledger, this.networkAccounts);
+    // Freshness window for contribution heartbeats reuses the auth envelope freshness.
+    this.contribution = new ContributionService(() => Date.now(), this.config.auth.freshnessMs);
     this.consensus = new ConsensusCoordinator(
       this.config.consensus,
       this.nodeKeys,
@@ -87,8 +98,16 @@ export class Kernel {
         treasuryId: this.treasuryId,
         blockReward: () => this.economics.blockReward,
         authorityStake: () => this.economics.authorityStake,
+        nodeRewardPool: () => this.economics.nodeRewardPool,
+        epochBlocks: () => this.economics.epochBlocks,
+        weights: () => ({
+          uptime: this.economics.uptimeWeight,
+          host: this.economics.hostWeight,
+          relay: this.economics.relayWeight,
+        }),
+        rewardCapBps: () => this.economics.rewardCapBps,
       },
-      { mempool: this.mempool, accounts: this.networkAccounts },
+      { mempool: this.mempool, accounts: this.networkAccounts, contribution: this.contribution },
     );
     this.httpLimiter = new RateLimiter(
       this.config.auth.httpRateLimitPerWindow,
@@ -225,6 +244,7 @@ export class Kernel {
       skills,
       connectors,
       economics: this.economics,
+      contribution: this.contribution,
       config: this.config,
       treasuryId: this.treasuryId,
       nodePublicKey: toB64u(this.nodeKeys.publicKey),

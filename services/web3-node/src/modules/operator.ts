@@ -8,6 +8,7 @@ import type { ModuleContext, Web3Module } from '../context.js';
 import { checkAdmin } from '../services/admin.js';
 import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
 import { STAKE_ESCROW_ID, STAKE_MEMO_PREFIX, UNSTAKE_MEMO_PREFIX } from '../services/consensus.js';
+import { ContributionService, nodeRewardWalletId } from '../services/contribution.js';
 
 /** A requested exit: the stake refund matures after the cooldown (Ethereum-style withdrawal delay). */
 export interface PendingExit {
@@ -71,6 +72,10 @@ export function operatorModule(): Web3Module {
       const { http, ledger, registry, connections, consensus, settlement, config, treasuryId } =
         ctx;
 
+      // This node's per-node contribution-reward wallet (derived from the node key) — where
+      // Proof-of-Contribution epoch payouts for THIS node land, distinct from the shared treasury.
+      const rewardWalletId = nodeRewardWalletId(ctx.nodePublicKey);
+
       const earnings = () => {
         let fees = 0;
         let rewards = 0;
@@ -82,7 +87,41 @@ export function operatorModule(): Web3Module {
           else if (d.memo === 'protocol-fee') fees += d.amount;
         }
         const balance = ledger.balanceOf(treasuryId as Web3Id);
-        return { balance, fees, rewards, formatted: formatAmount(balance) };
+        // Contribution rewards accrue to the node's own reward wallet, not the treasury.
+        const contribution = ledger.balanceOf(rewardWalletId);
+        return { balance, fees, rewards, contribution, formatted: formatAmount(balance) };
+      };
+
+      // Live Proof-of-Contribution status for THIS node: its current score, the pool it competes
+      // for, and how many other nodes are live this window.
+      const contributionSummary = () => {
+        const weights = {
+          uptime: ctx.economics.uptimeWeight,
+          host: ctx.economics.hostWeight,
+          relay: ctx.economics.relayWeight,
+        };
+        const live = ctx.contribution.live();
+        const mine = live.find((r) => r.nodeKey === ctx.nodePublicKey) ?? null;
+        const myScore = mine ? ContributionService.score(mine, weights) : 0;
+        const totalScore = live.reduce((s, r) => s + ContributionService.score(r, weights), 0);
+        const pool = ctx.economics.nodeRewardPool;
+        const capBps = ctx.economics.rewardCapBps;
+        // Projected next-epoch payout for this node (proportional share, then per-node cap).
+        const rawShare = pool > 0 && totalScore > 0 ? Math.floor((pool * myScore) / totalScore) : 0;
+        const cap = capBps > 0 ? Math.floor((pool * capBps) / 10_000) : pool;
+        const walletBalance = ledger.balanceOf(rewardWalletId);
+        return {
+          enabled: pool > 0,
+          pool,
+          epochBlocks: ctx.economics.epochBlocks,
+          liveContributors: live.length,
+          myScore: Number(myScore.toFixed(3)),
+          totalScore: Number(totalScore.toFixed(3)),
+          projectedPerEpoch: Math.min(rawShare, cap),
+          walletId: rewardWalletId,
+          walletBalance,
+          walletFormatted: formatAmount(walletBalance),
+        };
       };
 
       const resources = () => {
@@ -122,6 +161,7 @@ export function operatorModule(): Web3Module {
             openMode: !ctx.accounts.hasAccounts() && !process.env.WEB3_ADMIN_TOKEN,
           },
           earnings: earnings(),
+          contribution: contributionSummary(),
           traffic: {
             agents: registry.size,
             online: connections.online().length,
@@ -138,6 +178,13 @@ export function operatorModule(): Web3Module {
           resources: resources(),
           limits,
         };
+      });
+
+      // Live Proof-of-Contribution status for the signed-in operator's node — score, live peers,
+      // reward wallet balance, and projected per-epoch payout. Read-only; any signed-in operator.
+      http.get('/operator/contribution', async (request, reply) => {
+        if (!requireAuthed(request, reply, ctx.accounts)) return;
+        return contributionSummary();
       });
 
       // --- operator locations (the Network map's real geography) -----------------------------
@@ -253,20 +300,33 @@ export function operatorModule(): Web3Module {
         if (!acct) return reply.code(401).send({ error: 'sign in to collect' });
         const balance = ledger.balanceOf(treasuryId as Web3Id);
         const body = (request.body ?? {}) as { amount?: number };
-        const amount = Math.round(Number(body.amount ?? balance));
-        if (!Number.isFinite(amount) || amount <= 0) {
+        // Sweep the node treasury (fees + block rewards), honouring an optional partial amount.
+        const treasuryAmount = Math.min(Math.round(Number(body.amount ?? balance)), balance);
+        // Always also sweep this node's contribution-reward wallet in full — it's the same owner.
+        const rewardBalance = ledger.balanceOf(rewardWalletId);
+        if ((!Number.isFinite(treasuryAmount) || treasuryAmount <= 0) && rewardBalance <= 0) {
           return reply.code(400).send({ error: 'nothing to collect' });
         }
         try {
-          ledger.transfer(treasuryId as Web3Id, acct.address as Web3Id, amount, {
-            memo: 'operator-collect',
-          });
+          if (treasuryAmount > 0) {
+            ledger.transfer(treasuryId as Web3Id, acct.address as Web3Id, treasuryAmount, {
+              memo: 'operator-collect',
+            });
+          }
+          if (rewardBalance > 0) {
+            ledger.transfer(rewardWalletId, acct.address as Web3Id, rewardBalance, {
+              memo: 'contribution-collect',
+            });
+          }
         } catch (err) {
           return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
         }
+        const collected = Math.max(0, treasuryAmount) + rewardBalance;
         return {
-          collected: amount,
-          collectedFormatted: formatAmount(amount),
+          collected,
+          collectedFormatted: formatAmount(collected),
+          fromTreasury: Math.max(0, treasuryAmount),
+          fromContribution: rewardBalance,
           walletBalance: ledger.balanceOf(acct.address as Web3Id),
         };
       });
