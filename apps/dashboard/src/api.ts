@@ -236,7 +236,7 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(`${NODE_URL}${path}`, init);
   } catch {
-    throw new ApiError(`cannot reach the node at ${NODE_URL} (network or CORS)`, 0);
+    throw new ApiError('cannot reach the network node (offline, or blocked by CORS)', 0);
   }
 }
 
