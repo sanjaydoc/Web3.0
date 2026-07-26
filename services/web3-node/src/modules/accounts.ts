@@ -186,7 +186,15 @@ export function accountsModule(): Web3Module {
         if (upstream) {
           try {
             const res = await fetch(`${upstream}/accounts/me`, { headers: passHeaders(request) });
-            return reply.code(res.status).send(await res.json().catch(() => ({})));
+            const data = (await res.json().catch(() => ({}))) as { address?: string; role?: Role };
+            // Adopt the account locally on sign-in so its token authenticates HERE too — otherwise
+            // local-auth endpoints on a follower (e.g. PUT /operator/location) reject a valid token
+            // this node simply never learned. `adopt` is a no-op once the account is known.
+            const token = request.headers['x-web3-token'];
+            if (res.ok && typeof token === 'string' && data.address && data.role) {
+              await accounts.adopt(data.address, data.role, token);
+            }
+            return reply.code(res.status).send(data);
           } catch {
             return reply.code(502).send({ error: 'could not reach an authority to sign in' });
           }

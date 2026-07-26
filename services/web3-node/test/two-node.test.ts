@@ -127,6 +127,18 @@ describe('two-node network: follower writes reach the shared chain', () => {
     });
     expect(me.statusCode).toBe(200);
     expect((me.json() as { address: string }).address).toBe(web3Id('carol'));
+
+    // ...and after that sign-in the follower has ADOPTED carol, so a local-auth endpoint works too:
+    // she can save her node location on the follower (was rejected with "sign in to set a node
+    // location" before the follower learned her token).
+    const loc = await follower.http.inject({
+      method: 'PUT',
+      url: '/operator/location',
+      headers: { 'x-web3-token': carolToken },
+      payload: { lat: 11.7963, lon: 77.8009, label: 'Mettur' },
+    });
+    expect(loc.statusCode).toBe(200);
+    expect((loc.json() as { lat: number }).lat).toBe(11.7963);
   });
 
   it('a key re-bind on the follower is forwarded to the authority (not locally 401d)', async () => {
