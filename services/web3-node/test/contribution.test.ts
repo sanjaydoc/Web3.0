@@ -55,7 +55,11 @@ describe('ContributionService — ingest & verification', () => {
   it('accepts an opt-in location and retains it for the map', () => {
     const t = 1_000_000;
     const svc = new ContributionService(() => t);
-    const { hb } = heartbeat(1, { uptimeSec: 3_600, lat: 13.0827, lon: 80.2707, label: 'Chennai' }, t);
+    const { hb } = heartbeat(
+      1,
+      { uptimeSec: 3_600, lat: 13.0827, lon: 80.2707, label: 'Chennai' },
+      t,
+    );
     expect(svc.ingest(hb)).toBe(true);
     const live = svc.live();
     expect(live[0]?.lat).toBe(13.0827);
@@ -114,6 +118,32 @@ describe('ContributionService — ingest & verification', () => {
     t += 400_000; // advance past the window
     svc.prune();
     expect(svc.size).toBe(0);
+  });
+});
+
+describe('ContributionService — network-wide agent totals', () => {
+  it('sums agentsHosted and online across all live nodes (whole-network counts)', () => {
+    const t = 1_000_000;
+    const svc = new ContributionService(() => t);
+    // Three live nodes hosting 2, 3, and 0 agents; 1, 2, and 0 of them online.
+    svc.ingest(heartbeat(1, { agentsHosted: 2, txServed: 1 }, t).hb);
+    svc.ingest(heartbeat(2, { agentsHosted: 3, txServed: 2 }, t).hb);
+    svc.ingest(heartbeat(3, { agentsHosted: 0, txServed: 0 }, t).hb);
+    expect(svc.size).toBe(3);
+    expect(svc.totalAgents()).toBe(5); // 2 + 3 + 0 — an agent on ANY node counts network-wide
+    expect(svc.totalOnline()).toBe(3); // 1 + 2 + 0
+  });
+
+  it('excludes stale nodes from the totals once they age out', () => {
+    let t = 1_000_000;
+    const svc = new ContributionService(() => t, 300_000);
+    svc.ingest(heartbeat(1, { agentsHosted: 4, txServed: 4 }, t).hb);
+    svc.ingest(heartbeat(2, { agentsHosted: 6, txServed: 1 }, t).hb);
+    expect(svc.totalAgents()).toBe(10);
+    t += 400_000; // node 1 & 2 both age out; only a fresh report should count
+    svc.ingest(heartbeat(2, { agentsHosted: 6, txServed: 1 }, t).hb); // node 2 re-reports
+    expect(svc.totalAgents()).toBe(6); // node 1 is stale → dropped from the network total
+    expect(svc.totalOnline()).toBe(1);
   });
 });
 

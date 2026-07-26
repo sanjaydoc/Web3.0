@@ -193,6 +193,25 @@ export class ContributionService {
     return this.live().length;
   }
 
+  /**
+   * Network-wide agent count: the sum of `agentsHosted` across all live nodes. Each node advertises
+   * its own `registry.size` in its heartbeat and every node (including itself) is one entry here, so
+   * this is the total number of agents hosted anywhere on the network — what the admin sees in
+   * Overview / Network, versus a single node's local `registry.size`.
+   */
+  totalAgents(windowMs = this.freshnessMs): number {
+    return this.live(windowMs).reduce((sum, r) => sum + r.agentsHosted, 0);
+  }
+
+  /**
+   * Network-wide online-agent count: the sum of each live node's connected-agent figure (carried in
+   * the report's `txServed` field, which a node sets to its `connections.online()` count). The
+   * network-wide analogue of a single node's `online` stat.
+   */
+  totalOnline(windowMs = this.freshnessMs): number {
+    return this.live(windowMs).reduce((sum, r) => sum + r.txServed, 0);
+  }
+
   /** The weighted contribution score for a single report. */
   static score(report: ContributionReport, weights: ContributionWeights): number {
     const hours = report.uptimeSec / 3_600;
