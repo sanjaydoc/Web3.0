@@ -369,7 +369,9 @@ export function App() {
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
-        {view === 'ledger' && <LedgerView snap={snap} admin={isAdmin} />}
+        {view === 'ledger' && (
+          <LedgerView snap={snap} admin={isAdmin} me={account?.address ?? null} />
+        )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
@@ -618,7 +620,25 @@ function describeEntry(e: LedgerEntry): {
   }
 }
 
-function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
+/** Does a ledger entry reference this account (as sender, recipient, or subject)? */
+function entryInvolves(e: LedgerEntry, address: string): boolean {
+  const d = e.data as Record<string, unknown>;
+  return d.from === address || d.to === address || d.web3Id === address;
+}
+
+function LedgerView({
+  snap,
+  admin,
+  me,
+}: {
+  snap: Snapshot;
+  admin: boolean;
+  me: string | null;
+}) {
+  // Admin sees the whole network's ledger; a node operator sees ONLY their own account's
+  // transactions (their address as sender, recipient, or subject). The node holds the full
+  // replicated chain, so this is a UI scope — same pattern as the admin-only Wallets table.
+  const entries = admin ? snap.entries : me ? snap.entries.filter((e) => entryInvolves(e, me)) : [];
   return (
     <>
       <div className="page-head">
@@ -656,9 +676,20 @@ function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
           </div>
         )}
         <div className="card">
-          <div className="section-title">Ledger entries</div>
-          {snap.entries.length === 0 ? (
-            <div className="empty">No entries yet.</div>
+          <div className="section-title">
+            {admin ? 'Ledger entries' : 'Your transactions'}
+            <span className="muted" style={{ fontWeight: 400 }}>
+              {admin ? ' — entire network' : me ? ` — ${me}` : ''}
+            </span>
+          </div>
+          {entries.length === 0 ? (
+            <div className="empty">
+              {admin
+                ? 'No entries yet.'
+                : me
+                  ? 'No transactions for your account yet.'
+                  : 'Sign in to see your transactions.'}
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table>
@@ -673,7 +704,7 @@ function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {snap.entries.map((e) => {
+                  {entries.map((e) => {
                     const d = describeEntry(e);
                     return (
                       <tr key={e.hash}>
