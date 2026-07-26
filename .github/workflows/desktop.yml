@@ -45,6 +45,9 @@ jobs:
         run: npm run dist
 
       - name: Upload installers (artifact)
+        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
+        # quota), don't skip the release publish below — that's what ships the installers.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web3-desktop-windows
@@ -94,6 +97,9 @@ jobs:
         run: npm run dist:linux
 
       - name: Upload installers (artifact)
+        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
+        # quota), don't skip the release publish below — that's what ships the installers.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web3-desktop-linux
@@ -142,6 +148,9 @@ jobs:
         run: npm run dist:mac
 
       - name: Upload installer (artifact)
+        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
+        # quota), don't skip the release publish below — that's what ships the installers.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web3-desktop-macos
