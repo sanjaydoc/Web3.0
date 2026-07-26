@@ -194,8 +194,30 @@ export function operatorModule(): Web3Module {
       const loadLocations = async () =>
         (await ctx.store.loadSetting<NodeLocation[]>(LOCATIONS_KEY)) ?? [];
 
-      // Public: every opt-in operator position (this is what the map renders).
-      http.get('/operator/locations', async () => ({ locations: await loadLocations() }));
+      // Public: every opt-in operator position (this is what the map renders). We merge two sources:
+      // (1) locations saved on THIS node's store, and (2) locations advertised by OTHER live nodes in
+      // their signed contribution heartbeats — so a remote peer (e.g. a desktop node) shows on the
+      // map here, not only on its own console. De-duped by rounded coordinates.
+      http.get('/operator/locations', async () => {
+        const local = await loadLocations();
+        const seen = new Set(local.map((l) => `${l.lat.toFixed(2)},${l.lon.toFixed(2)}`));
+        const remote: NodeLocation[] = [];
+        for (const r of ctx.contribution.live()) {
+          if (r.nodeKey === ctx.nodePublicKey) continue; // our own dot comes from `local`
+          if (typeof r.lat !== 'number' || typeof r.lon !== 'number') continue;
+          const key = `${r.lat.toFixed(2)},${r.lon.toFixed(2)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          remote.push({
+            address: `node:${r.nodeKey.slice(0, 10)}`,
+            label: (r.label || 'node').slice(0, 48),
+            lat: r.lat,
+            lon: r.lon,
+            updatedAt: new Date(r.ts).toISOString(),
+          });
+        }
+        return { locations: [...local, ...remote] };
+      });
 
       // Signed-in operators set (or update) their own position. Coordinates are rounded to 4 dp
       // (~11 m) and only what is explicitly saved here is ever shared.

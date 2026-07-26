@@ -4,6 +4,7 @@ import WebSocket from 'ws';
 import type { WebSocket as WsSocket } from 'ws';
 import type { ModuleContext, Web3Module } from '../context.js';
 import type { ContributionReport, Heartbeat } from '../services/contribution.js';
+import { LOCATIONS_KEY, type NodeLocation } from './operator.js';
 
 /**
  * consensus — the distributed L1 surface. Always exposes `GET /consensus` (status). When
@@ -133,21 +134,27 @@ export function consensusModule(): Web3Module {
       // Proof-of-Contribution: periodically publish this node's live contribution (uptime, hosted
       // agents, connected agents relayed) as a signed heartbeat. We register our own report locally
       // too, so a proposing authority always counts itself, then gossip it to peers.
-      const emitHeartbeat = (): void => {
+      const emitHeartbeat = async (): Promise<void> => {
+        // Advertise this node's opt-in location (the operator's most-recently-saved position) so it
+        // shows on every peer's map, not just locally. Single-operator nodes have exactly one entry;
+        // absent → the report simply carries no location.
+        const locs = (await ctx.store.loadSetting<NodeLocation[]>(LOCATIONS_KEY)) ?? [];
+        const loc = [...locs].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
         const report: ContributionReport = {
           nodeKey: ctx.nodePublicKey,
           uptimeSec: Math.floor((Date.now() - ctx.startedAt) / 1000),
           agentsHosted: registry.size,
           txServed: connections.online().length,
           ts: Date.now(),
+          ...(loc ? { lat: loc.lat, lon: loc.lon, label: loc.label } : {}),
         };
         const hb = consensus.signContribution(report);
         consensus.ingestHeartbeat(hb);
         broadcastHeartbeat(hb);
       };
-      emitHeartbeat(); // announce ourselves immediately on boot
+      void emitHeartbeat(); // announce ourselves immediately on boot
       const heartbeatMs = Math.max(config.consensus.blockMs, 15_000);
-      const hbTimer = setInterval(emitHeartbeat, heartbeatMs);
+      const hbTimer = setInterval(() => void emitHeartbeat(), heartbeatMs);
       if (typeof hbTimer.unref === 'function') hbTimer.unref();
 
       http.addHook('onClose', async () => {

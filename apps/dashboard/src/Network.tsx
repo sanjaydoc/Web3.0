@@ -320,7 +320,7 @@ export function Network() {
 
         <div className="net-hud net-tr net-metrics">
           <div>
-            <b>{online}</b>
+            <b>{stats?.nodes ?? online}</b>
             <span>NODES</span>
           </div>
           <div>

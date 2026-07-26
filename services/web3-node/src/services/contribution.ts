@@ -30,6 +30,11 @@ export interface ContributionReport {
   txServed: number;
   /** Epoch-ms the report was produced (freshness + replay window). */
   ts: number;
+  /** Optional opt-in geo position so this node appears on every peer's Network map (not just its
+   *  own). Only present when the operator saved a location; signed as part of the report. */
+  lat?: number;
+  lon?: number;
+  label?: string;
 }
 
 /** A gossiped heartbeat: the report plus the node's signature over its canonical hash. */
@@ -67,13 +72,20 @@ export interface RewardShare {
 
 /** The canonical message a node signs / verifies for a report — sorted-key JSON hash. */
 export function hashReport(report: ContributionReport): string {
-  return hashJson({
+  // Location fields are hashed ONLY when present, so a report without them hashes identically to the
+  // pre-location format — older nodes' signatures still verify, and adding a location doesn't break
+  // interop during a rolling upgrade.
+  const body: Record<string, unknown> = {
     nodeKey: report.nodeKey,
     uptimeSec: report.uptimeSec,
     agentsHosted: report.agentsHosted,
     txServed: report.txServed,
     ts: report.ts,
-  });
+  };
+  if (typeof report.lat === 'number') body.lat = report.lat;
+  if (typeof report.lon === 'number') body.lon = report.lon;
+  if (report.label) body.label = report.label;
+  return hashJson(body);
 }
 
 /** Sign a contribution report with the node keypair, producing a gossippable heartbeat. */
@@ -128,13 +140,26 @@ export class ContributionService {
       return false;
     }
     if (!ok) return false;
-    // Normalise the counters so a malformed report can't poison the score maths.
+    // Normalise the counters so a malformed report can't poison the score maths. The opt-in location
+    // (already covered by the verified signature) is kept as-is so the node shows on peers' maps.
+    const hasLoc =
+      typeof report.lat === 'number' &&
+      Number.isFinite(report.lat) &&
+      typeof report.lon === 'number' &&
+      Number.isFinite(report.lon);
     const clean: ContributionReport = {
       nodeKey: report.nodeKey,
       uptimeSec: safeCount(report.uptimeSec),
       agentsHosted: safeCount(report.agentsHosted),
       txServed: safeCount(report.txServed),
       ts: report.ts,
+      ...(hasLoc
+        ? {
+            lat: report.lat,
+            lon: report.lon,
+            ...(report.label ? { label: String(report.label).slice(0, 48) } : {}),
+          }
+        : {}),
     };
     const existing = this.entries.get(clean.nodeKey);
     if (existing && existing.report.ts >= clean.ts) {

@@ -27,6 +27,9 @@ function heartbeat(
     agentsHosted: fields.agentsHosted ?? 0,
     txServed: fields.txServed ?? 0,
     ts,
+    ...(fields.lat !== undefined ? { lat: fields.lat } : {}),
+    ...(fields.lon !== undefined ? { lon: fields.lon } : {}),
+    ...(fields.label !== undefined ? { label: fields.label } : {}),
   };
   return { hb: signHeartbeat(keys, report), nodeKey };
 }
@@ -47,6 +50,25 @@ describe('ContributionService — ingest & verification', () => {
     hb.report.uptimeSec = 999_999; // inflate contribution after signing
     expect(svc.ingest(hb)).toBe(false);
     expect(svc.size).toBe(0);
+  });
+
+  it('accepts an opt-in location and retains it for the map', () => {
+    const t = 1_000_000;
+    const svc = new ContributionService(() => t);
+    const { hb } = heartbeat(1, { uptimeSec: 3_600, lat: 13.0827, lon: 80.2707, label: 'Chennai' }, t);
+    expect(svc.ingest(hb)).toBe(true);
+    const live = svc.live();
+    expect(live[0]?.lat).toBe(13.0827);
+    expect(live[0]?.lon).toBe(80.2707);
+    expect(live[0]?.label).toBe('Chennai');
+  });
+
+  it('rejects a heartbeat whose location was moved after signing', () => {
+    const t = 1_000_000;
+    const svc = new ContributionService(() => t);
+    const { hb } = heartbeat(1, { uptimeSec: 3_600, lat: 13.08, lon: 80.27 }, t);
+    hb.report.lat = 51.5; // relocate the pin after signing → signature must fail
+    expect(svc.ingest(hb)).toBe(false);
   });
 
   it('rejects a heartbeat signed by a different key than it claims', () => {
