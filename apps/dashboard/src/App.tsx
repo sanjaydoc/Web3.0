@@ -113,6 +113,8 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  // Mobile nav drawer: collapsed by default, toggled by the hamburger in the top bar.
+  const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
@@ -148,6 +150,12 @@ export function App() {
   const role: Role = isAdmin ? rolePref : 'operator';
 
   const visibleNav = NAV.filter((n) => role === 'admin' || n.operator);
+
+  // Navigating from the sidebar also closes the mobile drawer so the page is visible.
+  const navigate = (v: View) => {
+    setView(v);
+    setMenuOpen(false);
+  };
 
   const changeRole = (r: Role) => {
     setRolePref(r);
@@ -210,9 +218,37 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
       <InstallBanner />
-      <aside className="side">
+      <header className="topbar">
+        <button
+          type="button"
+          className="hamburger"
+          aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <div className="brand">
+          <span className="badge">W</span> Web3.0
+        </div>
+      </header>
+      {menuOpen && (
+        <div
+          className="scrim"
+          role="button"
+          tabIndex={0}
+          aria-label="Close navigation menu"
+          onClick={() => setMenuOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') setMenuOpen(false);
+          }}
+        />
+      )}
+      <aside className={`side ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span className="badge">W</span> Web3.0
         </div>
@@ -241,7 +277,7 @@ export function App() {
             id={n.id}
             label={n.label}
             view={view}
-            set={setView}
+            set={navigate}
             count={
               n.badge === 'agents'
                 ? snap.agents.length
