@@ -84,6 +84,10 @@ const OPERATOR_HOME: View = 'mynode';
  */
 const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
 
+/** Views reserved for a real admin even on your own node — network-wide observability an operator
+ *  running a single node doesn't need. */
+const ADMIN_ONLY = new Set<View>(['network', 'traffic']);
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -194,7 +198,10 @@ export function App() {
   const ownsNode = !mainNodeLocked;
 
   const visibleNav = NAV.filter(
-    (n) => (ownsNode || n.operator) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)),
+    (n) =>
+      (ownsNode || n.operator) &&
+      !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)) &&
+      !(!isAdmin && ADMIN_ONLY.has(n.id)),
   );
 
   const changeRole = (r: Role) => {
@@ -208,9 +215,11 @@ export function App() {
   useEffect(() => {
     const item = NAV.find((n) => n.id === view);
     const blocked =
-      (!ownsNode && !item?.operator) || (mainNodeLocked && LOCKED_ON_MAIN.has(view));
+      (!ownsNode && !item?.operator) ||
+      (mainNodeLocked && LOCKED_ON_MAIN.has(view)) ||
+      (!isAdmin && ADMIN_ONLY.has(view));
     if (blocked) setView(operatorHome);
-  }, [ownsNode, view, mainNodeLocked, operatorHome]);
+  }, [ownsNode, isAdmin, view, mainNodeLocked, operatorHome]);
 
   useEffect(() => {
     // The console's network/ledger views need this feed. Fetch it whenever the viewer owns this node

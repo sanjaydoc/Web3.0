@@ -812,9 +812,10 @@ export function Operator() {
       {node && (
         <>
           <div className="grid-2" style={{ marginBottom: 18 }}>
-            {ownsNode ? (
-              // Node OWNER: the node treasury — fees + block rewards it collects — and the
-              // sweep-to-wallet action. The owner is whoever runs this node.
+            {isAdmin ? (
+              // The node TREASURY (fees + block rewards) + the sweep-to-wallet action — the node
+              // owner's money. Only the admin sees the treasury; an operator sees their OWN wallet
+              // below (their personal earnings), even on their own node.
               <div className="card">
                 <div className="section-title">Node earnings</div>
                 <div
