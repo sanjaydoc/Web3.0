@@ -47,6 +47,10 @@ export function txModule(): Web3Module {
           account,
           nonce: consensus.nextNonce(account),
           bound: networkAccounts.has(account),
+          // The account's on-chain signing key, so the client can tell whether THIS device's key
+          // still matches (a different device / re-install has a different key → sends would be
+          // rejected with "signature key does not match the account on-chain" until it re-binds).
+          pubkey: networkAccounts.pubkeyOf(account) ?? null,
         };
       });
 
