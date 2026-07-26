@@ -72,8 +72,8 @@ export function Developers() {
       .then((m) => setIsAdmin(m.role === 'admin'))
       .catch(() => setIsAdmin(false));
     api
-      .whoami()
-      .then((w) => setMyIp(w.ip))
+      .deviceIp()
+      .then(setMyIp)
       .catch(() => setMyIp(null));
     api
       .consensus()
