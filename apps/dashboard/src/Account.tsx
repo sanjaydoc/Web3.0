@@ -42,8 +42,9 @@ import {
 function PaymentsSection({
   me,
   bound,
+  onchainKey,
   onChanged,
-}: { me: Acct; bound: boolean; onChanged: () => void }) {
+}: { me: Acct; bound: boolean; onchainKey: string | null; onChanged: () => void }) {
   const [localKey, setLocalKey] = useState<AccountKey | null>(() => loadAccountKey(me.address));
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
@@ -99,7 +100,12 @@ function PaymentsSection({
     }
   }
 
-  const ready = !!localKey && bound;
+  // A proven key mismatch: we KNOW the on-chain key (server returned it) and this device's key is a
+  // different one — the network would reject the tx ("signature key does not match the account
+  // on-chain"). Only block on a *proven* mismatch so an older node that doesn't report the key yet
+  // still behaves as before (no false lock-out).
+  const mismatch = !!localKey && !!onchainKey && localKey.publicKey !== onchainKey;
+  const ready = !!localKey && bound && !mismatch;
 
   return (
     <>
@@ -152,15 +158,23 @@ function PaymentsSection({
       ) : (
         <>
           <p className="hint">
-            {localKey && !bound
-              ? 'Your device has a signing key, but it isn’t bound on-chain yet. Bind it to send payments.'
-              : bound && !localKey
-                ? 'Your signing key lives on another device. Generate a new one here to send from this browser (it replaces the old key on-chain).'
-                : 'Turn on trustless payments: this generates an ML-DSA key in your browser and binds its public half on-chain. The secret half never leaves this device.'}
+            {mismatch
+              ? 'This device’s signing key doesn’t match your account’s key on-chain — that’s why sends are rejected. This happens on a new install or a different device. Re-bind to make THIS device your signing key (it replaces the old one on-chain; other devices then need to re-bind too).'
+              : localKey && !bound
+                ? 'Your device has a signing key, but it isn’t bound on-chain yet. Bind it to send payments.'
+                : bound && !localKey
+                  ? 'Your signing key lives on another device. Generate a new one here to send from this browser (it replaces the old key on-chain).'
+                  : 'Turn on trustless payments: this generates an ML-DSA key in your browser and binds its public half on-chain. The secret half never leaves this device.'}
           </p>
           <div className="gen-actions">
             <button type="button" className="btn act" disabled={busy} onClick={enable}>
-              {busy ? 'Enabling…' : 'Enable payments'}
+              {busy
+                ? mismatch
+                  ? 'Re-binding…'
+                  : 'Enabling…'
+                : mismatch
+                  ? 'Re-bind this device’s key'
+                  : 'Enable payments'}
             </button>
           </div>
         </>
@@ -195,6 +209,8 @@ export function Account() {
   const [balance, setBalance] = useState<number | null>(null);
   /** Whether this account's signing key is bound on-chain (can it send trustless payments). */
   const [keyBound, setKeyBound] = useState(false);
+  /** The account's on-chain signing key — compared against this device's key to catch a mismatch. */
+  const [onchainKey, setOnchainKey] = useState<string | null>(null);
 
   const copyToken = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(
@@ -221,8 +237,14 @@ export function Account() {
         .catch(() => setBalance(0));
       api
         .txNonce(acct.address)
-        .then((n) => setKeyBound(n.bound))
-        .catch(() => setKeyBound(false));
+        .then((n) => {
+          setKeyBound(n.bound);
+          setOnchainKey(n.pubkey ?? null); // older nodes omit `pubkey` → treat as unknown
+        })
+        .catch(() => {
+          setKeyBound(false);
+          setOnchainKey(null);
+        });
     } catch {
       setMe(null); // stale/invalid token
     } finally {
@@ -309,7 +331,7 @@ export function Account() {
             <dd>{new Date(me.createdAt).toLocaleString()}</dd>
           </dl>
 
-          <PaymentsSection me={me} bound={keyBound} onChanged={refresh} />
+          <PaymentsSection me={me} bound={keyBound} onchainKey={onchainKey} onChanged={refresh} />
 
           {token && (
             <>

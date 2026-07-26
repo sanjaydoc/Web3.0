@@ -448,7 +448,7 @@ export const api = {
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */
   txNonce: (account: string) =>
-    get<{ account: string; nonce: number; bound: boolean }>(
+    get<{ account: string; nonce: number; bound: boolean; pubkey: string | null }>(
       `/tx/nonce/${encodeURIComponent(account)}`,
     ),
   /** Submit an account-signed transfer to the network (trustless — no node login needed). */
