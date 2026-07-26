@@ -77,6 +77,13 @@ const NAV: {
 /** Where a non-admin lands (and falls back to) — their own earnings, never an admin view. */
 const OPERATOR_HOME: View = 'mynode';
 
+/**
+ * Views that consume the node's compute/hosting. On the admin-only MAIN node these are reserved for
+ * the admin, so a non-admin viewer never mounts them — they're pointed at "Run a node" to do this on
+ * their own node instead. (On a normal node, nothing is locked and these stay available.)
+ */
+const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -113,8 +120,6 @@ function shortTime(iso: string): string {
 export function App() {
   const [view, setView] = useState<View>('overview');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
-  // Mobile nav drawer: collapsed by default, toggled by the hamburger in the top bar.
-  const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
@@ -144,30 +149,45 @@ export function App() {
     checkAuth();
   }, [checkAuth]);
 
+  // Is the node this dashboard points at the network's admin-only main node? Public on /node, so we
+  // can learn it even as a guest. When true and the viewer isn't admin, we steer them to run their
+  // own node instead of operating against the main node (hosting there is refused server-side).
+  const [adminOnly, setAdminOnly] = useState(false);
+  useEffect(() => {
+    api
+      .node()
+      .then((n) => setAdminOnly(Boolean(n.auth?.adminOnly)))
+      .catch(() => undefined);
+  }, []);
+
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
   const role: Role = isAdmin ? rolePref : 'operator';
 
-  const visibleNav = NAV.filter((n) => role === 'admin' || n.operator);
+  // A non-admin on the main node: hosting/publishing here is reserved for the admin, so hide those
+  // views and make "Run a node" their home — participation happens on their own node.
+  const mainNodeLocked = adminOnly && !isAdmin;
+  const operatorHome: View = mainNodeLocked ? 'download' : OPERATOR_HOME;
 
-  // Navigating from the sidebar also closes the mobile drawer so the page is visible.
-  const navigate = (v: View) => {
-    setView(v);
-    setMenuOpen(false);
-  };
+  const visibleNav = NAV.filter(
+    (n) => (role === 'admin' || n.operator) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)),
+  );
 
   const changeRole = (r: Role) => {
     setRolePref(r);
     localStorage.setItem(ROLE_KEY, r);
     // If the current page isn't in the new role's menu, fall back to the operator home.
-    if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(OPERATOR_HOME);
+    if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(operatorHome);
   };
 
-  // Never leave a non-admin sitting on an admin-only view (e.g. after switching accounts).
+  // Never leave a non-admin sitting on a view they can't use (admin-only, or locked on the main node).
   useEffect(() => {
-    if (role === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(OPERATOR_HOME);
-  }, [role, view]);
+    const item = NAV.find((n) => n.id === view);
+    const blocked =
+      (role === 'operator' && !item?.operator) || (mainNodeLocked && LOCKED_ON_MAIN.has(view));
+    if (blocked) setView(operatorHome);
+  }, [role, view, mainNodeLocked, operatorHome]);
 
   useEffect(() => {
     // Network-wide data feeds admin-only views only. Operators never render it, so don't even
@@ -218,37 +238,9 @@ export function App() {
   }
 
   return (
-    <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
+    <div className="app">
       <InstallBanner />
-      <header className="topbar">
-        <button
-          type="button"
-          className="hamburger"
-          aria-label="Toggle navigation menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((v) => !v)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-        <div className="brand">
-          <span className="badge">W</span> Web3.0
-        </div>
-      </header>
-      {menuOpen && (
-        <div
-          className="scrim"
-          role="button"
-          tabIndex={0}
-          aria-label="Close navigation menu"
-          onClick={() => setMenuOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') setMenuOpen(false);
-          }}
-        />
-      )}
-      <aside className={`side ${menuOpen ? 'open' : ''}`}>
+      <aside className="side">
         <div className="brand">
           <span className="badge">W</span> Web3.0
         </div>
@@ -277,7 +269,7 @@ export function App() {
             id={n.id}
             label={n.label}
             view={view}
-            set={navigate}
+            set={setView}
             count={
               n.badge === 'agents'
                 ? snap.agents.length
@@ -298,6 +290,9 @@ export function App() {
       </aside>
 
       <main className="main">
+        {mainNodeLocked && (
+          <MainNodeNotice go={() => setView('download')} onDownload={view === 'download'} />
+        )}
         {view === 'overview' && <Overview snap={snap} />}
         {view === 'mynode' && <Operator />}
         {view === 'agents' && <Agents agents={snap.agents} wallets={snap.wallets} />}
@@ -314,6 +309,29 @@ export function App() {
         {view === 'download' && <Download />}
         {view === 'telegram' && <Telegram />}
       </main>
+    </div>
+  );
+}
+
+/** Banner shown to a non-admin viewing the network's admin-only main node. */
+function MainNodeNotice({ go, onDownload }: { go: () => void; onDownload: boolean }) {
+  return (
+    <div
+      className="card"
+      style={{ marginBottom: 18, borderLeft: '3px solid var(--accent, #6a5cff)' }}
+    >
+      <div className="section-title">This is the network's main node</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        The main node is reserved for its admin. You can sign up, hold a wallet, and read the
+        network here — but to <b>launch agents</b> and <b>earn aETH</b> for the compute you
+        contribute, run your own node on your device. It joins the same network and your identity
+        travels with you.
+      </p>
+      {!onDownload && (
+        <button type="button" className="btn act" onClick={go}>
+          Run a node →
+        </button>
+      )}
     </div>
   );
 }

@@ -134,12 +134,44 @@ export interface MyEarnings {
 
 export type NodeRole = 'solo' | 'relay' | 'authority';
 
+/** Live Proof-of-Contribution status for a node: what it's contributing and earning per epoch. */
+export interface ContributionInfo {
+  /** Whether the earning engine is on (reward pool > 0). */
+  enabled: boolean;
+  /** aETH minted per epoch and split across live contributing nodes. */
+  pool: number;
+  /** Epoch length in blocks. */
+  epochBlocks: number;
+  /** Nodes seen contributing within the freshness window. */
+  liveContributors: number;
+  /** This node's weighted contribution score. */
+  myScore: number;
+  /** Sum of all live nodes' scores (this node's share = myScore / totalScore). */
+  totalScore: number;
+  /** Projected payout to this node at the next epoch (after the per-node cap). */
+  projectedPerEpoch: number;
+  /** This node's contribution-reward wallet (derived from its node key). */
+  walletId: string;
+  /** aETH earned by this node from contribution rewards, awaiting collection. */
+  walletBalance: number;
+  walletFormatted: string;
+}
+
 export interface NodeOperator {
   role: NodeRole;
   nodePublicKey?: string;
   treasuryId: string;
   uptimeSec: number;
-  earnings: { balance: number; fees: number; rewards: number; formatted: string };
+  earnings: {
+    balance: number;
+    fees: number;
+    rewards: number;
+    contribution: number;
+    formatted: string;
+  };
+  contribution?: ContributionInfo;
+  /** Node auth posture — including whether this is the admin-only main node. */
+  auth?: { accounts: number; hasAdmin: boolean; openMode: boolean; adminOnly: boolean };
   traffic: { agents: number; online: number; ledgerEntries: number };
   consensus: {
     mode: string;
@@ -236,7 +268,7 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(`${NODE_URL}${path}`, init);
   } catch {
-    throw new ApiError('cannot reach the network node (offline, or blocked by CORS)', 0);
+    throw new ApiError(`cannot reach the node at ${NODE_URL} (network or CORS)`, 0);
   }
 }
 
@@ -273,42 +305,22 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   return res.json() as Promise<T>;
 }
 
-const isRoutable = (ip: string): boolean => !!ip && !/^(127\.|::1$|0\.0\.0\.0$)/.test(ip);
-
-/**
- * This device's own public IP, detected with zero setup. Order: the node's `/whoami` (the IP as the
- * network sees you — no third party) if it returns a routable address; otherwise a public IP echo
- * service so it still resolves straight from the browser with no node redeploy or command. Returns
- * null if every source fails (offline). Only ever the caller's own IP — nothing about the node.
- */
-async function detectDeviceIp(): Promise<string | null> {
-  try {
-    const r = await get<{ ip: string }>('/whoami');
-    if (isRoutable(r.ip)) return r.ip;
-  } catch {
-    /* node may not expose /whoami — fall through to the public echo below */
-  }
-  // CORS-enabled public echo services; first success wins.
-  for (const url of ['https://api.ipify.org?format=json', 'https://ipv4.icanhazip.com']) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const text = (await res.text()).trim();
-      const ip = text.startsWith('{') ? (JSON.parse(text) as { ip?: string }).ip : text;
-      if (ip && isRoutable(ip)) return ip;
-    } catch {
-      /* try the next source */
-    }
-  }
-  return null;
-}
-
 /** Live monetary policy — GUI-editable by the admin, applies immediately. */
 export interface Economics {
   feeBps: number;
   blockReward: number;
   burnBps: number;
   authorityStake: number;
+  /** Proof-of-Contribution: aETH minted per epoch and split across live contributing nodes. */
+  nodeRewardPool: number;
+  /** Epoch length in blocks. */
+  epochBlocks: number;
+  /** Contribution-score weights. */
+  uptimeWeight: number;
+  hostWeight: number;
+  relayWeight: number;
+  /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
+  rewardCapBps: number;
   blockRewardFormatted?: string;
   authorityStakeFormatted?: string;
 }
@@ -374,6 +386,8 @@ export const api = {
     ),
   economics: () => get<Economics>('/operator/economics'),
   updateEconomics: (patch: Partial<Economics>) => post<Economics>('/operator/economics', patch),
+  /** Live Proof-of-Contribution status for this node (score, live peers, reward wallet). */
+  contribution: () => get<ContributionInfo>('/operator/contribution'),
   storageInfo: () => get<StorageInfo>('/operator/storage'),
   saveStorage: (input: { mongodbUri?: string; mongodbDb?: string }) =>
     post<{ saved: boolean; restartRequired: boolean; configPath: string }>(
@@ -381,10 +395,13 @@ export const api = {
       input,
     ),
   collectEarnings: () =>
-    post<{ collected: number; collectedFormatted: string; walletBalance: number }>(
-      '/operator/collect',
-      {},
-    ),
+    post<{
+      collected: number;
+      collectedFormatted: string;
+      fromTreasury?: number;
+      fromContribution?: number;
+      walletBalance: number;
+    }>('/operator/collect', {}),
   stake: (input: { amount?: number; nodePublicKey?: string }) =>
     post<StakeResult>('/operator/stake', input),
   requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),
@@ -427,11 +444,6 @@ export const api = {
   bindKey: (pubkey: string) =>
     post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
-  /** The caller's OWN IP as the node sees it (their device), not the node's address. */
-  whoami: () => get<{ ip: string }>('/whoami'),
-  /** Auto-detect this device's public IP with no setup: prefer the node's /whoami, else a public
-   *  echo service — so the dashboard can always show it without any command or node redeploy. */
-  deviceIp: () => detectDeviceIp(),
   /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */
