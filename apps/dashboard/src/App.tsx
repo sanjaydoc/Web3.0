@@ -369,7 +369,9 @@ export function App() {
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
-        {view === 'ledger' && <LedgerView snap={snap} admin={isAdmin} />}
+        {view === 'ledger' && (
+          <LedgerView snap={snap} admin={isAdmin} me={account?.address ?? null} />
+        )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
@@ -558,7 +560,85 @@ function Feed({ events }: { events: Web3Event[] }) {
   );
 }
 
-function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
+/**
+ * Decode a ledger entry into a readable From → To · Amount · label, straight from `entry.data`
+ * (no server change needed — payments already carry from/to/amount). This is what turns the
+ * opaque "payment / <hash>" rows into an auditable payments table: a transfer to sanjay@web3.0
+ * reads as `you → sanjay@web3.0 · 5.00 aETH`, a faucet/reward as a `mint`.
+ */
+function describeEntry(e: LedgerEntry): {
+  label: string;
+  from: string;
+  to: string;
+  amount: string;
+  note?: string;
+} {
+  const d = e.data as Record<string, unknown>;
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+  const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
+  const cur = str(d.currency) || 'aETH';
+  switch (e.type) {
+    case 'payment': {
+      const amt = num(d.amount);
+      const isMint = d.from === null || d.from === undefined;
+      return {
+        label: isMint ? 'mint' : 'transfer',
+        from: isMint ? 'network' : str(d.from) || '—',
+        to: str(d.to) || '—',
+        amount: amt !== undefined ? formatAmount(amt, cur) : '—',
+        note: str(d.memo) || undefined,
+      };
+    }
+    case 'register': {
+      const amt = num(d.openingBalance);
+      return {
+        label: 'register',
+        from: 'network',
+        to: str(d.web3Id) || '—',
+        amount: amt && amt > 0 ? formatAmount(amt, cur) : '—',
+        note: 'joined network',
+      };
+    }
+    case 'account':
+      return {
+        label: 'key bind',
+        from: '—',
+        to: str(d.web3Id) || '—',
+        amount: '—',
+        note: str(d.role) ? `role: ${str(d.role)}` : undefined,
+      };
+    case 'message':
+      return {
+        label: 'message',
+        from: str(d.from) || '—',
+        to: str(d.to) || '—',
+        amount: '—',
+        note: str(d.bodyType) || undefined,
+      };
+    default:
+      return { label: e.type, from: '—', to: '—', amount: '—' };
+  }
+}
+
+/** Does a ledger entry reference this account (as sender, recipient, or subject)? */
+function entryInvolves(e: LedgerEntry, address: string): boolean {
+  const d = e.data as Record<string, unknown>;
+  return d.from === address || d.to === address || d.web3Id === address;
+}
+
+function LedgerView({
+  snap,
+  admin,
+  me,
+}: {
+  snap: Snapshot;
+  admin: boolean;
+  me: string | null;
+}) {
+  // Admin sees the whole network's ledger; a node operator sees ONLY their own account's
+  // transactions (their address as sender, recipient, or subject). The node holds the full
+  // replicated chain, so this is a UI scope — same pattern as the admin-only Wallets table.
+  const entries = admin ? snap.entries : me ? snap.entries.filter((e) => entryInvolves(e, me)) : [];
   return (
     <>
       <div className="page-head">
@@ -596,30 +676,61 @@ function LedgerView({ snap, admin }: { snap: Snapshot; admin: boolean }) {
           </div>
         )}
         <div className="card">
-          <div className="section-title">Ledger entries</div>
-          {snap.entries.length === 0 ? (
-            <div className="empty">No entries yet.</div>
+          <div className="section-title">
+            {admin ? 'Ledger entries' : 'Your transactions'}
+            <span className="muted" style={{ fontWeight: 400 }}>
+              {admin ? ' — entire network' : me ? ` — ${me}` : ''}
+            </span>
+          </div>
+          {entries.length === 0 ? (
+            <div className="empty">
+              {admin
+                ? 'No entries yet.'
+                : me
+                  ? 'No transactions for your account yet.'
+                  : 'Sign in to see your transactions.'}
+            </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Type</th>
-                  <th>Hash</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snap.entries.map((e) => (
-                  <tr key={e.hash}>
-                    <td>{e.seq}</td>
-                    <td>
-                      <span className="chip">{e.type}</span>
-                    </td>
-                    <td className="mono-hash">{e.hash.slice(0, 18)}…</td>
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>From → To</th>
+                    <th>Amount</th>
+                    <th>Time</th>
+                    <th>Hash</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {entries.map((e) => {
+                    const d = describeEntry(e);
+                    return (
+                      <tr key={e.hash}>
+                        <td>{e.seq}</td>
+                        <td>
+                          <span className="chip">{d.label}</span>
+                        </td>
+                        <td>
+                          <span>{d.from}</span>
+                          <span className="muted"> → </span>
+                          <span>{d.to}</span>
+                          {d.note && (
+                            <div className="muted" style={{ fontSize: '0.8em' }}>
+                              {d.note}
+                            </div>
+                          )}
+                        </td>
+                        <td>{d.amount}</td>
+                        <td className="muted">{shortTime(e.ts)}</td>
+                        <td className="mono-hash">{e.hash.slice(0, 12)}…</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
