@@ -282,13 +282,120 @@ function ClientTerminal() {
   );
 }
 
+const AndroidLogo = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M6 9h12v8a1 1 0 0 1-1 1h-1v3a1 1 0 0 1-2 0v-3h-2v3a1 1 0 0 1-2 0v-3H9a1 1 0 0 1-1-1V9zM4 9a1 1 0 0 1 2 0v6a1 1 0 0 1-2 0V9zm14 0a1 1 0 0 1 2 0v6a1 1 0 0 1-2 0V9zM7.5 8a4.5 4.5 0 0 1 9 0h-9z"
+      fill="#3ddc84"
+    />
+    <circle cx="10" cy="5.5" r="0.7" fill="#0d0d0f" />
+    <circle cx="14" cy="5.5" r="0.7" fill="#0d0d0f" />
+  </svg>
+);
+
+/** Mobile apps — not shipped yet. No fake links: Android will be an APK (foreground-service node),
+ *  iOS an App Store / TestFlight build (a wallet + light client, since iOS suspends background apps). */
+function MobileSoon() {
+  const rows = [
+    {
+      label: 'Android',
+      sub: 'APK — full node, coming soon',
+      accent: '#3ddc84',
+      icon: <AndroidLogo />,
+    },
+    {
+      label: 'iOS',
+      sub: 'App Store / TestFlight — coming soon',
+      accent: '#a0a0a0',
+      icon: <AppleLogo />,
+    },
+  ];
+  return (
+    <div className="dl-panel" style={{ marginTop: 16 }}>
+      <p className="dl-head">
+        Mobile <span className="muted">— in progress</span>
+      </p>
+      <div className="dl-grid">
+        {rows.map((b) => (
+          <div
+            key={b.label}
+            className="dl-btn"
+            aria-disabled="true"
+            style={{ ['--accent' as string]: b.accent, opacity: 0.62, cursor: 'default' }}
+          >
+            <span style={{ flexShrink: 0 }}>{b.icon}</span>
+            <div className="dl-txt">
+              <div className="dl-lab">{b.label}</div>
+              <div className="dl-sub">{b.sub}</div>
+            </div>
+            <span className="chip" style={{ marginLeft: 'auto' }}>
+              soon
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="dl-blurb">
+        <b>Android</b> will ship as a downloadable <b>.apk</b> that runs a real node as a foreground
+        service — the mobile way to contribute compute and earn. <b>iOS</b> comes via the App Store
+        / TestFlight (there is no iOS "APK"); because iOS suspends background apps, it acts as a{' '}
+        <b>wallet and light client</b> rather than an always-on node. Today, run a full node on
+        <b> desktop</b> above; a phone browser can sign in as a light client but can't earn.
+      </p>
+    </div>
+  );
+}
+
+/** Honest capability tiers so no one expects a browser tab to earn like a desktop node. */
+function PlatformTable() {
+  const rows: [string, string, string][] = [
+    ['Desktop (Win/mac/Linux)', 'Full node — best earner', 'Available now'],
+    ['Android', 'Foreground-service node — mobile earner', 'Coming soon'],
+    ['iOS', 'Wallet + light client (background-limited)', 'Coming soon'],
+    ['Browser (any device)', 'Light client — sign in & explore, no earning', 'Available now'],
+  ];
+  return (
+    <div className="card" style={{ marginTop: 18 }}>
+      <div className="section-title">What each platform can do</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Node capability</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([p, cap, status]) => (
+            <tr key={p}>
+              <td>
+                <strong>{p}</strong>
+              </td>
+              <td>{cap}</td>
+              <td>
+                <span className={`chip ${status === 'Available now' ? 'allow' : ''}`}>
+                  {status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="hint" style={{ margin: '10px 0 0' }}>
+        Earning scales with what you actually contribute: an always-on desktop node earns most; a
+        phone contributes when the app is running; a browser tab is an on-ramp, not an earner.
+      </p>
+    </div>
+  );
+}
+
 export function Download() {
   return (
     <>
       <div className="page-head">
-        <h1>Get the app</h1>
+        <h1>Run a node</h1>
         <span className="muted">
-          download the native client for your device and join the shared Web3.0 network
+          run a Web3.0 node on your device to join the network and earn aETH for the compute you
+          contribute
         </span>
       </div>
 
@@ -300,6 +407,10 @@ export function Download() {
         forwards your account-signed transactions to be sealed. Same chain, accounts, and ledger as
         everyone else — you're a first-class participant, not an island. Just install and sign in.
       </p>
+
+      <MobileSoon />
+
+      <PlatformTable />
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
         Build on Web3.0 <span className="muted">— open source</span>

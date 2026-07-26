@@ -20,6 +20,9 @@ function EconomicsCard() {
   const [burnBps, setBurnBps] = useState('');
   const [rewardAeth, setRewardAeth] = useState('');
   const [stakeAeth, setStakeAeth] = useState('');
+  const [poolAeth, setPoolAeth] = useState('');
+  const [epochBlocks, setEpochBlocks] = useState('');
+  const [capBps, setCapBps] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -32,6 +35,9 @@ function EconomicsCard() {
         setBurnBps(String(e.burnBps));
         setRewardAeth((e.blockReward / 100).toString());
         setStakeAeth((e.authorityStake / 100).toString());
+        setPoolAeth((e.nodeRewardPool / 100).toString());
+        setEpochBlocks(String(e.epochBlocks));
+        setCapBps(String(e.rewardCapBps));
       })
       .catch(() => undefined);
   }, []);
@@ -45,6 +51,9 @@ function EconomicsCard() {
         burnBps: Math.round(Number.parseFloat(burnBps || '0')),
         blockReward: Math.round(Number.parseFloat(rewardAeth || '0') * 100),
         authorityStake: Math.round(Number.parseFloat(stakeAeth || '0') * 100),
+        nodeRewardPool: Math.round(Number.parseFloat(poolAeth || '0') * 100),
+        epochBlocks: Math.round(Number.parseFloat(epochBlocks || '0')),
+        rewardCapBps: Math.round(Number.parseFloat(capBps || '0')),
       });
       setEco(next);
       setMsg({
@@ -96,6 +105,37 @@ function EconomicsCard() {
           <span className="hint">permissionless admission threshold</span>
         </div>
       </div>
+
+      <div className="section-title" style={{ fontSize: 'var(--fs-title)', marginTop: 14 }}>
+        Node contribution rewards
+      </div>
+      <p className="muted" style={{ margin: '2px 0 10px' }}>
+        Proof-of-Contribution: pay every live node — not just authorities — for the uptime and
+        compute it lends. The pool is minted each epoch and split across contributors by score,
+        capped per node. Set the pool to 0 to turn the engine off.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="eco-pool">Reward pool / epoch (aETH)</label>
+          <input id="eco-pool" value={poolAeth} onChange={(ev) => setPoolAeth(ev.target.value)} />
+          <span className="hint">split across live contributing nodes · 0 = off</span>
+        </div>
+        <div className="field">
+          <label htmlFor="eco-epoch">Epoch length (blocks)</label>
+          <input
+            id="eco-epoch"
+            value={epochBlocks}
+            onChange={(ev) => setEpochBlocks(ev.target.value)}
+          />
+          <span className="hint">pool is distributed once every this many blocks</span>
+        </div>
+        <div className="field">
+          <label htmlFor="eco-cap">Per-node cap (bps)</label>
+          <input id="eco-cap" value={capBps} onChange={(ev) => setCapBps(ev.target.value)} />
+          <span className="hint">2000 = one node may take at most 20% · 0 = uncapped</span>
+        </div>
+      </div>
+
       <div className="gen-actions">
         <button type="button" className="btn act" disabled={busy} onClick={save}>
           {busy ? 'Saving…' : 'Save policy'}
@@ -341,6 +381,11 @@ function AuthorityCard({ role }: { role: NodeRole }) {
                   <b>Run this node well</b> — protocol fees (<code>WEB3_FEE_BPS</code>) on payments
                   it processes and hosting accrue to the node treasury; block rewards too once
                   you're an authority.
+                </li>
+                <li>
+                  <b>Contribute uptime &amp; compute</b> — while a node reward pool is set, every
+                  epoch pays live nodes for the resources they lend, by contribution score — no
+                  authority seat required.
                 </li>
                 <li>
                   <b>Collect &amp; stake</b> — sweep treasury earnings into your wallet with{' '}
@@ -687,14 +732,17 @@ export function Operator() {
                   <dd>{formatAmount(e?.fees ?? 0)}</dd>
                   <dt>Block rewards</dt>
                   <dd>{formatAmount(e?.rewards ?? 0)}</dd>
+                  <dt>Contribution rewards</dt>
+                  <dd>{formatAmount(e?.contribution ?? 0)}</dd>
                 </dl>
-                {e && e.balance === 0 && (
+                {e && e.balance === 0 && (e.contribution ?? 0) === 0 && (
                   <p className="hint">
-                    Earnings are off by default — set <code>WEB3_FEE_BPS</code> /{' '}
-                    <code>WEB3_BLOCK_REWARD</code> to start earning.
+                    Earnings are off by default — set <code>WEB3_FEE_BPS</code>,{' '}
+                    <code>WEB3_BLOCK_REWARD</code>, or a <b>node reward pool</b> (below) to start
+                    earning.
                   </p>
                 )}
-                {e && e.balance > 0 && (
+                {e && (e.balance > 0 || (e.contribution ?? 0) > 0) && (
                   <button type="button" className="btn act" disabled={busy} onClick={collect}>
                     {busy ? 'Collecting…' : 'Collect to wallet'}
                   </button>
@@ -779,6 +827,41 @@ export function Operator() {
               </div>
             )}
           </div>
+
+          {isAdmin && node.contribution && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <div className="section-title">Contribution rewards</div>
+              <p className="muted" style={{ margin: '2px 0 12px' }}>
+                {node.contribution.enabled
+                  ? 'Proof-of-Contribution is live — your node earns aETH each epoch for the uptime and compute it lends, alongside every other live node.'
+                  : 'Proof-of-Contribution is off. Set a node reward pool in Economics to start paying live nodes for the resources they contribute.'}
+              </p>
+              <dl className="kv">
+                <dt>Your score</dt>
+                <dd>
+                  {node.contribution.myScore}{' '}
+                  <span className="muted">
+                    of {node.contribution.totalScore} across {node.contribution.liveContributors}{' '}
+                    live node{node.contribution.liveContributors === 1 ? '' : 's'}
+                  </span>
+                </dd>
+                <dt>Projected / epoch</dt>
+                <dd>
+                  {formatAmount(node.contribution.projectedPerEpoch)}{' '}
+                  <span className="muted">
+                    from a {formatAmount(node.contribution.pool)} pool every{' '}
+                    {node.contribution.epochBlocks} blocks
+                  </span>
+                </dd>
+                <dt>Earned, uncollected</dt>
+                <dd>{node.contribution.walletFormatted}</dd>
+              </dl>
+              <p className="hint">
+                Contribution rewards land in your node's reward wallet and sweep into your account
+                with <b>Collect to wallet</b> above.
+              </p>
+            </div>
+          )}
 
           {isAdmin && (
             <div className="card" style={{ marginBottom: 18 }}>
