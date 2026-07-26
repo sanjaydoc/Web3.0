@@ -11,7 +11,7 @@ const { randomBytes } = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 
 const NODE_HOST = '127.0.0.1';
 const NODE_PORT = 8787;
@@ -39,8 +39,10 @@ function nodeSeed() {
   return seed;
 }
 
-/** Launch the bundled node as a child process (Electron-as-node), joining the shared network. */
+/** Launch the bundled node as a child process (Electron-as-node), joining the shared network.
+ *  Idempotent: a no-op if the node is already running, so the Start control can't spawn duplicates. */
 function startNode() {
+  if (nodeProc) return;
   const bundle = path.join(__dirname, 'node-bundle.cjs');
   const networkFile = path.join(__dirname, 'network.json');
   const env = {
@@ -105,6 +107,9 @@ async function createWindow() {
     title: 'Web3.0',
     webPreferences: {
       contextIsolation: true,
+      // Preload exposes a tiny, safe `window.web3desktop` bridge (start/stop/status the local node)
+      // to the dashboard — the only channel between the renderer and this main process.
+      preload: path.join(__dirname, 'preload.cjs'),
       // The dashboard loads from file:// and calls the LOCAL node over http. Disabling webSecurity
       // lets our own first-party UI make those calls without a null-origin CORS dance. The window
       // only ever loads our bundled dashboard.
@@ -137,6 +142,20 @@ function stopNode() {
   }
 }
 
+/** Node control bridge for the dashboard (via preload → ipcRenderer.invoke). Start is idempotent;
+ *  stop kills the child; status reports whether the process is currently running. */
+function registerNodeIpc() {
+  ipcMain.handle('node:start', () => {
+    startNode();
+    return { running: !!nodeProc };
+  });
+  ipcMain.handle('node:stop', () => {
+    stopNode();
+    return { running: false };
+  });
+  ipcMain.handle('node:status', () => ({ running: !!nodeProc }));
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -147,6 +166,7 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
   app.whenReady().then(() => {
+    registerNodeIpc();
     startNode();
     createWindow();
   });

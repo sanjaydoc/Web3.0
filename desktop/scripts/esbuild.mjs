@@ -82,6 +82,15 @@ await build({
   external: ['electron'],
 });
 
+// The preload bridge (window.web3desktop → node start/stop/status). Also runs in the Electron
+// runtime, so `electron` stays external.
+await build({
+  ...common,
+  entryPoints: [resolve(root, 'src/preload.js')],
+  outfile: resolve(out, 'preload.cjs'),
+  external: ['electron'],
+});
+
 // Bundle the network's genesis/peer config (desktop/network.json) so installed nodes JOIN the
 // shared network instead of booting solo. It lives under desktop/ (not the repo root) so it never
 // leaks into a from-source node's cwd. Absent file → the node still boots solo.

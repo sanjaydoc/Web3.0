@@ -13,6 +13,97 @@ import {
   formatAmount,
 } from './api.js';
 
+/** The Electron preload bridge (desktop app only) — lets the console start/stop the local node. */
+interface DesktopBridge {
+  isDesktop: boolean;
+  startNode: () => Promise<{ running: boolean }>;
+  stopNode: () => Promise<{ running: boolean }>;
+  nodeStatus: () => Promise<{ running: boolean }>;
+}
+const desktop: DesktopBridge | undefined =
+  typeof window !== 'undefined'
+    ? (window as unknown as { web3desktop?: DesktopBridge }).web3desktop
+    : undefined;
+
+/**
+ * Node status + control. The green light shows whether the node is reachable (online) — everywhere,
+ * web and desktop. In the desktop app a Start/Stop button appears (via the preload bridge); on the
+ * web console the node is remote, so it's status-only.
+ */
+function NodeControl({ online }: { online: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  // While starting, the process is up but not yet reachable — clear the pending state once it is.
+  useEffect(() => {
+    if (online && starting) setStarting(false);
+  }, [online, starting]);
+
+  const toggle = async () => {
+    if (!desktop) return;
+    setBusy(true);
+    try {
+      if (online) {
+        await desktop.stopNode();
+      } else {
+        setStarting(true);
+        await desktop.startNode();
+      }
+    } catch {
+      setStarting(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const label = online ? 'Node running' : starting ? 'Starting…' : 'Node stopped';
+  const dotColor = online ? 'var(--ok)' : starting ? 'var(--gold, #f2c14e)' : 'var(--no, #c0392b)';
+
+  return (
+    <div
+      className="card"
+      style={{ marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14 }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          background: dotColor,
+          boxShadow: online ? '0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent)' : 'none',
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 600 }}>{label}</div>
+        <div className="muted" style={{ fontSize: 'var(--fs-small, 13px)' }}>
+          {desktop
+            ? online
+              ? 'Your node is live on the shared network and contributing.'
+              : 'Your node is off — start it to join the network and earn.'
+            : online
+              ? 'Connected to the node.'
+              : 'The node is not reachable.'}
+        </div>
+      </div>
+      {desktop && (
+        <button
+          type="button"
+          className="btn act"
+          disabled={busy}
+          onClick={toggle}
+          style={
+            online ? { background: 'var(--no, #c0392b)', borderColor: 'transparent' } : undefined
+          }
+        >
+          {busy ? '…' : online ? 'Stop node' : 'Start node'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Live monetary policy — visible to any signed-in operator, editable by the admin. */
 function EconomicsCard() {
   const [eco, setEco] = useState<Economics | null>(null);
@@ -600,18 +691,21 @@ export function Operator() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [touched, setTouched] = useState(false);
+  // Whether the node is reachable right now — drives the green on/off light.
+  const [online, setOnline] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const n = await api.node();
       setNode(n);
+      setOnline(true);
       if (!touched) {
         setContribute(n.limits.contribute);
         setMaxRamGb((n.limits.maxRamMb / 1024).toFixed(1).replace(/\.0$/, ''));
         setMaxAgents(String(n.limits.maxAgents));
       }
     } catch {
-      /* node offline */
+      setOnline(false); // node offline / unreachable
     }
     api
       .telegram()
@@ -702,6 +796,8 @@ export function Operator() {
             : 'your wallet and income on the Web3.0 network'}
         </span>
       </div>
+
+      <NodeControl online={online} />
 
       {!node && (
         <div className="card empty">Node offline — start it to see live earnings and load.</div>
