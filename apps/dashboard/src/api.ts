@@ -41,6 +41,7 @@ export interface LedgerEntry {
 export interface Stats {
   agents: number;
   online: number;
+  nodes?: number;
   ledgerEntries: number;
   ledgerVerified: boolean;
   totalValue: number;

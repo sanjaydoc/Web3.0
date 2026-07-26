@@ -684,6 +684,12 @@ export function Operator() {
   const [mine, setMine] = useState<MyEarnings | null>(null);
   const isAdmin = me?.role === 'admin';
   const [admin, setAdmin] = useState(() => localStorage.getItem(ADMIN_KEY) ?? '');
+  // Who sees the node-OWNER console (load, contribution, authority, location, treasury)? Anyone
+  // running THIS node: an admin on any node, OR any operator on a node that isn't the reserved
+  // admin-only MAIN node — i.e. their own desktop/self-hosted node. On the main node a plain
+  // operator still sees only their personal earnings (that node isn't theirs). Network-policy cards
+  // (Economics, Storage) stay admin-only.
+  const ownsNode = isAdmin || !node?.auth?.adminOnly;
   const [adminReq, setAdminReq] = useState(false);
   const [contribute, setContribute] = useState(true);
   const [maxRamGb, setMaxRamGb] = useState('0');
@@ -783,13 +789,13 @@ export function Operator() {
     <>
       <div className="page-head">
         <h1>
-          {isAdmin ? 'My node' : 'Earnings'}{' '}
-          {isAdmin && node && (
+          {ownsNode ? 'My node' : 'Earnings'}{' '}
+          {ownsNode && node && (
             <span className={`role-badge ${node.role}`}>{node.role.toUpperCase()}</span>
           )}
         </h1>
         <span className="muted">
-          {isAdmin
+          {ownsNode
             ? node
               ? ROLE_HELP[node.role]
               : 'what this node earns, carries, and contributes to Web3.0'
@@ -806,9 +812,9 @@ export function Operator() {
       {node && (
         <>
           <div className="grid-2" style={{ marginBottom: 18 }}>
-            {isAdmin ? (
-              // Node OWNER (admin): the node treasury — fees + block rewards it collects — and the
-              // sweep-to-wallet action. This is the owner's money; only admins see it.
+            {ownsNode ? (
+              // Node OWNER: the node treasury — fees + block rewards it collects — and the
+              // sweep-to-wallet action. The owner is whoever runs this node.
               <div className="card">
                 <div className="section-title">Node earnings</div>
                 <div
@@ -881,7 +887,7 @@ export function Operator() {
               </div>
             )}
 
-            {isAdmin && (
+            {ownsNode && (
               <div className="card">
                 <div className="section-title">Load &amp; uptime</div>
                 <dl className="kv">
@@ -924,7 +930,7 @@ export function Operator() {
             )}
           </div>
 
-          {isAdmin && node.contribution && (
+          {ownsNode && node.contribution && (
             <div className="card" style={{ marginBottom: 18 }}>
               <div className="section-title">Contribution rewards</div>
               <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -959,7 +965,7 @@ export function Operator() {
             </div>
           )}
 
-          {isAdmin && (
+          {ownsNode && (
             <div className="card" style={{ marginBottom: 18 }}>
               <div className="section-title">Contribution</div>
               <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -1031,16 +1037,17 @@ export function Operator() {
             </div>
           )}
 
-          {/* Node-owner / network cards — admin only. Operators see just their own earnings above. */}
-          {isAdmin && <AuthorityCard role={node.role} />}
+          {/* Node-owner cards — shown to whoever RUNS this node. Economics + Storage stay admin-only
+              (network monetary policy + node persistence config, not per-operator). */}
+          {ownsNode && <AuthorityCard role={node.role} />}
 
           {isAdmin && <EconomicsCard />}
 
           {isAdmin && <StorageCard />}
 
-          {isAdmin && <NodeLocationCard />}
+          {ownsNode && <NodeLocationCard />}
 
-          {isAdmin && (
+          {ownsNode && (
             <div className="card">
               <div className="section-title">This node</div>
               <dl className="kv">
