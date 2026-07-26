@@ -545,16 +545,52 @@ function NodeLocationCard() {
     })();
   }, []);
 
+  // Electron's Chromium routes navigator.geolocation through Google's geolocation service, which needs
+  // an API key the desktop app doesn't ship — so GPS fails there with a "network service" error.
+  // Fall back to approximate, key-less IP geolocation (city-level) so the button still works; the user
+  // can always fine-tune the coordinates by hand before saving.
+  const ipLocate = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('https://ipwho.is/');
+      const d = (await res.json()) as {
+        success?: boolean;
+        latitude?: number;
+        longitude?: number;
+        city?: string;
+      };
+      if (d.success && typeof d.latitude === 'number' && typeof d.longitude === 'number') {
+        setLat(d.latitude.toFixed(4));
+        setLon(d.longitude.toFixed(4));
+        if (d.city && !label) setLabel(d.city);
+        setMsg({
+          kind: 'ok',
+          text: `Approx. location from your network${d.city ? ` (${d.city})` : ''} — adjust if needed, then Save.`,
+        });
+        return true;
+      }
+    } catch {
+      /* network/service unavailable */
+    }
+    return false;
+  };
+
   const useGps = () => {
     setMsg(null);
+    setBusy(true);
+    const fallback = async () => {
+      const ok = await ipLocate();
+      setBusy(false);
+      if (!ok) {
+        setMsg({
+          kind: 'err',
+          text: "Couldn't detect your location automatically — enter the coordinates manually.",
+        });
+      }
+    };
     if (!navigator.geolocation) {
-      setMsg({
-        kind: 'err',
-        text: 'This browser has no geolocation — enter coordinates manually.',
-      });
+      void fallback();
       return;
     }
-    setBusy(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLat(pos.coords.latitude.toFixed(4));
@@ -562,10 +598,8 @@ function NodeLocationCard() {
         setBusy(false);
         setMsg({ kind: 'ok', text: 'Location captured — press Save to publish it to the map.' });
       },
-      (err) => {
-        setBusy(false);
-        setMsg({ kind: 'err', text: `Location denied or unavailable (${err.message}).` });
-      },
+      // GPS/permission failed — common in the desktop app (no geolocation key) — try IP-based instead.
+      () => void fallback(),
       { enableHighAccuracy: true, timeout: 12000 },
     );
   };
