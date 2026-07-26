@@ -1,4 +1,4 @@
-import { formatAmount } from '@web3/core';
+import { type Web3Id, formatAmount } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { BURN_ID } from '../services/economics.js';
 
@@ -11,7 +11,20 @@ export function observabilityModule(): Web3Module {
   return {
     name: 'observability',
     version: '0.1.0',
-    register({ http, bus, ledger, registry, connections, contribution }: ModuleContext) {
+    register({
+      http,
+      bus,
+      ledger,
+      registry,
+      connections,
+      contribution,
+      treasuryId,
+    }: ModuleContext) {
+      // The node treasury is registered as an agent card (so it has an identity + wallet) but it is
+      // infrastructure, not a real agent — never count it among "agents". Each node's heartbeat also
+      // excludes it, so the network-wide sum is real agents only.
+      const localAgents = (): number =>
+        registry.size - (registry.has(treasuryId as Web3Id) ? 1 : 0);
       http.get('/events', (request) => {
         const { limit } = request.query as { limit?: string };
         return { events: bus.recent(limit ? Number(limit) : 100) };
@@ -59,7 +72,7 @@ export function observabilityModule(): Web3Module {
         // so no heartbeats) falls back to its own local counts.
         const networked = contribution.size > 0;
         return {
-          agents: networked ? contribution.totalAgents() : registry.size,
+          agents: networked ? contribution.totalAgents() : localAgents(),
           online: networked ? contribution.totalOnline() : connections.online().length,
           // Live NODES in the network (peers heard from via a fresh signed contribution heartbeat,
           // within the freshness window) — distinct from `online`, which counts connected agents.

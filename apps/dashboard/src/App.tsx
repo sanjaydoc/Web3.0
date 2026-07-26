@@ -371,7 +371,7 @@ export function App() {
         {mainNodeLocked && (
           <MainNodeNotice go={() => setView('download')} onDownload={view === 'download'} />
         )}
-        {view === 'overview' && <Overview snap={snap} agentsCount={agentsForView.length} />}
+        {view === 'overview' && <Overview snap={snap} />}
         {view === 'mynode' && <Operator />}
         {view === 'agents' && <Agents agents={agentsForView} wallets={snap.wallets} />}
         {view === 'skills' && <Skills agents={agentsForView} />}
@@ -435,7 +435,7 @@ function NavItem(props: {
   );
 }
 
-function Overview({ snap, agentsCount }: { snap: Snapshot; agentsCount: number }) {
+function Overview({ snap }: { snap: Snapshot }) {
   const s = snap.stats;
   return (
     <>
@@ -447,7 +447,7 @@ function Overview({ snap, agentsCount }: { snap: Snapshot; agentsCount: number }
       </div>
       <div className="stats">
         <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
-        <Stat k="Agents" n={s ? String(agentsCount) : '—'} />
+        <Stat k="Agents" n={s ? String(s.agents) : '—'} />
         <Stat k="Agents online" n={s ? String(s.online) : '—'} />
         <Stat
           k="Value in network"
