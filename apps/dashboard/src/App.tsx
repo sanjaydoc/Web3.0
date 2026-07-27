@@ -314,7 +314,17 @@ export function App() {
     return (
       <>
         <InstallBanner />
-        <Landing onEnter={() => checkAuth()} onGuest={() => setGuest(true)} />
+        <Landing
+          onEnter={() => checkAuth()}
+          onGuest={() => setGuest(true)}
+          // A brand-new account (Landing → Create account) goes straight into the onboarding flow —
+          // pick up the new token, then force the wizard (it resumes past the name step and walks
+          // location → RAM → save your key). Same onboarding component used on desktop/Android.
+          onCreated={async () => {
+            await checkAuth();
+            setForceOnboard(true);
+          }}
+        />
       </>
     );
   }
