@@ -1,0 +1,72 @@
+name: android
+
+# Builds the Android APK — a full peer node running on the phone via nodejs-mobile, with the
+# dashboard in a Capacitor WebView pointed at the local node (http://127.0.0.1:8787). The node joins
+# the shared chain via the bundled network.json (same as the desktop app).
+#
+# Runs on any push that touches mobile/ (so we can iterate the build to green) and on demand.
+# Release attachment to the public GitHub Release (alongside the desktop installers) is wired in
+# once the APK builds green.
+on:
+  push:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- JS toolchain: build the dashboard (workspace) + bundle the node, assemble www/ ---
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Workspace deps — needed so the dashboard can build from the monorepo.
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      # Mobile deps (Capacitor + capacitor-nodejs + esbuild) — standalone, not in the workspace.
+      - name: Install mobile deps
+        working-directory: mobile
+        run: npm ci
+
+      # Build the dashboard, bundle the node into one file (target node18), assemble mobile/www.
+      - name: Prepare web payload
+        working-directory: mobile
+        run: npm run prepare:app
+
+      # --- Android toolchain: sync Capacitor + Gradle assemble ---
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      # Copies www/ (dashboard + nodejs project) into the android assets and wires the plugin.
+      - name: Capacitor sync
+        working-directory: mobile
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p mobile/dist
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "mobile/dist/Web3.0-android.apk"
+          ls -lh mobile/dist
+
+      - name: Upload APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: web3-android-apk
+          path: mobile/dist/Web3.0-android.apk

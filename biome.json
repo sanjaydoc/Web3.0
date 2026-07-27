@@ -2,7 +2,15 @@
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "ignore": ["dist", "node_modules", "**/*.json", "apps/dashboard/dist", "docs"]
+    "ignore": [
+      "dist",
+      "node_modules",
+      "**/*.json",
+      "apps/dashboard/dist",
+      "docs",
+      "mobile/www",
+      "mobile/android"
+    ]
   },
   "formatter": {
     "enabled": true,
