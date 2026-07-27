@@ -648,6 +648,46 @@ function LedgerView({
   // transactions (their address as sender, recipient, or subject). The node holds the full
   // replicated chain, so this is a UI scope — same pattern as the admin-only Wallets table.
   const entries = admin ? snap.entries : me ? snap.entries.filter((e) => entryInvolves(e, me)) : [];
+
+  // A transfer shows in Recent activity the instant it's submitted, but only lands here once it's
+  // SEALED into a block. Surface still-unsealed transfers as "pending" rows so a payment you just
+  // made appears immediately (and doesn't look lost) — it turns into a sealed row when an authority
+  // seals it. Keyed by from|to|amount|nonce so a tx already sealed isn't also shown as pending.
+  const paymentKey = (d: { from?: unknown; to?: unknown; amount?: unknown; nonce?: unknown }) =>
+    `${d.from}|${d.to}|${d.amount}|${d.nonce ?? ''}`;
+  const sealedKeys = new Set(
+    snap.entries
+      .filter((e) => e.type === 'payment' && (e.data as { from?: unknown }).from != null)
+      .map((e) => paymentKey(e.data as Record<string, unknown>)),
+  );
+  const seenPending = new Set<string>();
+  const pending = snap.events
+    .filter((e) => e.kind === 'tx.submitted')
+    .map((e) => {
+      const d = (e.data ?? {}) as {
+        from?: unknown;
+        to?: unknown;
+        amount?: unknown;
+        nonce?: unknown;
+      };
+      return {
+        id: e.id,
+        ts: e.ts,
+        from: typeof d.from === 'string' ? d.from : '',
+        to: typeof d.to === 'string' ? d.to : '',
+        amount: typeof d.amount === 'number' ? d.amount : null,
+        nonce: typeof d.nonce === 'number' ? d.nonce : undefined,
+      };
+    })
+    .filter((p) => p.from && p.to && p.amount != null)
+    .filter((p) => !sealedKeys.has(paymentKey(p))) // already sealed → shown as a real entry below
+    .filter((p) => admin || (me != null && (p.from === me || p.to === me))) // role scope
+    .filter((p) => {
+      const k = paymentKey(p);
+      if (seenPending.has(k)) return false;
+      seenPending.add(k);
+      return true;
+    });
   return (
     <>
       <div className="page-head">
@@ -691,7 +731,7 @@ function LedgerView({
               {admin ? ' — entire network' : me ? ` — ${me}` : ''}
             </span>
           </div>
-          {entries.length === 0 ? (
+          {entries.length === 0 && pending.length === 0 ? (
             <div className="empty">
               {admin
                 ? 'No entries yet.'
@@ -713,6 +753,22 @@ function LedgerView({
                   </tr>
                 </thead>
                 <tbody>
+                  {pending.map((p) => (
+                    <tr key={`pending-${p.id}`} style={{ opacity: 0.75 }}>
+                      <td>—</td>
+                      <td>
+                        <span className="chip">pending</span>
+                      </td>
+                      <td>
+                        <span>{p.from}</span>
+                        <span className="muted"> → </span>
+                        <span>{p.to}</span>
+                      </td>
+                      <td>{formatAmount(p.amount as number)}</td>
+                      <td className="muted">{shortTime(p.ts)}</td>
+                      <td className="muted">awaiting seal</td>
+                    </tr>
+                  ))}
                   {entries.map((e) => {
                     const d = describeEntry(e);
                     return (
