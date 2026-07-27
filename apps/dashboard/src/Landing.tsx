@@ -87,7 +87,7 @@ const ICONS: Record<string, ReactNode> = {
 };
 
 // Desktop installers — the latest release on the public repo. Bump `DL_VER` on each release.
-const DL_VER = '0.1.14';
+const DL_VER = '0.1.15';
 const DL_BASE = `https://github.com/sanjaydoc/Web3.0/releases/download/v${DL_VER}`;
 const RELEASES = 'https://github.com/sanjaydoc/Web3.0/releases/latest';
 

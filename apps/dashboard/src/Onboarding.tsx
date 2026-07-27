@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, formatAmount, setWeb3Token } from './api.js';
+import { api, formatAmount, getWeb3Token, setWeb3Token } from './api.js';
 import { generateAccountKey, saveAccountKey } from './txsign.js';
 
 /**
@@ -321,6 +321,82 @@ function RamStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** Final step — surface the account's API token so the operator saves it (reveal / copy / download
+ *  as Your_Key.txt). It's the one secret they must keep; anyone with it controls the account. */
+function TokenStep({ onDone }: { onDone: () => void }) {
+  const token = getWeb3Token();
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(token).then(
+      () => {
+        setCopied(true);
+        setSaved(true);
+        setTimeout(() => setCopied(false), 1800);
+      },
+      () => undefined,
+    );
+  };
+
+  const download = () => {
+    const body = [
+      'Web3.0 — your account key (API token)',
+      '',
+      token,
+      '',
+      'Store this like a password. Use it to sign in on another device, or as the',
+      'x-web3-token header in agent scripts. Anyone with this token controls your',
+      'account — keep it secret.',
+      '',
+    ].join('\n');
+    const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Your_Key.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setSaved(true);
+  };
+
+  return (
+    <>
+      <p className="muted" style={{ margin: '0 0 12px' }}>
+        Save your token now — it's how you sign in on another device or authenticate agent scripts.
+        This is the only place it's shown.
+      </p>
+      <div className="term" style={{ marginBottom: 8 }}>
+        <div className="term-body">
+          <div className="term-cmd">
+            <code>{revealed ? token : `web3_${'•'.repeat(28)}`}</code>
+            <button type="button" className="copy" onClick={() => setRevealed((r) => !r)}>
+              {revealed ? 'Hide' : 'Reveal'}
+            </button>
+            <button type="button" className={`copy ${copied ? 'copied' : ''}`} onClick={copy}>
+              {copied ? 'copied ✓' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <p className="hint">
+        Your API token. Copy it to sign in on another device, or use it as the{' '}
+        <code>x-web3-token</code> header in agent scripts. Store it like a password.
+      </p>
+      <div className="onboard-actions">
+        <button type="button" className="btn act" onClick={download}>
+          ⬇ Download Your_Key.txt
+        </button>
+        <button type="button" className={`btn ${saved ? 'act' : 'ghost'}`} onClick={onDone}>
+          I've saved it — enter dashboard →
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function Onboarding({
   authed,
   onAuthChanged,
@@ -388,9 +464,9 @@ export function Onboarding({
           <span className="badge">W</span> Web3.0
         </div>
         <h1 className="onboard-title">Run a node — quick setup</h1>
-        <p className="muted onboard-sub">Three quick steps and you're earning on the network.</p>
+        <p className="muted onboard-sub">A few quick steps and you're earning on the network.</p>
 
-        <ProgressBar done={step} total={3} />
+        <ProgressBar done={step} total={4} />
 
         <StepCard n={1} title="Create your identity" state={state(0)} summary={addr}>
           <NameStep
@@ -413,7 +489,11 @@ export function Onboarding({
         </StepCard>
 
         <StepCard n={3} title="Contribute RAM & start earning" state={state(2)}>
-          <RamStep onDone={onDone} />
+          <RamStep onDone={() => setStep(3)} />
+        </StepCard>
+
+        <StepCard n={4} title="Save your key" state={state(3)}>
+          <TokenStep onDone={onDone} />
         </StepCard>
       </div>
     </div>
