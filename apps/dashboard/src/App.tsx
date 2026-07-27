@@ -9,6 +9,7 @@ import { InstallBanner } from './InstallBanner.js';
 import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
 import { Network } from './Network.js';
+import { Onboarding } from './Onboarding.js';
 import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
@@ -45,6 +46,7 @@ type View =
 
 type Role = 'operator' | 'admin';
 const ROLE_KEY = 'web3.role';
+const ONBOARDED_KEY = 'web3.onboarded';
 
 /** Sidebar entries. `operator: true` = shown to node operators too; the rest are admin-only. */
 const NAV: {
@@ -137,6 +139,20 @@ export function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [guest, setGuest] = useState(false);
   const [account, setAccount] = useState<Acct | null>(null);
+  // First-run onboarding is for BRAND-NEW operators only: anyone who already has a saved token (a
+  // returning user) or has finished the wizard is considered onboarded, so existing users are never
+  // interrupted. It only ever shows on a real own node (not the reserved main node) — see the gate.
+  const [onboarded, setOnboarded] = useState(
+    () => localStorage.getItem(ONBOARDED_KEY) === '1' || !!getWeb3Token(),
+  );
+  // Lets anyone re-open the wizard on demand from the dashboard ("Get started"), even after the
+  // one-time auto-onboarding is done.
+  const [forceOnboard, setForceOnboard] = useState(false);
+  const finishOnboarding = useCallback(() => {
+    localStorage.setItem(ONBOARDED_KEY, '1');
+    setOnboarded(true);
+    setForceOnboard(false);
+  }, []);
 
   const checkAuth = useCallback(async () => {
     if (!getWeb3Token()) {
@@ -270,6 +286,27 @@ export function App() {
 
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
+
+  // First-run onboarding: a brand-new operator on their OWN node (never the reserved main node, and
+  // only once we know it's reachable) — or re-opened on demand via the dashboard's "Get started".
+  // Walks name → location → RAM, then drops into the dashboard.
+  if ((nodeOnline && !adminOnly && !onboarded) || forceOnboard) {
+    return (
+      <>
+        <InstallBanner />
+        <Onboarding
+          authed={Boolean(authed)}
+          onAuthChanged={checkAuth}
+          onDone={() => {
+            finishOnboarding();
+            void checkAuth();
+          }}
+          onSignInInstead={finishOnboarding}
+        />
+      </>
+    );
+  }
+
   if (!authed && !guest) {
     return (
       <>
@@ -386,7 +423,9 @@ export function App() {
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}
-        {view === 'download' && <Download />}
+        {view === 'download' && (
+          <Download onGetStarted={adminOnly ? undefined : () => setForceOnboard(true)} />
+        )}
         {view === 'telegram' && <Telegram />}
       </main>
     </div>

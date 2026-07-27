@@ -1697,3 +1697,122 @@ button.connector:not(:disabled):hover {
     justify-content: center;
   }
 }
+
+/* ── First-run onboarding wizard (additive; own styles only) ───────────────────────────── */
+.onboard {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 20px 64px;
+  background: var(--paper);
+}
+.onboard-inner {
+  width: 100%;
+  max-width: 560px;
+}
+.onboard-title {
+  font-family: var(--serif);
+  text-align: center;
+  margin: 8px 0 4px;
+}
+.onboard-sub {
+  text-align: center;
+  margin: 0 0 22px;
+}
+.onboard-progress {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.onboard-seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--hair);
+  transition: background 0.35s ease;
+}
+.onboard-seg.filled {
+  background: var(--ok);
+}
+.onboard-card {
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 12px);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  background: var(--paper-2, var(--paper));
+  transition: opacity 0.2s ease;
+}
+.onboard-card.todo {
+  opacity: 0.5;
+}
+.onboard-card.active {
+  border-color: var(--ok);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+.onboard-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.onboard-badge {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--hair);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--fs-sm, 13px);
+  color: var(--muted);
+}
+.onboard-badge.ok {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.onboard-card-title {
+  min-width: 0;
+}
+.onboard-card-body {
+  margin-top: 14px;
+}
+.onboard-handle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.onboard-handle input {
+  flex: 1;
+  min-width: 0;
+}
+.onboard-suffix {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.onboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.onboard-ram-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.onboard-earn {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 12px);
+  text-align: center;
+}
+.onboard-earn-big {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  color: var(--ok);
+  line-height: 1.1;
+}
