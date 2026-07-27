@@ -9,7 +9,7 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 // it. The node joins the ONE shared chain (replicates, relays, forwards signed txs); every install
 // is a first-class participant. Published by the `desktop` workflow on every version tag, to the
 // public repo's releases.
-const DESKTOP_VERSION = '0.1.13';
+const DESKTOP_VERSION = '0.1.14';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
@@ -388,7 +388,7 @@ function PlatformTable() {
   );
 }
 
-export function Download() {
+export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
   return (
     <>
       <div className="page-head">
@@ -398,6 +398,32 @@ export function Download() {
           contribute
         </span>
       </div>
+
+      {/* Guided first-run setup — name, node location, and RAM to contribute — for operators on
+          their own node. Only wired in when onboarding applies (never on the reserved main node). */}
+      {onGetStarted && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div className="section-title">New here? Get set up in a minute</div>
+            <p className="muted" style={{ margin: '2px 0 0' }}>
+              Pick a name, put your node on the map, and choose how much RAM to contribute.
+            </p>
+          </div>
+          <button type="button" className="btn act" onClick={onGetStarted}>
+            Get started →
+          </button>
+        </div>
+      )}
 
       <DesktopApp />
 
