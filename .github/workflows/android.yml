@@ -17,6 +17,8 @@ on:
 jobs:
   android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -66,8 +68,33 @@ jobs:
           cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "mobile/dist/Web3.0-android.apk"
           ls -lh mobile/dist
 
+      # Best-effort convenience copy. Non-blocking: Actions artifact storage can be quota-full, and
+      # the real delivery is the public release below.
       - name: Upload APK (artifact)
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web3-android-apk
           path: mobile/dist/Web3.0-android.apk
+
+      # Publish the APK to a rolling pre-release on the PUBLIC repo so anyone can sideload it from a
+      # stable URL (bypasses the Actions artifact quota entirely). Same PAT the desktop installers use.
+      #   → https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk
+      - name: Publish APK to the PUBLIC 'android' pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: android
+          name: Web3.0 for Android (latest)
+          prerelease: true
+          body: |
+            **Web3.0 for Android** — a full peer node on your phone (nodejs-mobile), with the dashboard
+            in a WebView pointed at the local node. Joins the same shared chain as the desktop app.
+
+            Debug build: to install, enable **"Install unknown apps"** for your browser/file manager,
+            then open the APK. First launch unpacks the Node runtime and starts your node, then shows
+            the "Run a node — quick setup" onboarding.
+
+            Rebuilt automatically from the latest `mobile/` changes.
+          files: mobile/dist/Web3.0-android.apk
