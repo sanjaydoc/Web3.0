@@ -1086,7 +1086,11 @@ button.connector:not(:disabled):hover {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 22px clamp(18px, 4vw, 40px);
+  /* Clear the device status bar (top) and gesture/nav bar (bottom) in the Capacitor app — the
+     landing draws edge-to-edge, so its header (brand + GitHub) would otherwise hide under the status
+     bar. env() insets are 0 on desktop/web, so this is a no-op there. */
+  padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(18px, 4vw, 40px)
+    calc(22px + env(safe-area-inset-bottom, 0px));
 }
 .l-top {
   display: flex;
