@@ -74,14 +74,9 @@ jobs:
           cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "mobile/dist/Web3.0-android.apk"
           ls -lh mobile/dist
 
-      # Best-effort convenience copy. Non-blocking: Actions artifact storage can be quota-full, and
-      # the real delivery is the public release below.
-      - name: Upload APK (artifact)
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: web3-android-apk
-          path: mobile/dist/Web3.0-android.apk
+      # No CI artifact copy on purpose: the APK ships via the public rolling release below, which
+      # doesn't count against the small (0.5 GB) Actions storage quota. A per-run artifact copy would
+      # just accumulate and blow that quota.
 
       # Publish the APK to a rolling pre-release on the PUBLIC repo so anyone can sideload it from a
       # stable URL (bypasses the Actions artifact quota entirely). Same PAT the desktop installers use.

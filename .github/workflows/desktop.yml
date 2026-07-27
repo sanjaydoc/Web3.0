@@ -44,16 +44,10 @@ jobs:
         working-directory: desktop
         run: npm run dist
 
-      - name: Upload installers (artifact)
-        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
-        # quota), don't skip the release publish below — that's what ships the installers.
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: web3-desktop-windows
-          path: |
-            desktop/release/*.msi
-            desktop/release/*.exe
+      # No CI artifact copy on purpose: the installers are large and Actions storage is a small
+      # metered quota (0.5 GB free). The real, permanent delivery is the public Release below —
+      # release assets don't count against Actions storage. To grab a one-off test build, add a
+      # temporary upload-artifact step with `retention-days: 1`.
 
       - name: Attach installers to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
@@ -96,16 +90,8 @@ jobs:
         working-directory: desktop
         run: npm run dist:linux
 
-      - name: Upload installers (artifact)
-        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
-        # quota), don't skip the release publish below — that's what ships the installers.
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: web3-desktop-linux
-          path: |
-            desktop/release/*.AppImage
-            desktop/release/*.deb
+      # No CI artifact copy on purpose (see the Windows job) — the public Release below is the real
+      # delivery and doesn't count against the small Actions storage quota.
 
       - name: Attach installers to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
@@ -147,14 +133,8 @@ jobs:
         working-directory: desktop
         run: npm run dist:mac
 
-      - name: Upload installer (artifact)
-        # Non-blocking: the CI artifact is a convenience. If it fails (e.g. Actions artifact-storage
-        # quota), don't skip the release publish below — that's what ships the installers.
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: web3-desktop-macos
-          path: desktop/release/*.dmg
+      # No CI artifact copy on purpose (see the Windows job) — the public Release below is the real
+      # delivery and doesn't count against the small Actions storage quota.
 
       - name: Attach installer to the PUBLIC release
         if: startsWith(github.ref, 'refs/tags/')
