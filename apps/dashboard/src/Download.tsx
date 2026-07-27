@@ -307,39 +307,23 @@ function MobileApps() {
       <p className="dl-head">
         Mobile <span className="muted">— Android available now</span>
       </p>
-      <div className="dl-grid">
-        <a
-          className="dl-btn"
-          href={ANDROID_APK}
-          target="_blank"
-          rel="noreferrer"
-          style={{ ['--accent' as string]: '#3ddc84' }}
-        >
-          <span style={{ flexShrink: 0 }}>
+      <div className="store-badges">
+        <a className="store-badge" href={ANDROID_APK} target="_blank" rel="noreferrer">
+          <span className="store-badge-icon">
             <AndroidLogo />
           </span>
-          <div className="dl-txt">
-            <div className="dl-lab">Android (.apk)</div>
-            <div className="dl-sub">full node · sideload</div>
-          </div>
-          <span className="dl-arrow">
-            <ArrowDown />
+          <span className="store-badge-txt">
+            <span className="store-badge-top">Get it — full node</span>
+            <span className="store-badge-big">Android</span>
           </span>
         </a>
-        <div
-          className="dl-btn"
-          aria-disabled="true"
-          style={{ ['--accent' as string]: '#a0a0a0', opacity: 0.62, cursor: 'default' }}
-        >
-          <span style={{ flexShrink: 0 }}>
+        <div className="store-badge is-soon" aria-disabled="true">
+          <span className="store-badge-icon">
             <AppleLogo />
           </span>
-          <div className="dl-txt">
-            <div className="dl-lab">iOS</div>
-            <div className="dl-sub">App Store / TestFlight — coming soon</div>
-          </div>
-          <span className="chip" style={{ marginLeft: 'auto' }}>
-            soon
+          <span className="store-badge-txt">
+            <span className="store-badge-top">Coming soon</span>
+            <span className="store-badge-big">iOS</span>
           </span>
         </div>
       </div>

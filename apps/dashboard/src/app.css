@@ -1816,3 +1816,67 @@ button.connector:not(:disabled):hover {
   color: var(--ok);
   line-height: 1.1;
 }
+
+/* App-store-style download badges (Mobile section) — a themed take on the App Store / Google Play
+   badges: an always-dark rounded pill with the platform mark + a small top line and a large label.
+   Both badges are forced to the SAME size, and the dark surface keeps them consistent in light and
+   dark site themes (real store badges are always dark, so this reads as a genuine store badge). */
+.store-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.store-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 220px;
+  height: 62px;
+  padding: 0 18px;
+  background: #0d0d0f;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 13px;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.store-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+.store-badge-icon {
+  flex-shrink: 0;
+  display: flex;
+}
+.store-badge-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.store-badge-txt {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.12;
+}
+.store-badge-top {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+.store-badge-big {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.store-badge.is-soon {
+  opacity: 0.5;
+  cursor: default;
+}
+.store-badge.is-soon:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.16);
+}
