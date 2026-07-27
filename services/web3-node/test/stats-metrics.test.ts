@@ -77,5 +77,10 @@ describe('GET /stats — network-wide metrics the dashboard shows', () => {
     expect(ledger.status).toBe(200);
     expect((ledger.json.verify as { ok: boolean }).ok).toBe(true);
     expect(ledger.json.size as number).toBeGreaterThanOrEqual(2);
+
+    // `totalAgents` is the cumulative "ever created" count from the ledger's register entries —
+    // it counts both agents whether or not any node is currently reporting them live.
+    const stats = await get('/stats');
+    expect(stats.json.totalAgents as number).toBeGreaterThanOrEqual(2);
   });
 });
