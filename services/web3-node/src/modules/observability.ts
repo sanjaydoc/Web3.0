@@ -75,6 +75,15 @@ export function observabilityModule(): Web3Module {
         // operator's node then shows in the admin's Overview / Network. A solo node (no consensus,
         // so no heartbeats) falls back to its own local counts.
         const networked = contribution.size > 0;
+        // Total agents EVER registered on this node's ledger — the append-only `register` entries, so
+        // idle/offline agents still count and it never drops when a node goes offline (unlike the live
+        // `agents` figure). Excludes the node's own treasury card. This is the cumulative "created to
+        // date" count on the chain this node holds.
+        const totalAgents = ledger
+          .all()
+          .filter(
+            (e) => e.type === 'register' && (e.data as { web3Id?: string }).web3Id !== treasuryId,
+          ).length;
         return {
           agents: networked ? networkAgents() : localAgents(),
           online: networked ? contribution.totalOnline() : connections.online().length,
@@ -82,6 +91,8 @@ export function observabilityModule(): Web3Module {
           // within the freshness window) — distinct from `online`, which counts connected agents.
           // A running desktop peer shows up here even though it hosts no agents.
           nodes: contribution.size,
+          // Cumulative agents ever created on this node's ledger (idle + online), never decreases.
+          totalAgents,
           ledgerEntries: ledger.size,
           ledgerVerified: ledger.verifyChainCached().ok,
           totalValue,

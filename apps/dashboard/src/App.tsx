@@ -486,6 +486,7 @@ function Overview({ snap }: { snap: Snapshot }) {
       </div>
       <div className="stats">
         <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
+        <Stat k="Total agents" n={s?.totalAgents !== undefined ? String(s.totalAgents) : '—'} />
         <Stat k="Agents" n={s ? String(s.agents) : '—'} />
         <Stat k="Agents online" n={s ? String(s.online) : '—'} />
         <Stat
