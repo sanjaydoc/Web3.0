@@ -35,13 +35,14 @@ describe('GET /stats — network-wide metrics the dashboard shows', () => {
 
   /** Simulate a peer node gossiping a signed heartbeat. `agentsHosted` counts that node's own
    *  treasury card (1) plus its real agents — exactly what a live node advertises. */
-  const gossipFrom = (agentsHosted: number, online: number): boolean => {
+  const gossipFrom = (agentsHosted: number, online: number, agentsTotal?: number): boolean => {
     const keys = generateKeypair();
     const report: ContributionReport = {
       nodeKey: toB64u(keys.publicKey),
       uptimeSec: 3_600,
       agentsHosted,
       txServed: online,
+      ...(typeof agentsTotal === 'number' ? { agentsTotal } : {}),
       ts: Date.now(),
     };
     return kernel.contribution.ingest(signHeartbeat(keys, report));
@@ -58,6 +59,20 @@ describe('GET /stats — network-wide metrics the dashboard shows', () => {
     expect(json.agents).toBe(3); // (3 + 2) hosted − 2 treasuries = 3 real agents network-wide
     expect(json.online).toBe(2 + 1); // connected agents summed across nodes
     expect(json.ledgerVerified).toBe(true);
+  });
+
+  it('sums "Total agents" network-wide from each node\'s cumulative agentsTotal, treasury excluded', async () => {
+    // Delta-based so it's robust to heartbeats other tests left in the shared registry.
+    const before = (await get('/stats')).json.totalAgents as number;
+    // Two nodes advertise their cumulative created-to-date counts (already treasury-excluded): 5 and 4.
+    // A node predating the field (no agentsTotal) falls back to agentsHosted−1 (its one treasury).
+    expect(gossipFrom(6, 0, 5)).toBe(true);
+    expect(gossipFrom(5, 0, 4)).toBe(true);
+    expect(gossipFrom(3, 0)).toBe(true); // legacy node → 3 − 1 treasury = 2
+    const after = (await get('/stats')).json.totalAgents as number;
+    // The three new nodes add 5 + 4 + (3−1) = 11 to the network-wide total — an agent created on ANY
+    // node counts, and no node's treasury inflates it.
+    expect(after - before).toBe(5 + 4 + 2);
   });
 
   it('exposes the agents that registered on this node via GET /agents, with wallets on the ledger', async () => {

@@ -139,12 +139,12 @@ export function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [guest, setGuest] = useState(false);
   const [account, setAccount] = useState<Acct | null>(null);
-  // First-run onboarding is for BRAND-NEW operators only: anyone who already has a saved token (a
-  // returning user) or has finished the wizard is considered onboarded, so existing users are never
-  // interrupted. It only ever shows on a real own node (not the reserved main node) — see the gate.
-  const [onboarded, setOnboarded] = useState(
-    () => localStorage.getItem(ONBOARDED_KEY) === '1' || !!getWeb3Token(),
-  );
+  // First-run onboarding is the desktop app's FRONT PAGE: on every open it greets the operator with
+  // the "Run a node — quick setup" wizard until they finish it (or sign in with an existing account),
+  // which sets ONBOARDED_KEY. We deliberately do NOT treat a mere saved token as "onboarded" — the
+  // Electron app keeps localStorage across reinstalls, so a leftover token from earlier use must not
+  // suppress the wizard. It only ever shows on a real own node (not the reserved main node) — see gate.
+  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(ONBOARDED_KEY) === '1');
   // Lets anyone re-open the wizard on demand from the dashboard ("Get started"), even after the
   // one-time auto-onboarding is done.
   const [forceOnboard, setForceOnboard] = useState(false);
@@ -287,15 +287,18 @@ export function App() {
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
 
-  // First-run onboarding: a brand-new operator on their OWN node (never the reserved main node, and
-  // only once we know it's reachable) — or re-opened on demand via the dashboard's "Get started".
-  // Walks name → location → RAM, then drops into the dashboard.
-  if ((nodeOnline && !adminOnly && !onboarded) || forceOnboard) {
+  // First-run onboarding is the FRONT PAGE on both surfaces — desktop (own node) and the website
+  // (admin-only main node). It greets every not-yet-onboarded visitor with the "Run a node" wizard
+  // until they finish it or sign in. We never force an admin through it (they sign in and manage the
+  // network), and only show it once the node is reachable. On the main node the RAM step is an
+  // informational earnings preview (canHost=false) since you host on your OWN node via the desktop app.
+  if ((nodeOnline && !onboarded && !isAdmin) || forceOnboard) {
     return (
       <>
         <InstallBanner />
         <Onboarding
           authed={Boolean(authed)}
+          canHost={!adminOnly}
           onAuthChanged={checkAuth}
           onDone={() => {
             finishOnboarding();
