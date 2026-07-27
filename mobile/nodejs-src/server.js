@@ -17,6 +17,23 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
+// nodejs-mobile runs Node 18, where the Web Crypto API is NOT exposed as the global `crypto` (that
+// only became a global in Node 19+). @noble/post-quantum needs `crypto.getRandomValues` for key
+// generation, so without this the node throws "crypto.getRandomValues must be defined" at boot →
+// process.exit(1) → the whole app crashes on launch. Polyfill the global from node:crypto's
+// webcrypto (present since Node 15) before the node boots.
+if (!globalThis.crypto && crypto.webcrypto) {
+  globalThis.crypto = crypto.webcrypto;
+}
+
+// Defense in depth: nodejs-mobile turns an uncaught error or process.exit() in the node thread into
+// a NATIVE app crash. Log unexpected errors instead of dying, and make process.exit a no-op so a
+// boot failure degrades to "node offline" (the dashboard shows a connection error) rather than
+// taking the whole app down.
+process.on('uncaughtException', (e) => console.error('[node] uncaughtException:', e));
+process.on('unhandledRejection', (e) => console.error('[node] unhandledRejection:', e));
+process.exit = (code) => console.error(`[node] process.exit(${code}) suppressed on mobile`);
+
 const HOST = '127.0.0.1';
 const PORT = 8787;
 
