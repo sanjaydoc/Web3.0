@@ -266,7 +266,7 @@ export function App() {
       active = false;
       clearInterval(timer);
     };
-  }, [isAdmin]);
+  }, [ownsNode]);
 
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
