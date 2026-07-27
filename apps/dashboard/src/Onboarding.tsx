@@ -460,8 +460,12 @@ export function Onboarding({
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
-  // Probe what's already done so a partially-set-up user resumes at the right step (and a fully
-  // set-up one skips straight to the dashboard). Brand-new users (no token) start at step 0.
+  // Probe ONCE at mount. If the visitor is already signed in when the wizard opens (a returning user
+  // via "Get started"), resume at the first incomplete step — or skip to the dashboard if everything
+  // is set. A brand-new visitor (not signed in at mount) starts at step 0 and then walks EVERY step:
+  // the probe does not re-run when they sign in mid-wizard, so a node that already has RAM/location
+  // from earlier testing can't make a fresh signup skip location or RAM.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs once, using mount-time auth
   useEffect(() => {
     let active = true;
     (async () => {
@@ -491,7 +495,7 @@ export function Onboarding({
     return () => {
       active = false;
     };
-  }, [authed]);
+  }, []);
 
   if (!ready) return <div className="landing" aria-busy="true" />;
 
