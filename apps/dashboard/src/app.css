@@ -12,17 +12,11 @@
   --fs-xl: 1.8rem; /* page titles, stat numbers */
 }
 
-html,
 body {
   background: var(--paper-2);
   /* Never scroll sideways — the mobile nav drawer parks off the left edge (translateX(-100%))
      and a stray wide child shouldn't drag the whole page horizontally. */
   overflow-x: hidden;
-  /* Kill the vertical rubber-band overscroll. In the Capacitor WebView, pulling down on a SHORT
-     page (e.g. a near-empty Payments/ledger) drags the sticky top bar + its separation line
-     downward, leaving blank space above it — looks like the header is "lowered" on that screen
-     only. Disabling overscroll chaining keeps the bar pinned. No-op on desktop. */
-  overscroll-behavior-y: none;
 }
 
 .app {
