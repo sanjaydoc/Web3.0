@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { InstallButton } from './InstallButton.js';
 import { ApiError, NODE_URL, type Role, api, setWeb3Token } from './api.js';
+import { generateAccountKey, saveAccountKey } from './txsign.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
 const NODES: [number, number][] = [
@@ -134,14 +135,16 @@ const DOWNLOADS = [
  * create-account. On success it calls `onEnter()` and the app reveals the dashboard. `onGuest()`
  * lets someone browse an open node without an account.
  */
-export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: () => void }) {
+export function Landing({
+  onEnter,
+  onGuest,
+  onCreated,
+}: { onEnter: () => void; onGuest: () => void; onCreated: () => void }) {
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [token, setToken] = useState('');
   const [local, setLocal] = useState('');
   // Public sign-ups are always node operators. Admins are bootstrapped on the node, not self-served.
   const role: Role = 'operator';
-  const [fresh, setFresh] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -172,26 +175,23 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
     setErr(null);
     setBusy(true);
     try {
-      const res = await api.signup(local.trim(), role);
+      // Generate the account's post-quantum (ML-DSA) signing key client-side and bind its public key
+      // on sign-up — same as the onboarding wizard's identity step — so the account can sign
+      // transactions and its key is available for the "Save your key" step below.
+      const key = generateAccountKey();
+      const res = await api.signup(local.trim(), role, key.publicKey);
+      saveAccountKey(res.address, key);
       setWeb3Token(res.token);
       localStorage.setItem('web3.creatorName', res.address);
-      setFresh(res.token);
+      // Every new account goes through the onboarding flow (put node on the map → RAM → SAVE YOUR
+      // KEY) rather than a bare token screen. The parent picks up the new token and opens onboarding;
+      // the account's key is revealed/copied/downloaded there, in the final step.
+      onCreated();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
-  }
-
-  function copy() {
-    if (!fresh) return;
-    navigator.clipboard.writeText(fresh).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      },
-      () => undefined,
-    );
   }
 
   return (
@@ -269,87 +269,71 @@ export function Landing({ onEnter, onGuest }: { onEnter: () => void; onGuest: ()
           </div>
 
           <div className="l-card">
-            {fresh ? (
-              <div className="l-auth">
-                <div className="l-cardhead">Account created</div>
-                <p className="l-sub">Save your token — it won’t be shown again.</p>
-                <div className="l-token">
-                  <code>{fresh}</code>
-                  <button type="button" className={`l-copy ${copied ? 'ok' : ''}`} onClick={copy}>
-                    {copied ? 'copied ✓' : 'Copy'}
-                  </button>
-                </div>
-                <button type="button" className="l-go" onClick={onEnter}>
-                  Enter dashboard →
+            <div className="l-auth">
+              <div className="l-tabs">
+                <button
+                  type="button"
+                  className={tab === 'in' ? 'on' : ''}
+                  onClick={() => setTab('in')}
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  className={tab === 'up' ? 'on' : ''}
+                  onClick={() => setTab('up')}
+                >
+                  Create account
                 </button>
               </div>
-            ) : (
-              <div className="l-auth">
-                <div className="l-tabs">
-                  <button
-                    type="button"
-                    className={tab === 'in' ? 'on' : ''}
-                    onClick={() => setTab('in')}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    className={tab === 'up' ? 'on' : ''}
-                    onClick={() => setTab('up')}
-                  >
-                    Create account
-                  </button>
-                </div>
 
-                {tab === 'in' ? (
-                  <>
-                    <label className="l-field">
-                      <span>Your token</span>
-                      <input
-                        type="password"
-                        value={token}
-                        placeholder="web3_…"
-                        onChange={(e) => setToken(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && token.trim() && signin()}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="l-go"
-                      disabled={busy || !token.trim()}
-                      onClick={signin}
-                    >
-                      Sign in →
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <label className="l-field">
-                      <span>Handle</span>
-                      <input
-                        value={local}
-                        placeholder="sanjay"
-                        onChange={(e) => setLocal(e.target.value)}
-                      />
-                      <em>{local || '…'}@web3.0</em>
-                    </label>
-                    <button
-                      type="button"
-                      className="l-go"
-                      disabled={busy || !local.trim()}
-                      onClick={signup}
-                    >
-                      Create account →
-                    </button>
-                  </>
-                )}
-                {err && <div className="l-err">{err}</div>}
-                <button type="button" className="l-guest" onClick={onGuest}>
-                  Explore the console without signing in →
-                </button>
-              </div>
-            )}
+              {tab === 'in' ? (
+                <>
+                  <label className="l-field">
+                    <span>Your token</span>
+                    <input
+                      type="password"
+                      value={token}
+                      placeholder="web3_…"
+                      onChange={(e) => setToken(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && token.trim() && signin()}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="l-go"
+                    disabled={busy || !token.trim()}
+                    onClick={signin}
+                  >
+                    Sign in →
+                  </button>
+                </>
+              ) : (
+                <>
+                  <label className="l-field">
+                    <span>Handle</span>
+                    <input
+                      value={local}
+                      placeholder="sanjay"
+                      onChange={(e) => setLocal(e.target.value)}
+                    />
+                    <em>{local || '…'}@web3.0</em>
+                  </label>
+                  <button
+                    type="button"
+                    className="l-go"
+                    disabled={busy || !local.trim()}
+                    onClick={signup}
+                  >
+                    Create account →
+                  </button>
+                </>
+              )}
+              {err && <div className="l-err">{err}</div>}
+              <button type="button" className="l-guest" onClick={onGuest}>
+                Explore the console without signing in →
+              </button>
+            </div>
           </div>
         </div>
       </div>
