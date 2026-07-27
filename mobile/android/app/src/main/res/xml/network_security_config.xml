@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The dashboard WebView talks to the peer node running on this device over http://127.0.0.1:8787.
+  Android blocks cleartext HTTP by default (API 28+), even to loopback — so permit cleartext ONLY to
+  the local node. Everything else (e.g. the network authority) is reached over HTTPS as normal.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

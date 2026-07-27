@@ -1,0 +1,6 @@
+{
+  "name": "web3-mobile-node",
+  "version": "0.1.0",
+  "description": "The Web3.0 peer node that runs inside nodejs-mobile on the phone.",
+  "main": "server.js"
+}

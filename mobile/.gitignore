@@ -1,0 +1,20 @@
+# Node deps
+node_modules/
+
+# Generated web payload (rebuilt by scripts/prepare.mjs → `npm run prepare:app`)
+www/
+
+# Capacitor copies the web payload + node project into the android assets on `cap sync` — generated.
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# Gradle / Android build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+*.apk
+*.aab
+.gradle/
