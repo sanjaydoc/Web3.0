@@ -118,6 +118,7 @@ Node.js/pnpm/terminal required:
 | **[macOS (.dmg)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | universal — Apple Silicon + Intel |
 | **[Linux (.AppImage)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | any distro — `chmod +x` and run |
 | **[Linux (.deb)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | Debian / Ubuntu — `sudo apt install ./web3_*.deb` |
+| **[Android (.apk)](https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk)** | runs a real node on the phone — sideload (enable "Install unknown apps") |
 | **[All releases](https://github.com/sanjaydoc/Web3.0/releases)** | changelog · checksums |
 
 It installs as **Web3.0** (W3 icon) with app shortcuts. The build is **unsigned**: on Windows,
