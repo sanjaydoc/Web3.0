@@ -28,6 +28,10 @@ export interface ContributionReport {
   agentsHosted: number;
   /** Requests/txs this node has served (monotonic counter). */
   txServed: number;
+  /** Cumulative agents EVER registered on this node's ledger (idle + online), treasury excluded.
+   *  Optional so pre-this-field nodes hash/verify identically; the aggregator falls back to a
+   *  treasury-adjusted `agentsHosted` for nodes that don't report it. Powers "Total agents". */
+  agentsTotal?: number;
   /** Epoch-ms the report was produced (freshness + replay window). */
   ts: number;
   /** Optional opt-in geo position so this node appears on every peer's Network map (not just its
@@ -85,6 +89,9 @@ export function hashReport(report: ContributionReport): string {
   if (typeof report.lat === 'number') body.lat = report.lat;
   if (typeof report.lon === 'number') body.lon = report.lon;
   if (report.label) body.label = report.label;
+  // Hashed only when present so a report without it hashes identically to the pre-field format —
+  // older nodes' signatures still verify during a rolling upgrade (same rule as the location fields).
+  if (typeof report.agentsTotal === 'number') body.agentsTotal = report.agentsTotal;
   return hashJson(body);
 }
 
@@ -153,6 +160,9 @@ export class ContributionService {
       agentsHosted: safeCount(report.agentsHosted),
       txServed: safeCount(report.txServed),
       ts: report.ts,
+      ...(typeof report.agentsTotal === 'number'
+        ? { agentsTotal: safeCount(report.agentsTotal) }
+        : {}),
       ...(hasLoc
         ? {
             lat: report.lat,
@@ -210,6 +220,24 @@ export class ContributionService {
    */
   totalOnline(windowMs = this.freshnessMs): number {
     return this.live(windowMs).reduce((sum, r) => sum + r.txServed, 0);
+  }
+
+  /**
+   * Network-wide CUMULATIVE agent count — every agent ever registered on any live node's ledger
+   * (idle + online), treasury excluded. This is "Total agents" in the admin Overview, the
+   * created-to-date analogue of the live `totalAgents()`. A node that reports `agentsTotal` (its own
+   * treasury-excluded ledger register-count) contributes it directly; an older node that predates the
+   * field falls back to its live `agentsHosted` minus its one treasury card, so it still counts.
+   * Only LIVE nodes contribute — a node whose agents are all offline drops out until it re-heartbeats,
+   * the same reachability limit as every other network metric (persistent cross-node totals need
+   * agent-card replication, the documented follow-on).
+   */
+  totalAgentsEver(windowMs = this.freshnessMs): number {
+    return this.live(windowMs).reduce(
+      (sum, r) =>
+        sum + (typeof r.agentsTotal === 'number' ? r.agentsTotal : Math.max(0, r.agentsHosted - 1)),
+      0,
+    );
   }
 
   /** The weighted contribution score for a single report. */

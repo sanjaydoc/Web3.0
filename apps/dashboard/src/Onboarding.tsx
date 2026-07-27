@@ -255,13 +255,20 @@ function LocationStep({ onDone }: { onDone: (label: string) => void }) {
 }
 
 /** Step 3 — choose RAM to contribute; shows a friendly earnings estimate; PUT /node/limits. */
-function RamStep({ onDone }: { onDone: () => void }) {
+function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) {
   const [gb, setGb] = useState(2);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const perDay = gb * EST_AETH_PER_GB_DAY;
 
   async function start() {
+    // On the main node (canHost = false, e.g. the website) you don't run a node here — allocating RAM
+    // is done on your OWN node via the desktop app, and the endpoint is admin-gated anyway. So we keep
+    // the step as an informational earnings preview and just advance; no allocation call is made.
+    if (!canHost) {
+      onDone();
+      return;
+    }
     setBusy(true);
     setErr('');
     try {
@@ -276,7 +283,9 @@ function RamStep({ onDone }: { onDone: () => void }) {
   return (
     <>
       <p className="muted" style={{ margin: '0 0 12px' }}>
-        Choose how much RAM your node lends to the network — more resources, more rewards.
+        {canHost
+          ? 'Choose how much RAM your node lends to the network — more resources, more rewards.'
+          : 'See what your node could earn. To actually contribute RAM and earn, run a node with the desktop app — you can’t host on the main node.'}
       </p>
       <div className="onboard-ram-presets">
         {RAM_PRESETS.map((v) => (
@@ -314,7 +323,7 @@ function RamStep({ onDone }: { onDone: () => void }) {
       {err && <div className="note note-err">{err}</div>}
       <div className="onboard-actions">
         <button type="button" className="btn act" disabled={busy} onClick={start}>
-          {busy ? 'Saving…' : 'Start contributing →'}
+          {busy ? 'Saving…' : canHost ? 'Start contributing →' : 'Continue →'}
         </button>
       </div>
     </>
@@ -439,11 +448,15 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
 
 export function Onboarding({
   authed,
+  canHost,
   onAuthChanged,
   onDone,
   onSignInInstead,
 }: {
   authed: boolean;
+  /** Whether this node can actually host agents (own node / desktop). False on the admin-only main
+   *  node (the website), where the RAM step becomes an informational earnings preview. */
+  canHost: boolean;
   /** Re-check auth in the parent after signup so the token/account propagate. */
   onAuthChanged: () => Promise<void>;
   /** All three steps finished — mark onboarded and enter the dashboard. */
@@ -480,10 +493,10 @@ export function Onboarding({
             s = 2;
             setLocLabel(loc.label || 'your location');
           }
-          if (loc && node.limits.maxRamMb > 0) {
-            if (active) onDoneRef.current();
-            return;
-          }
+          // Already fully set up (has location + RAM): don't silently drop them into the dashboard —
+          // the wizard is the front page, so land on the final "Save your key" step (step 3) where
+          // they can back up their key and click through to the dashboard themselves.
+          if (loc && node.limits.maxRamMb > 0) s = 3;
         } catch {
           /* fall back to the earliest incomplete step */
         }
@@ -533,7 +546,7 @@ export function Onboarding({
         </StepCard>
 
         <StepCard n={3} title="Contribute RAM & start earning" state={state(2)}>
-          <RamStep onDone={() => setStep(3)} />
+          <RamStep canHost={canHost} onDone={() => setStep(3)} />
         </StepCard>
 
         <StepCard n={4} title="Save your key" state={state(3)}>

@@ -20,7 +20,7 @@ export function consensusModule(): Web3Module {
     name: 'consensus',
     version: '0.1.0',
     register(ctx: ModuleContext) {
-      const { http, consensus, config, log, bus, ledger, registry, connections } = ctx;
+      const { http, consensus, config, log, bus, ledger, registry, connections, treasuryId } = ctx;
       const subscribers = new Set<WsSocket>();
       const dialed = new Set<WebSocket>();
       let closing = false;
@@ -149,6 +149,14 @@ export function consensusModule(): Web3Module {
           // This stays correct even while nodes run mixed versions during a rollout.
           agentsHosted: registry.size,
           txServed: connections.online().length,
+          // Cumulative agents ever registered on this node's ledger (treasury excluded) — lets the
+          // network sum a true "Total agents" across all live nodes, the created-to-date analogue of
+          // the live `agentsHosted`. Idle/offline agents on this node still count here.
+          agentsTotal: ledger
+            .all()
+            .filter(
+              (e) => e.type === 'register' && (e.data as { web3Id?: string }).web3Id !== treasuryId,
+            ).length,
           ts: Date.now(),
           ...(loc ? { lat: loc.lat, lon: loc.lon, label: loc.label } : {}),
         };
