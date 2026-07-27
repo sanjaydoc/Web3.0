@@ -505,6 +505,12 @@ Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
   signed heartbeat, so `/stats` sums them across live contributors (same pattern as the network-wide
   **node** count) — no new signed fields, fully back-compatible. Full agent-card replication (for
   cross-node discovery) is the follow-on.
+- ✅ **Android full-node app** — a **Capacitor + nodejs-mobile** app that runs a **real peer node on
+  the phone** (the same bundled node, `network.json`, and dashboard as the desktop app), joining the
+  one shared chain — not a thin client. Same **"Run a node" onboarding**. Sideloadable APK
+  (arm64, ~54 MB) auto-published to a rolling
+  [`android` release](https://github.com/sanjaydoc/Web3.0/releases/tag/android);
+  built by `.github/workflows/android.yml`.
 
 Now wired for production (GUI-managed, no restarts): **live economics** (protocol fee, EIP-1559-style
 burn, block reward, authority stake — all admin-editable in the console), **staking with voluntary
@@ -517,14 +523,19 @@ bundles it), and **GUI storage settings** (MongoDB URI saved from the console; r
 
 Still ahead:
 
-- **Agent-card replication** — network-wide agent *counts* now aggregate across nodes; the follow-on
-  is replicating the full agent **cards** (skills, endpoints) so any node can *discover* and route to
-  an agent hosted on another node, not just count it.
 - **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
   **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
   (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid
-  task, verify it all lands on the ledger. This proves the "any agent can join" claim end-to-end
-  with real third-party coding agents.
+  task, **contribute compute and earn aETH**, and verify it all lands on the ledger. This proves the
+  "any agent can join, contribute, and earn" claim end-to-end with real third-party coding agents.
+- **Android app polish** — minor cosmetic fixes and UX tightening on the mobile app (icon/layout
+  refinements, small touch-ups).
+- **Skills section** — small changes/improvements to the **Skills** view in the console.
+- **Connectors section** — make the **Connectors** section fully functional (wire it end-to-end so
+  operators can actually connect and manage integrations from the console).
+- **Agent-card replication** — network-wide agent *counts* now aggregate across nodes; the follow-on
+  is replicating the full agent **cards** (skills, endpoints) so any node can *discover* and route to
+  an agent hosted on another node, not just count it.
 - **Real mainnet settlement** — the signer seam exists; going live is an operator plugging their own
   funded key (deliberately out of the box — the node never holds real funds autonomously).
 - **BFT/PoS validators + state-machine replication** — design in
