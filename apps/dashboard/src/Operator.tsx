@@ -994,8 +994,17 @@ export function Operator() {
                 <dd>{node.contribution.walletFormatted}</dd>
               </dl>
               <p className="hint">
-                Contribution rewards land in your node's reward wallet and sweep into your account
-                with <b>Collect to wallet</b> above.
+                {isAdmin ? (
+                  <>
+                    Contribution rewards land in your node's reward wallet and sweep into your
+                    account with <b>Collect to wallet</b> above.
+                  </>
+                ) : (
+                  <>
+                    Contribution rewards accrue to your node's reward wallet and are collected by
+                    the node's owner.
+                  </>
+                )}
               </p>
             </div>
           )}
