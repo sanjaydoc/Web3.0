@@ -52,11 +52,17 @@ export function observabilityModule(): Web3Module {
       });
 
       http.get('/ledger', (request) => {
-        const { limit } = request.query as { limit?: string };
-        const entries = ledger.all();
-        const recent = entries.slice(-(limit ? Number(limit) : 50)).reverse();
+        const { limit, account } = request.query as { limit?: string; account?: string };
+        // A node operator passes ?account=<their address> to get ONLY their own transactions, drawn
+        // from the FULL replicated chain (history), so their ledger stays populated across restarts:
+        // a follower authors nothing into its own log, so `all()` alone is empty after a re-sync —
+        // the operator's sealed payments live on the chain and arrive as replicated entries.
+        const rows = account
+          ? ledger.historyFor(account as Parameters<typeof ledger.historyFor>[0])
+          : ledger.history();
+        const recent = rows.slice(-(limit ? Number(limit) : account ? 500 : 50)).reverse();
         return {
-          size: ledger.size,
+          size: rows.length,
           head: ledger.head(),
           verify: ledger.verifyChainCached(),
           wallets: ledger.wallets(),

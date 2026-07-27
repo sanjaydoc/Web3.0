@@ -417,14 +417,17 @@ export const api = {
   clearNodeLocation: () => send<{ removed: boolean }>('DELETE', '/operator/location'),
   agents: () => get<{ agents: AgentCard[]; count: number }>('/agents'),
   events: (limit = 60) => get<{ events: Web3Event[] }>(`/events?limit=${limit}`),
-  ledger: () =>
+  // Pass `account` (a node operator's own address) to scope the ledger to THEIR transactions,
+  // served from the full replicated chain so their history survives app restarts. Omit it (admin)
+  // for the whole-network view.
+  ledger: (account?: string) =>
     get<{
       size: number;
       head: string;
       verify: { ok: boolean };
       wallets: Wallet[];
       entries: LedgerEntry[];
-    }>('/ledger?limit=40'),
+    }>(account ? `/ledger?account=${encodeURIComponent(account)}` : '/ledger?limit=40'),
   guardrails: () => get<Guardrails>('/guardrails'),
   settlement: () => get<SettlementInfo>('/settlement'),
   consensus: () => get<ConsensusInfo>('/consensus'),

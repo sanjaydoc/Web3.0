@@ -47,6 +47,19 @@ export class Ledger {
   private readonly balances = new Map<Web3Id, Wallet>();
 
   /**
+   * FOREIGN entries learned from committed blocks — authored & signed by a PEER authority, not by
+   * this node. Kept so a follower (which authors nothing into `entries` itself) can still show the
+   * full replicated chain: e.g. an operator's own payment, which is sealed by the authority and
+   * arrives here as a foreign entry. `entries` stays this node's own self-signed, hash-linked log
+   * (what `verifyChain()` covers and a proposer extends); `foreign` is a read-only history mirror.
+   * It is rebuilt from the network re-sync on every restart, so the chain is the durable source of
+   * truth and no on-device database is needed for a phone/desktop peer's history to survive.
+   */
+  private readonly foreign: LedgerEntry[] = [];
+  private readonly foreignSeen = new Set<string>();
+  private historyCache?: { own: number; foreign: number; rows: LedgerEntry[] };
+
+  /**
    * Synchronous, in-memory side effect for every newly-appended entry (e.g. the network-account
    * index). Runs inline during `append()`. Durable persistence is separate — see `onPersist`.
    */
@@ -210,6 +223,55 @@ export class Ledger {
     return this.entries.length;
   }
 
+  /**
+   * The full chain as this node knows it: its own authored `entries` PLUS the FOREIGN entries it
+   * learned from committed blocks, deduped and in timestamp order. On an authority (which authors
+   * everything) this equals `all()`; on a follower (which authors nothing locally) it is the
+   * replicated chain. This is the read view for *showing* the whole ledger — `all()` stays own-only
+   * because that is what `verifyChain()` covers and what a proposer extends. Memoised by
+   * (own, foreign) counts so a frequently-polled `/ledger` doesn't re-sort every request.
+   */
+  history(): LedgerEntry[] {
+    if (
+      this.historyCache &&
+      this.historyCache.own === this.entries.length &&
+      this.historyCache.foreign === this.foreign.length
+    ) {
+      return this.historyCache.rows;
+    }
+    let rows: LedgerEntry[];
+    if (this.foreign.length === 0) {
+      rows = [...this.entries];
+    } else {
+      const seen = new Set<string>();
+      rows = [];
+      for (const e of this.entries) {
+        seen.add(e.hash);
+        rows.push(e);
+      }
+      for (const e of this.foreign) {
+        if (seen.has(e.hash)) continue;
+        seen.add(e.hash);
+        rows.push(e);
+      }
+      rows.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+    }
+    this.historyCache = { own: this.entries.length, foreign: this.foreign.length, rows };
+    return rows;
+  }
+
+  /**
+   * Full-chain entries that involve `account` — its address as sender, recipient, or subject
+   * (register / account-binding). Lets a node operator see ONLY their own transactions, and stay
+   * populated across app restarts because `history()` is rebuilt from the replicated chain on boot.
+   */
+  historyFor(account: Web3Id): LedgerEntry[] {
+    return this.history().filter((e) => {
+      const d = e.data as unknown as Record<string, unknown>;
+      return d.from === account || d.to === account || d.web3Id === account;
+    });
+  }
+
   head(): string {
     return this.entries.at(-1)?.hash ?? GENESIS_HASH;
   }
@@ -321,6 +383,14 @@ export class Ledger {
    */
   applyExternal(entry: LedgerEntry): void {
     this.replayBalances(entry);
+    // Keep the entry itself (deduped) so `history()` can surface the full replicated chain — not
+    // just this node's own authored log. Without this a follower's ledger view is empty even though
+    // its balances are correct, and the operator's own sealed payments (foreign entries from the
+    // authority) would never appear as sealed rows.
+    if (!this.foreignSeen.has(entry.hash)) {
+      this.foreignSeen.add(entry.hash);
+      this.foreign.push(entry);
+    }
   }
 
   private credit(web3Id: Web3Id, amount: Amount, currency: Currency): void {

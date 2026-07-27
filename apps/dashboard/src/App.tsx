@@ -254,11 +254,15 @@ export function App() {
     let active = true;
     async function poll() {
       try {
+        // A non-admin operator scopes the ledger to their OWN account, served from the full
+        // replicated chain so their transactions stay populated across app restarts. Admin (on the
+        // main node) pulls the whole-network ledger.
+        const ledgerAccount = !isAdmin && account?.address ? account.address : undefined;
         const [stats, agents, events, ledger, guardrails] = await Promise.all([
           api.stats(),
           api.agents(),
           api.events(60),
-          api.ledger(),
+          api.ledger(ledgerAccount),
           api.guardrails(),
         ]);
         if (!active) return;
@@ -282,7 +286,7 @@ export function App() {
       active = false;
       clearInterval(timer);
     };
-  }, [ownsNode]);
+  }, [ownsNode, isAdmin, account?.address]);
 
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;

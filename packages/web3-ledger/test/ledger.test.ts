@@ -125,3 +125,88 @@ describe('Ledger', () => {
     expect(second!.prevHash).toBe(first!.hash);
   });
 });
+
+describe('replicated history (follower view)', () => {
+  it('surfaces foreign entries in history() even though the own signed log is empty', () => {
+    // An authority authors the chain; a follower (phone/desktop peer) only replicates it.
+    const authority = newLedger();
+    authority.register(alice, 'did:web3:za', 1000);
+    authority.register(bob, 'did:web3:zb', 0);
+    authority.transfer(alice, bob, 250, { nonce: 0 });
+
+    const follower = newLedger();
+    for (const e of authority.all()) follower.applyExternal(e);
+
+    // Balances converge (existing replication behaviour) ...
+    expect(follower.balanceOf(alice)).toBe(750);
+    expect(follower.balanceOf(bob)).toBe(250);
+    // ... and the follower authors nothing itself, so its own signed log is empty ...
+    expect(follower.all()).toHaveLength(0);
+    // ... yet the full transaction HISTORY is now visible (the fix).
+    expect(follower.history()).toHaveLength(3);
+  });
+
+  it('scopes historyFor() to only the given account (an operator sees just their own)', () => {
+    const authority = newLedger();
+    authority.register(alice, 'did:web3:za', 1000);
+    authority.register(bob, 'did:web3:zb', 0);
+    authority.transfer(alice, bob, 250, { nonce: 0 });
+
+    const follower = newLedger();
+    for (const e of authority.all()) follower.applyExternal(e);
+
+    // bob: his register + the payment he received = 2; alice's register never involves bob.
+    expect(follower.historyFor(bob)).toHaveLength(2);
+    expect(
+      follower.historyFor(bob).every((e) => {
+        const d = e.data as unknown as Record<string, unknown>;
+        return d.from === bob || d.to === bob || d.web3Id === bob;
+      }),
+    ).toBe(true);
+    // alice: her register + the payment she sent = 2.
+    expect(follower.historyFor(alice)).toHaveLength(2);
+  });
+
+  it('history() equals all() on a node with no foreign entries (authority / solo)', () => {
+    const authority = newLedger();
+    authority.register(alice, 'did:web3:za', 100);
+    authority.transfer(alice, bob, 10, { nonce: 0 });
+    expect(authority.history()).toEqual(authority.all());
+  });
+
+  it('dedupes a replayed foreign entry (gossip replay / reconnect re-sync is idempotent)', () => {
+    const authority = newLedger();
+    authority.register(alice, 'did:web3:za', 500);
+    const entry = authority.all()[0]!;
+
+    const follower = newLedger();
+    follower.applyExternal(entry);
+    follower.applyExternal(entry); // seen again on reconnect
+    expect(follower.history()).toHaveLength(1);
+  });
+
+  it('rebuilds the full history from re-sync after a restart (durability via the chain)', () => {
+    const authority = newLedger();
+    authority.register(alice, 'did:web3:za', 1000);
+    authority.register(bob, 'did:web3:zb', 0);
+    authority.transfer(alice, bob, 100, { nonce: 0 });
+    authority.transfer(bob, alice, 40, { nonce: 0 });
+    const chain = authority.all();
+
+    // A phone reopens: a brand-new in-memory ledger, then the network re-syncs every committed
+    // entry. The operator's own history must come back in full — nothing is lost across restart.
+    const rebooted = newLedger();
+    for (const e of chain) rebooted.applyExternal(e);
+
+    // alice: her register + the two payments she was party to = 3.
+    expect(rebooted.historyFor(alice)).toHaveLength(3);
+    expect(rebooted.historyFor(alice).map((e) => e.hash)).toEqual(
+      chain
+        .filter((e) => {
+          const d = e.data as unknown as Record<string, unknown>;
+          return d.from === alice || d.to === alice || d.web3Id === alice;
+        })
+        .map((e) => e.hash),
+    );
+  });
+});
