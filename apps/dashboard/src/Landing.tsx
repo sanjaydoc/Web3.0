@@ -110,10 +110,23 @@ const LinuxMark = () => (
     <path d="M11 9.1 12 9.85l1-.75a1.4 1.4 0 0 0-2 0z" fill="var(--paper)" />
   </svg>
 );
+const AndroidMark = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M6 9h12v8a1 1 0 0 1-1 1h-1v3a1 1 0 0 1-2 0v-3h-2v3a1 1 0 0 1-2 0v-3H9a1 1 0 0 1-1-1V9zM4 9a1 1 0 0 1 2 0v6a1 1 0 0 1-2 0V9zm14 0a1 1 0 0 1 2 0v6a1 1 0 0 1-2 0V9zM7.5 8a4.5 4.5 0 0 1 9 0h-9z"
+      fill="currentColor"
+    />
+  </svg>
+);
+// The Android APK is published to a rolling `android` pre-release (always the latest build), so it
+// uses its own URL rather than the versioned desktop base.
+const ANDROID_APK =
+  'https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk';
 const DOWNLOADS = [
   { os: 'Windows', file: `${DL_BASE}/Web3.0.Setup.${DL_VER}.exe`, icon: <WinMark /> },
   { os: 'macOS', file: `${DL_BASE}/Web3.0-${DL_VER}-universal.dmg`, icon: <AppleMark /> },
   { os: 'Linux', file: `${DL_BASE}/Web3.0-${DL_VER}.AppImage`, icon: <LinuxMark /> },
+  { os: 'Android', file: ANDROID_APK, icon: <AndroidMark /> },
 ];
 
 /**

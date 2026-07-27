@@ -18,6 +18,11 @@ const DESKTOP_DMG = `${DL}/Web3.0-${DESKTOP_VERSION}-universal.dmg`;
 const DESKTOP_APPIMAGE = `${DL}/Web3.0-${DESKTOP_VERSION}.AppImage`;
 const DESKTOP_DEB = `${DL}/web3_${DESKTOP_VERSION}_amd64.deb`;
 
+// The Android app — a REAL peer node on the phone (nodejs-mobile) that joins the same shared chain.
+// Published by the `android` workflow to a rolling `android` pre-release, so this link always points
+// at the latest build. Unsigned debug APK → sideload (enable "Install unknown apps").
+const ANDROID_APK = `${REPO}/releases/download/android/Web3.0-android.apk`;
+
 // Commands that actually work against the PUBLIC repo: run the open console, or build an agent with
 // the SDK. (Running the node itself is the desktop app above — its core isn't in this repo.)
 const CLIENT_CMDS = [
@@ -293,53 +298,58 @@ const AndroidLogo = () => (
   </svg>
 );
 
-/** Mobile apps — not shipped yet. No fake links: Android will be an APK (foreground-service node),
- *  iOS an App Store / TestFlight build (a wallet + light client, since iOS suspends background apps). */
-function MobileSoon() {
-  const rows = [
-    {
-      label: 'Android',
-      sub: 'APK — full node, coming soon',
-      accent: '#3ddc84',
-      icon: <AndroidLogo />,
-    },
-    {
-      label: 'iOS',
-      sub: 'App Store / TestFlight — coming soon',
-      accent: '#a0a0a0',
-      icon: <AppleLogo />,
-    },
-  ];
+/** Mobile apps. Android ships now as a downloadable APK that runs a REAL peer node on the phone
+ *  (nodejs-mobile). iOS is still to come — a wallet + light client, since iOS suspends background
+ *  apps so it can't be an always-on node. */
+function MobileApps() {
   return (
     <div className="dl-panel" style={{ marginTop: 16 }}>
       <p className="dl-head">
-        Mobile <span className="muted">— in progress</span>
+        Mobile <span className="muted">— Android available now</span>
       </p>
       <div className="dl-grid">
-        {rows.map((b) => (
-          <div
-            key={b.label}
-            className="dl-btn"
-            aria-disabled="true"
-            style={{ ['--accent' as string]: b.accent, opacity: 0.62, cursor: 'default' }}
-          >
-            <span style={{ flexShrink: 0 }}>{b.icon}</span>
-            <div className="dl-txt">
-              <div className="dl-lab">{b.label}</div>
-              <div className="dl-sub">{b.sub}</div>
-            </div>
-            <span className="chip" style={{ marginLeft: 'auto' }}>
-              soon
-            </span>
+        <a
+          className="dl-btn"
+          href={ANDROID_APK}
+          target="_blank"
+          rel="noreferrer"
+          style={{ ['--accent' as string]: '#3ddc84' }}
+        >
+          <span style={{ flexShrink: 0 }}>
+            <AndroidLogo />
+          </span>
+          <div className="dl-txt">
+            <div className="dl-lab">Android (.apk)</div>
+            <div className="dl-sub">full node · sideload</div>
           </div>
-        ))}
+          <span className="dl-arrow">
+            <ArrowDown />
+          </span>
+        </a>
+        <div
+          className="dl-btn"
+          aria-disabled="true"
+          style={{ ['--accent' as string]: '#a0a0a0', opacity: 0.62, cursor: 'default' }}
+        >
+          <span style={{ flexShrink: 0 }}>
+            <AppleLogo />
+          </span>
+          <div className="dl-txt">
+            <div className="dl-lab">iOS</div>
+            <div className="dl-sub">App Store / TestFlight — coming soon</div>
+          </div>
+          <span className="chip" style={{ marginLeft: 'auto' }}>
+            soon
+          </span>
+        </div>
       </div>
       <p className="dl-blurb">
-        <b>Android</b> will ship as a downloadable <b>.apk</b> that runs a real node as a foreground
-        service — the mobile way to contribute compute and earn. <b>iOS</b> comes via the App Store
-        / TestFlight (there is no iOS "APK"); because iOS suspends background apps, it acts as a{' '}
-        <b>wallet and light client</b> rather than an always-on node. Today, run a full node on
-        <b> desktop</b> above; a phone browser can sign in as a light client but can't earn.
+        <b>Android</b> runs a <b>real node on your phone</b> — same shared chain as desktop. It's an
+        unsigned build, so sideload it: open the <b>.apk</b>, allow <b>“Install unknown apps”</b>{' '}
+        for your browser, then launch. First open unpacks the node and drops you into the same{' '}
+        <b>“Run a node — quick setup”</b> onboarding. <b>iOS</b> comes later via the App Store /
+        TestFlight (no iOS “APK”); because iOS suspends background apps, it acts as a{' '}
+        <b>wallet and light client</b> rather than an always-on node.
       </p>
     </div>
   );
@@ -349,7 +359,7 @@ function MobileSoon() {
 function PlatformTable() {
   const rows: [string, string, string][] = [
     ['Desktop (Win/mac/Linux)', 'Full node — best earner', 'Available now'],
-    ['Android', 'Foreground-service node — mobile earner', 'Coming soon'],
+    ['Android', 'Full node on the phone (nodejs-mobile)', 'Available now'],
     ['iOS', 'Wallet + light client (background-limited)', 'Coming soon'],
     ['Browser (any device)', 'Light client — sign in & explore, no earning', 'Available now'],
   ];
@@ -434,7 +444,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
         everyone else — you're a first-class participant, not an island. Just install and sign in.
       </p>
 
-      <MobileSoon />
+      <MobileApps />
 
       <PlatformTable />
 
