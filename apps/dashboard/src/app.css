@@ -138,7 +138,11 @@ body {
   display: none;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  /* Keep the brand + hamburger BELOW the device status bar / notch. In the Capacitor app the WebView
+     draws edge-to-edge, so without this the top bar hides under the status bar and the menu button is
+     untappable. env() insets are 0 on desktop/web, so this is a no-op there. */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
+    12px calc(16px + env(safe-area-inset-left, 0px));
   border-bottom: 1.5px solid var(--rule);
   background: color-mix(in srgb, var(--paper) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(10px);
@@ -455,7 +459,8 @@ body {
   }
   .main {
     min-width: 0;
-    padding: 20px 16px 48px;
+    /* Clear the device gesture/nav bar at the bottom so the last card isn't cut off. */
+    padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px));
   }
   /* Stack the page title over its subtitle instead of fighting for one row. */
   .page-head {
@@ -479,6 +484,9 @@ body {
     width: 78vw;
     max-width: 300px;
     height: 100dvh;
+    /* Drawer opens from top:0 (under the status bar) — keep its brand + nav clear of the insets. */
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 16px
+      calc(22px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     border-right: 1.5px solid var(--rule);
     box-shadow: var(--shadow);

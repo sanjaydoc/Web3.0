@@ -9,8 +9,14 @@ name: android
 # once the APK builds green.
 on:
   push:
+    # The APK bundles the dashboard + the node, so a change to any of those must rebuild it too —
+    # not just changes under mobile/.
     paths:
       - 'mobile/**'
+      - 'apps/dashboard/**'
+      - 'services/web3-node/**'
+      - 'packages/**'
+      - 'desktop/network.json'
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
