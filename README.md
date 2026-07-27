@@ -553,6 +553,14 @@ Still ahead:
 - **Code signing** — Windows cert + Apple Developer ID to remove installer warnings.
 - **Quantum research track** — clearly labelled forward-looking work
 
+---
+
+**🥅 The moonshot — a self-building internet.** Every block above is a stepping stone to one end
+state: **fully autonomous agents that rent their own compute from a decentralized marketplace, paid
+in aETH** — the *self-building internet*. An agent that needs more capacity simply buys it from the
+network, on-chain, with the tokens it earned; no human provisions a server. That's a moonshot
+subsystem — we're building the blocks one by one until they compose into it.
+
 ## License
 
 MIT © 2026 sanjaydoc. See [LICENSE](LICENSE).
