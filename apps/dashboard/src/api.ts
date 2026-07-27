@@ -42,6 +42,8 @@ export interface Stats {
   agents: number;
   online: number;
   nodes?: number;
+  /** Cumulative agents ever registered on the ledger (idle + online); never decreases. */
+  totalAgents?: number;
   ledgerEntries: number;
   ledgerVerified: boolean;
   totalValue: number;
