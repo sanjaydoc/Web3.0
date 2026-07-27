@@ -323,10 +323,12 @@ function RamStep({ onDone }: { onDone: () => void }) {
 
 /** Final step — surface the account's API token so the operator saves it (reveal / copy / download
  *  as Your_Key.txt). It's the one secret they must keep; anyone with it controls the account. */
-function TokenStep({ onDone }: { onDone: () => void }) {
+function TokenStep({ address, onDone }: { address: string; onDone: () => void }) {
   const token = getWeb3Token();
+  const addr = address || localStorage.getItem('web3.creatorName') || '';
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [addrCopied, setAddrCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const copy = () => {
@@ -335,6 +337,16 @@ function TokenStep({ onDone }: { onDone: () => void }) {
         setCopied(true);
         setSaved(true);
         setTimeout(() => setCopied(false), 1800);
+      },
+      () => undefined,
+    );
+  };
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText(addr).then(
+      () => {
+        setAddrCopied(true);
+        setTimeout(() => setAddrCopied(false), 1800);
       },
       () => undefined,
     );
@@ -368,6 +380,26 @@ function TokenStep({ onDone }: { onDone: () => void }) {
         Save your token now — it's how you sign in on another device or authenticate agent scripts.
         This is the only place it's shown.
       </p>
+      {addr && (
+        <>
+          <div className="section-title">Your address</div>
+          <div className="term" style={{ marginBottom: 10 }}>
+            <div className="term-body">
+              <div className="term-cmd">
+                <code>{addr}</code>
+                <button
+                  type="button"
+                  className={`copy ${addrCopied ? 'copied' : ''}`}
+                  onClick={copyAddress}
+                >
+                  {addrCopied ? 'copied ✓' : 'Copy address'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      <div className="section-title">Your token</div>
       <div className="term" style={{ marginBottom: 8 }}>
         <div className="term-body">
           <div className="term-cmd">
@@ -493,7 +525,7 @@ export function Onboarding({
         </StepCard>
 
         <StepCard n={4} title="Save your key" state={state(3)}>
-          <TokenStep onDone={onDone} />
+          <TokenStep address={addr} onDone={onDone} />
         </StepCard>
       </div>
     </div>
