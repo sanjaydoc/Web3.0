@@ -12,11 +12,17 @@
   --fs-xl: 1.8rem; /* page titles, stat numbers */
 }
 
+html,
 body {
   background: var(--paper-2);
   /* Never scroll sideways — the mobile nav drawer parks off the left edge (translateX(-100%))
      and a stray wide child shouldn't drag the whole page horizontally. */
   overflow-x: hidden;
+  /* Kill the vertical rubber-band overscroll. In the Capacitor WebView, pulling down on a SHORT
+     page (e.g. a near-empty Payments/ledger) drags the sticky top bar + its separation line
+     downward, leaving blank space above it — looks like the header is "lowered" on that screen
+     only. Disabling overscroll chaining keeps the bar pinned. No-op on desktop. */
+  overscroll-behavior-y: none;
 }
 
 .app {
@@ -426,12 +432,26 @@ body {
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  /* Wrap to a second line on narrow screens instead of pushing the last button (e.g. "Stop bot")
+     out past the card's right edge. */
+  flex-wrap: wrap;
   margin: 16px 0 8px;
 }
 .copied {
   font-size: var(--fs-sm);
   color: var(--ok);
   font-weight: 600;
+}
+/* Horizontal-scroll wrapper for wide tables on narrow screens (e.g. the transactions ledger:
+   #/Type/From→To/Amount/Time/Hash). A plain width:100% table squeezes the columns until the last
+   ones (Time, Hash) clip off the card's edge. nowrap keeps each value whole; the wrapper scrolls
+   sideways within the card rather than clipping. On desktop the table still fits at full width. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table {
+  white-space: nowrap;
 }
 .steps {
   font-size: var(--fs-base);
@@ -1847,17 +1867,23 @@ button.connector:not(:disabled):hover {
   width: 220px;
   height: 62px;
   padding: 0 18px;
-  background: #0d0d0f;
+  /* Match the desktop-installer .dl-btn language on the same dark panel: a translucent-white tile
+     with a hairline border and an accent-tinted hover — instead of a solid black pill that blends
+     into the panel and reads as unstyled. Accent defaults to Android green; iOS overrides below. */
+  --store-accent: #3ddc84;
+  background: rgba(255, 255, 255, 0.03);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 13px;
   text-decoration: none;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s
+    ease;
 }
 .store-badge:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38);
-  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+  border-color: var(--store-accent);
+  background: color-mix(in srgb, var(--store-accent) 10%, transparent);
 }
 .store-badge-icon {
   flex-shrink: 0;

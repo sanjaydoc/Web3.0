@@ -270,7 +270,13 @@ curl ${NODE_URL}/settlement`;
         )}
       </div>
 
-      <div className="card" style={{ display: 'grid', gap: 18 }}>
+      {/* minmax(0, 1fr) caps the grid track at the card width; without it a wide <pre> sizes the
+          track to its own content and the code canvas spills past the card's right edge (and drags
+          the page sideways). With the cap, each <pre>'s own overflow-x:auto scrolls instead. */}
+      <div
+        className="card"
+        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}
+      >
         <div className="section-title" style={{ margin: 0 }}>
           Quickstart
         </div>

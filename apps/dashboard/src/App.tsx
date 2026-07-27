@@ -793,7 +793,7 @@ function LedgerView({
                   : 'Sign in to see your transactions.'}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-scroll">
               <table>
                 <thead>
                   <tr>

@@ -331,6 +331,9 @@ table {
 th,
 td {
   text-align: left;
+  /* Top-align so a status pill (e.g. "Available now") lines up with the first line of a tall,
+     multi-line neighbour cell instead of floating in the vertical middle of the row. */
+  vertical-align: top;
   padding: .6rem .5rem;
   border-bottom: 1px solid var(--hair);
 }
