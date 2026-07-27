@@ -116,11 +116,14 @@ export function Telegram() {
           </div>
         </div>
 
+        {/* One consistent size across the row: primary filled (.btn) + two outline (.btn.ghost).
+            Don't mix in .btn.act here — it's the small inline-pill variant and looks mismatched
+            next to full-size buttons. */}
         <div className="gen-actions">
-          <button type="button" className="btn act" disabled={busy} onClick={() => save(true)}>
+          <button type="button" className="btn" disabled={busy} onClick={() => save(true)}>
             Save &amp; start
           </button>
-          <button type="button" className="btn" disabled={busy} onClick={() => save(false)}>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => save(false)}>
             Save &amp; stop
           </button>
           <button

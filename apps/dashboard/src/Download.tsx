@@ -350,30 +350,35 @@ function PlatformTable() {
   return (
     <div className="card" style={{ marginTop: 18 }}>
       <div className="section-title">What each platform can do</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Platform</th>
-            <th>Node capability</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([p, cap, status]) => (
-            <tr key={p}>
-              <td>
-                <strong>{p}</strong>
-              </td>
-              <td>{cap}</td>
-              <td>
-                <span className={`chip ${status === 'Available now' ? 'allow' : ''}`}>
-                  {status}
-                </span>
-              </td>
+      {/* Scroll wrapper: three columns + the nowrap status pill can exceed a phone's width, and
+          without this the table (and the "Available now" pill) bleeds out past the card's right
+          edge. Here it scrolls inside the card instead. */}
+      <div className="hscroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Node capability</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map(([p, cap, status]) => (
+              <tr key={p}>
+                <td>
+                  <strong>{p}</strong>
+                </td>
+                <td>{cap}</td>
+                <td>
+                  <span className={`chip ${status === 'Available now' ? 'allow' : ''}`}>
+                    {status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="hint" style={{ margin: '10px 0 0' }}>
         Earning scales with what you actually contribute: an always-on desktop node earns most; a
         phone contributes when the app is running; a browser tab is an on-ramp, not an earner.
