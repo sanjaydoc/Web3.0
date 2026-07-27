@@ -25,7 +25,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Capacitor 8's CLI requires Node >=22.
+          node-version: 22
           cache: pnpm
 
       # Workspace deps — needed so the dashboard can build from the monorepo.
