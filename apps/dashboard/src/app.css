@@ -12,6 +12,15 @@
   --fs-xl: 1.8rem; /* page titles, stat numbers */
 }
 
+/* Stop the vertical rubber-band overscroll on the document scroller so the sticky mobile top bar
+   can't be dragged down on a short page (which left blank space above it — the header looked
+   "lowered" on e.g. the Payments screen). This sets ONLY overscroll-behavior: it adds no overflow
+   property, so <html> is never made into its own scroll container and vertical scrolling is
+   untouched. (The earlier attempt also put overflow-x:hidden here, which DID create an <html>
+   scroll container and locked scrolling — so overflow-x stays on <body> only, below.) */
+html {
+  overscroll-behavior-y: none;
+}
 body {
   background: var(--paper-2);
   /* Never scroll sideways — the mobile nav drawer parks off the left edge (translateX(-100%))
