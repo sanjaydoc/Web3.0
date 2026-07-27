@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, formatAmount, getWeb3Token, setWeb3Token } from './api.js';
-import { generateAccountKey, saveAccountKey } from './txsign.js';
+import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js';
 
 /**
  * First-run onboarding for a brand-new node operator, shown once on their OWN node (never on the
@@ -353,14 +353,22 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
   };
 
   const download = () => {
+    const key = addr ? loadAccountKey(addr) : null;
     const body = [
-      'Web3.0 — your account key (API token)',
+      'Web3.0 — account backup',
+      'KEEP THIS FILE SECRET. Anyone with it can control your account.',
       '',
-      token,
+      `Address:            ${addr}`,
+      `API token:          ${token}`,
       '',
-      'Store this like a password. Use it to sign in on another device, or as the',
-      'x-web3-token header in agent scripts. Anyone with this token controls your',
-      'account — keep it secret.',
+      'Signing keypair (ML-DSA, base64url) — lets you send aETH from another device:',
+      `  public key:       ${key?.publicKey ?? '(not found on this device)'}`,
+      `  secret key:       ${key?.secretKey ?? '(not found on this device)'}`,
+      '',
+      'How to use:',
+      '  - Sign in elsewhere: paste the API token (sent as the x-web3-token header).',
+      '  - Restore payments on a new device: import the signing keypair above.',
+      '  - Never share the secret key or token.',
       '',
     ].join('\n');
     const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
