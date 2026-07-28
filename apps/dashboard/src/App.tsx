@@ -8,6 +8,7 @@ import { HostedDapps } from './HostedDapps.js';
 import { InstallBanner } from './InstallBanner.js';
 import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
+import { Marketplace } from './Marketplace.js';
 import { Network } from './Network.js';
 import { Onboarding } from './Onboarding.js';
 import { Operator } from './Operator.js';
@@ -43,6 +44,7 @@ type View =
   | 'telegram'
   | 'developers'
   | 'account'
+  | 'marketplace'
   | 'download';
 
 type Role = 'operator' | 'admin';
@@ -70,6 +72,7 @@ const NAV: {
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
   { id: 'telegram', label: 'Telegram bot' },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
+  { id: 'marketplace', label: 'Marketplace', operator: true },
   { id: 'developers', label: 'Developers', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
   { id: 'agents', label: 'Agents', badge: 'agents' },
@@ -101,6 +104,7 @@ const AGENT_OWNER_NAV = new Set<View>([
   'overview',
   'account',
   'genesis',
+  'marketplace',
   'developers',
   'hosteddapps',
   'skills',
@@ -469,6 +473,7 @@ export function App() {
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
+        {view === 'marketplace' && <Marketplace />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}

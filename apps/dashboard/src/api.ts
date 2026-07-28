@@ -208,6 +208,26 @@ export interface SignupResult {
   role: Role;
   token: string;
 }
+/** A host offering compute in the marketplace: its per-epoch price and live free capacity. */
+export interface MarketHost {
+  host: string;
+  pricePerEpoch: number;
+  capacity: number;
+  used: number;
+  free: number;
+}
+/** A hosting rental: an agent-owner pays a host to run `agentId`, billed each epoch. */
+export interface Lease {
+  id: string;
+  owner: string;
+  host: string;
+  agentId: string;
+  pricePerEpoch: number;
+  active: boolean;
+  createdAt: string;
+  epochsBilled: number;
+  paidTotal: number;
+}
 export interface SkillDef {
   id: string;
   name: string;
@@ -447,6 +467,16 @@ export const api = {
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
   hostedStart: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/start', { handle }, adminToken),
+  // Hosting marketplace — hosts sell RAM capacity; agent-owners rent it for their agents.
+  hostingMarket: () => get<{ hosts: MarketHost[] }>('/hosting/market'),
+  hostingOffer: () => get<{ host: string | null; pricePerEpoch: number }>('/hosting/offer'),
+  setHostingOffer: (pricePerEpoch: number) =>
+    post<{ host: string; pricePerEpoch: number }>('/hosting/offer', { pricePerEpoch }),
+  rentHost: (agentId: string) => post<Lease>('/hosting/rent', { agentId }),
+  hostingLeases: () => get<{ leases: Lease[] }>('/hosting/leases'),
+  hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
+  endLease: (id: string) =>
+    post<{ ended: boolean }>(`/hosting/lease/${encodeURIComponent(id)}/end`, {}),
   signup: (local: string, role: Role, pubkey?: string) =>
     post<SignupResult>('/accounts/signup', { local, role, pubkey }),
   /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */
