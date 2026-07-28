@@ -8,6 +8,7 @@ import { HostedDapps } from './HostedDapps.js';
 import { InstallBanner } from './InstallBanner.js';
 import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
+import { Marketplace } from './Marketplace.js';
 import { Network } from './Network.js';
 import { Onboarding } from './Onboarding.js';
 import { Operator } from './Operator.js';
@@ -17,6 +18,7 @@ import {
   type Account as Acct,
   type AgentCard,
   type Guardrails,
+  type HostedAgent,
   type LedgerEntry,
   NODE_URL,
   type Stats,
@@ -42,6 +44,7 @@ type View =
   | 'telegram'
   | 'developers'
   | 'account'
+  | 'marketplace'
   | 'download';
 
 type Role = 'operator' | 'admin';
@@ -69,6 +72,7 @@ const NAV: {
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
   { id: 'telegram', label: 'Telegram bot' },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
+  { id: 'marketplace', label: 'Marketplace', operator: true },
   { id: 'developers', label: 'Developers', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
   { id: 'agents', label: 'Agents', badge: 'agents' },
@@ -86,9 +90,30 @@ const OPERATOR_HOME: View = 'mynode';
  */
 const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
 
-/** Views reserved for a real admin even on your own node — network-wide observability an operator
- *  running a single node doesn't need. */
-const ADMIN_ONLY = new Set<View>(['network', 'traffic']);
+/**
+ * Exactly which views each non-admin persona sees (an admin always sees everything). The two are
+ * mutually exclusive at signup:
+ *  - OPERATOR — runs/earns from a node: a lean host console.
+ *  - AGENT_OWNER — creates & manages agents: the builder console.
+ * Network + Live traffic (network-wide observability) are in neither list, so they stay admin-only.
+ * The OWNER's Genesis/Developers/Hosted dApps are in LOCKED_ON_MAIN, so on the reserved main node an
+ * owner can't launch there until they have a host to run on (the marketplace).
+ */
+const OPERATOR_NAV = new Set<View>(['overview', 'account', 'download', 'mynode', 'ledger']);
+const AGENT_OWNER_NAV = new Set<View>([
+  'overview',
+  'account',
+  'genesis',
+  'marketplace',
+  'developers',
+  'hosteddapps',
+  'skills',
+  'connectors',
+  'ledger',
+  'telegram',
+  'agents',
+  'guardrails',
+]);
 
 interface Snapshot {
   stats?: Stats;
@@ -129,7 +154,7 @@ export function App() {
   // Is the node reachable? Polled for EVERYONE (the admin data-poll below is admin-only, so operators
   // would otherwise always read snap.online === false and see a wrong "node offline" in the footer).
   const [nodeOnline, setNodeOnline] = useState(false);
-  // Mobile nav drawer (the sidebar collapses behind a hamburger below 760px).
+  // Mobile nav drawer: collapses behind a hamburger below 760px, toggled by the top-bar button.
   const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
@@ -204,6 +229,9 @@ export function App() {
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
+  // The agent-owner persona (create/own agents, pay a host) sees the builder console; every other
+  // non-admin (operator/developer/guest) sees the lean node-operator console. Exclusive at signup.
+  const isAgentOwner = account?.role === 'agent-owner';
   const role: Role = isAdmin ? rolePref : 'operator';
 
   // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
@@ -215,6 +243,10 @@ export function App() {
   // views and make "Run a node" their home — participation happens on their own node.
   const mainNodeLocked = adminOnly && !isAdmin;
   const operatorHome: View = mainNodeLocked ? 'download' : OPERATOR_HOME;
+  // Where each persona lands (and falls back to). An agent-owner's home is Genesis (create an agent);
+  // on the reserved main node, where hosting is locked, they fall back to their Account until a host
+  // (the marketplace) is available.
+  const personaHome: View = isAgentOwner ? (mainNodeLocked ? 'account' : 'genesis') : operatorHome;
 
   // You get the FULL node console (network, ledger, connectors, skills, telegram, …) whenever you
   // run THIS node: an admin on any node, OR any operator on a node that isn't the reserved main node
@@ -222,12 +254,23 @@ export function App() {
   // to their personal items. (ownsNode === !mainNodeLocked, named for readability.)
   const ownsNode = !mainNodeLocked;
 
-  const visibleNav = NAV.filter(
-    (n) =>
-      (ownsNode || n.operator) &&
-      !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)) &&
-      !(!isAdmin && ADMIN_ONLY.has(n.id)),
-  );
+  const personaNav = isAgentOwner ? AGENT_OWNER_NAV : OPERATOR_NAV;
+  const visibleNav = NAV.filter((n) => {
+    // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
+    if (isAdmin) return true;
+    // Otherwise, exactly the signed-in persona's views.
+    if (!personaNav.has(n.id)) return false;
+    // Compute/hosting views stay reserved for the admin on the main node; and on the main node a
+    // non-admin is limited to their personal (operator-safe) items — participation is on their own node.
+    if (mainNodeLocked && (LOCKED_ON_MAIN.has(n.id) || !n.operator)) return false;
+    return true;
+  });
+
+  // Navigating from the sidebar also closes the mobile drawer so the page is visible.
+  const navigate = (v: View) => {
+    setView(v);
+    setMenuOpen(false);
+  };
 
   const changeRole = (r: Role) => {
     setRolePref(r);
@@ -236,15 +279,13 @@ export function App() {
     if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(operatorHome);
   };
 
-  // Never leave a non-admin sitting on a view they can't use (admin-only, or locked on the main node).
+  // Never leave a non-admin sitting on a view that isn't in their persona's menu — send them home.
+  const visibleKey = visibleNav.map((n) => n.id).join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleKey is the stable signature of visibleNav
   useEffect(() => {
-    const item = NAV.find((n) => n.id === view);
-    const blocked =
-      (!ownsNode && !item?.operator) ||
-      (mainNodeLocked && LOCKED_ON_MAIN.has(view)) ||
-      (!isAdmin && ADMIN_ONLY.has(view));
-    if (blocked) setView(operatorHome);
-  }, [ownsNode, isAdmin, view, mainNodeLocked, operatorHome]);
+    if (isAdmin) return;
+    if (!visibleNav.some((n) => n.id === view)) setView(personaHome);
+  }, [visibleKey, view, personaHome, isAdmin]);
 
   useEffect(() => {
     // The console's network/ledger views need this feed. Fetch it whenever the viewer owns this node
@@ -254,11 +295,15 @@ export function App() {
     let active = true;
     async function poll() {
       try {
+        // A non-admin operator scopes the ledger to their OWN account, served from the full
+        // replicated chain so their transactions stay populated across app restarts. Admin (on the
+        // main node) pulls the whole-network ledger.
+        const ledgerAccount = !isAdmin && account?.address ? account.address : undefined;
         const [stats, agents, events, ledger, guardrails] = await Promise.all([
           api.stats(),
           api.agents(),
           api.events(60),
-          api.ledger(),
+          api.ledger(ledgerAccount),
           api.guardrails(),
         ]);
         if (!active) return;
@@ -282,7 +327,7 @@ export function App() {
       active = false;
       clearInterval(timer);
     };
-  }, [ownsNode]);
+  }, [ownsNode, isAdmin, account?.address]);
 
   // Landing gate — shown until the visitor signs in (or chooses to explore an open node).
   if (authed === null) return <div className="landing" aria-busy="true" />;
@@ -329,44 +374,37 @@ export function App() {
     );
   }
 
-  // Navigate + collapse the mobile drawer in one gesture.
-  const go = (v: View) => {
-    setView(v);
-    setMenuOpen(false);
-  };
-
   return (
     <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
       <InstallBanner />
-
-      {/* Mobile top bar — only visible below 760px (CSS). Hosts the brand + hamburger. */}
-      <header className="mobile-bar">
-        <div className="brand">
-          <span className="badge">W</span> Web3.0
-        </div>
+      <header className="topbar">
         <button
           type="button"
           className="hamburger"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={() => setMenuOpen((v) => !v)}
         >
-          <span className="hamburger-box">
-            <span className="hamburger-inner" />
-          </span>
+          <span />
+          <span />
+          <span />
         </button>
+        <div className="brand">
+          <span className="badge">W</span> Web3.0
+        </div>
       </header>
-
-      {/* Tap-away backdrop for the open drawer (mobile only). */}
       {menuOpen && (
-        <button
-          type="button"
-          className="nav-backdrop"
-          aria-label="Close menu"
+        <div
+          className="scrim"
+          role="button"
+          tabIndex={0}
+          aria-label="Close navigation menu"
           onClick={() => setMenuOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') setMenuOpen(false);
+          }}
         />
       )}
-
       <aside className={`side ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span className="badge">W</span> Web3.0
@@ -395,9 +433,10 @@ export function App() {
           <NavItem
             key={n.id}
             id={n.id}
-            label={n.label}
+            // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
+            label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
             view={view}
-            set={go}
+            set={navigate}
             count={
               n.badge === 'agents'
                 ? agentsForView.length
@@ -433,6 +472,7 @@ export function App() {
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
+        {view === 'marketplace' && <Marketplace />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}
@@ -539,6 +579,43 @@ function Stat({ k, n, unit }: { k: string; n: string; unit?: string }) {
 
 function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] }) {
   const balanceOf = (id: string) => wallets.find((w) => w.owner === id)?.balance ?? 0;
+
+  // Hosted agents (Genesis-created, running IN this node) are the ones we can start/stop. The node
+  // returns only the caller's own hosted agents to a non-admin, so the Start/Stop control appears
+  // only on rows the operator owns. Externally-run SDK agents aren't hosted here → no control.
+  const [hosted, setHosted] = useState<HostedAgent[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const r = await api.hosted();
+        if (active) setHosted(r.agents);
+      } catch {
+        /* node offline / not permitted — leave controls hidden */
+      }
+    };
+    load();
+    const t = setInterval(load, 3000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, []);
+  const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
+
+  const toggle = async (h: HostedAgent) => {
+    setBusy(h.web3Id);
+    try {
+      const r = h.running ? await api.hostedStop(h.handle) : await api.hostedStart(h.handle);
+      setHosted(r.agents);
+    } catch {
+      /* keep last state; the poll will reconcile */
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -548,34 +625,56 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
         {agents.length === 0 ? (
           <div className="empty">No agents registered yet. Run the two-agents demo.</div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Web3.0 ID</th>
-                <th>Kind</th>
-                <th>Skills</th>
-                <th>Wallet</th>
-                <th>DID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((a) => (
-                <tr key={a.web3Id}>
-                  <td>
-                    <strong>{a.web3Id}</strong>
-                  </td>
-                  <td>
-                    <span className="chip">{a.kind}</span>
-                  </td>
-                  <td>
-                    {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
-                  </td>
-                  <td>{formatAmount(balanceOf(a.web3Id))}</td>
-                  <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+          // Scroll wrapper: the columns overflow a phone's width; scroll inside the card instead of
+          // the last columns bleeding past the edge. (Agents view only.)
+          <div className="hscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Web3.0 ID</th>
+                  <th>Control</th>
+                  <th>Kind</th>
+                  <th>Skills</th>
+                  <th>Wallet</th>
+                  <th>DID</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {agents.map((a) => {
+                  const h = hostedById.get(a.web3Id);
+                  return (
+                    <tr key={a.web3Id}>
+                      <td>
+                        <strong>{a.web3Id}</strong>
+                      </td>
+                      <td>
+                        {h ? (
+                          <button
+                            type="button"
+                            className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
+                            disabled={busy === a.web3Id}
+                            onClick={() => toggle(h)}
+                          >
+                            {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
+                          </button>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="chip">{a.kind}</span>
+                      </td>
+                      <td>
+                        {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
+                      </td>
+                      <td>{formatAmount(balanceOf(a.web3Id))}</td>
+                      <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </>
@@ -793,7 +892,7 @@ function LedgerView({
                   : 'Sign in to see your transactions.'}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-scroll">
               <table>
                 <thead>
                   <tr>

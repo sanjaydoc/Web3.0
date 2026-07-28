@@ -196,16 +196,41 @@ export interface NodeOperator {
   limits: NodeLimits;
 }
 
-export type Role = 'admin' | 'operator' | 'developer';
+// `operator` (host) and `agent-owner` are the two mutually-exclusive marketplace personas.
+// (The legacy `developer` role was folded into `agent-owner`.)
+export type Role = 'admin' | 'operator' | 'agent-owner';
+// Freemium plan (GitHub-for-agents): `free` (capped hosting) or `pro` (paid, higher limits).
+export type Plan = 'free' | 'pro';
 export interface Account {
   address: string;
   role: Role;
+  plan: Plan;
   createdAt: string;
 }
 export interface SignupResult {
   address: string;
   role: Role;
   token: string;
+}
+/** A host offering compute in the marketplace: its per-epoch price and live free capacity. */
+export interface MarketHost {
+  host: string;
+  pricePerEpoch: number;
+  capacity: number;
+  used: number;
+  free: number;
+}
+/** A hosting rental: an agent-owner pays a host to run `agentId`, billed each epoch. */
+export interface Lease {
+  id: string;
+  owner: string;
+  host: string;
+  agentId: string;
+  pricePerEpoch: number;
+  active: boolean;
+  createdAt: string;
+  epochsBilled: number;
+  paidTotal: number;
 }
 export interface SkillDef {
   id: string;
@@ -271,7 +296,7 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(`${NODE_URL}${path}`, init);
   } catch {
-    throw new ApiError(`cannot reach the node at ${NODE_URL} (network or CORS)`, 0);
+    throw new ApiError('cannot reach the network node (offline, or blocked by CORS)', 0);
   }
 }
 
@@ -306,6 +331,36 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   });
   if (!res.ok) return readError(res, path);
   return res.json() as Promise<T>;
+}
+
+const isRoutable = (ip: string): boolean => !!ip && !/^(127\.|::1$|0\.0\.0\.0$)/.test(ip);
+
+/**
+ * This device's own public IP, detected with zero setup. Order: the node's `/whoami` (the IP as the
+ * network sees you — no third party) if it returns a routable address; otherwise a public IP echo
+ * service so it still resolves straight from the browser with no node redeploy or command. Returns
+ * null if every source fails (offline). Only ever the caller's own IP — nothing about the node.
+ */
+async function detectDeviceIp(): Promise<string | null> {
+  try {
+    const r = await get<{ ip: string }>('/whoami');
+    if (isRoutable(r.ip)) return r.ip;
+  } catch {
+    /* node may not expose /whoami — fall through to the public echo below */
+  }
+  // CORS-enabled public echo services; first success wins.
+  for (const url of ['https://api.ipify.org?format=json', 'https://ipv4.icanhazip.com']) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const text = (await res.text()).trim();
+      const ip = text.startsWith('{') ? (JSON.parse(text) as { ip?: string }).ip : text;
+      if (ip && isRoutable(ip)) return ip;
+    } catch {
+      /* try the next source */
+    }
+  }
+  return null;
 }
 
 /** Live monetary policy — GUI-editable by the admin, applies immediately. */
@@ -417,14 +472,17 @@ export const api = {
   clearNodeLocation: () => send<{ removed: boolean }>('DELETE', '/operator/location'),
   agents: () => get<{ agents: AgentCard[]; count: number }>('/agents'),
   events: (limit = 60) => get<{ events: Web3Event[] }>(`/events?limit=${limit}`),
-  ledger: () =>
+  // Pass `account` (a node operator's own address) to scope the ledger to THEIR transactions,
+  // served from the full replicated chain so their history survives app restarts. Omit it (admin)
+  // for the whole-network view.
+  ledger: (account?: string) =>
     get<{
       size: number;
       head: string;
       verify: { ok: boolean };
       wallets: Wallet[];
       entries: LedgerEntry[];
-    }>('/ledger?limit=40'),
+    }>(account ? `/ledger?account=${encodeURIComponent(account)}` : '/ledger?limit=40'),
   guardrails: () => get<Guardrails>('/guardrails'),
   settlement: () => get<SettlementInfo>('/settlement'),
   consensus: () => get<ConsensusInfo>('/consensus'),
@@ -441,12 +499,32 @@ export const api = {
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
+  hostedStart: (handle: string, adminToken?: string) =>
+    post<{ agents: HostedAgent[] }>('/hosted/start', { handle }, adminToken),
+  // Hosting marketplace — hosts sell RAM capacity; agent-owners rent it for their agents.
+  hostingMarket: () => get<{ hosts: MarketHost[] }>('/hosting/market'),
+  hostingOffer: () => get<{ host: string | null; pricePerEpoch: number }>('/hosting/offer'),
+  setHostingOffer: (pricePerEpoch: number) =>
+    post<{ host: string; pricePerEpoch: number }>('/hosting/offer', { pricePerEpoch }),
+  rentHost: (agentId: string, mandate?: unknown) =>
+    post<Lease>('/hosting/rent', { agentId, mandate }),
+  hostingLeases: () => get<{ leases: Lease[] }>('/hosting/leases'),
+  hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
+  endLease: (id: string) =>
+    post<{ ended: boolean }>(`/hosting/lease/${encodeURIComponent(id)}/end`, {}),
   signup: (local: string, role: Role, pubkey?: string) =>
     post<SignupResult>('/accounts/signup', { local, role, pubkey }),
   /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */
   bindKey: (pubkey: string) =>
     post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
+  /** Set an account's freemium plan (admin) — the manual upgrade path until credits ship. */
+  setPlan: (address: string, plan: Plan) => post<Account>('/accounts/plan', { address, plan }),
+  /** The caller's OWN IP as the node sees it (their device), not the node's address. */
+  whoami: () => get<{ ip: string }>('/whoami'),
+  /** Auto-detect this device's public IP with no setup: prefer the node's /whoami, else a public
+   *  echo service — so the dashboard can always show it without any command or node redeploy. */
+  deviceIp: () => detectDeviceIp(),
   /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */

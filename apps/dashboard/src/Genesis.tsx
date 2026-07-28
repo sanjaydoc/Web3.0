@@ -41,6 +41,8 @@ export function Genesis() {
   const [launchMsg, setLaunchMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [hosted, setHosted] = useState<HostedAgent[]>([]);
   const [adminRequired, setAdminRequired] = useState(false);
+  // Only admin's generated script embeds the authority's real address; operators get a placeholder.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [connectors, setConnectors] = useState<string[]>([]);
   const [customConns, setCustomConns] = useState<CustomConnector[]>([]);
 
@@ -65,6 +67,13 @@ export function Genesis() {
     } catch {
       /* node may be offline */
     }
+  }, []);
+
+  useEffect(() => {
+    api
+      .me()
+      .then((m) => setIsAdmin(m.role === 'admin'))
+      .catch(() => setIsAdmin(false));
   }, []);
 
   useEffect(() => {
@@ -147,7 +156,7 @@ agent = Agent(
     ${py(handle)},
     name=${py(name)},
     description=${py(description)},
-    base_url=${py(NODE_URL)},
+    base_url=${py(isAdmin ? NODE_URL : 'https://<your-node-address>')},
     skills=[{"id": ${py(skillId)}, "name": ${py(skillName)}, "description": ${py(skillDesc)}, "tags": []}],
     pricing={"perTask": ${minorUnits}, "currency": "aETH"},
 )
@@ -186,6 +195,7 @@ while True:
     model,
     system,
     current,
+    isAdmin,
   ]);
 
   function onProviderChange(id: string) {

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   type Account as Acct,
   ApiError,
-  NODE_URL,
   type Role,
   api,
   formatAmount,
@@ -18,7 +17,7 @@ import {
 function signinError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 0)
-      return `Couldn't reach the node at ${NODE_URL} — it may be offline, or this site's origin isn't allowed (CORS).`;
+      return "Couldn't reach the network node — it may be offline, or this site's origin isn't allowed (CORS).";
     if (err.status === 401)
       return 'Token not recognized by this node. Check for a missing character or an extra space, and make sure this token belongs to this node.';
     return `Sign-in failed (${err.status}).`;
@@ -326,6 +325,17 @@ export function Account() {
             <dt>Role</dt>
             <dd>
               <span className="chip allow">{me.role}</span>
+            </dd>
+            <dt>Plan</dt>
+            <dd>
+              <span className={`chip ${me.plan === 'pro' ? 'allow' : ''}`}>
+                {me.plan === 'pro' ? 'Pro' : 'Free'}
+              </span>{' '}
+              {me.plan === 'free' && (
+                <span className="muted">
+                  — host a few agents free; Pro (buy credits) lifts the limit. Coming soon.
+                </span>
+              )}
             </dd>
             <dt>Since</dt>
             <dd>{new Date(me.createdAt).toLocaleString()}</dd>

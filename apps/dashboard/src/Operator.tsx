@@ -3,6 +3,7 @@ import {
   type Account as Acct,
   type AuthorityRequest,
   type Economics,
+  type Lease,
   type MyEarnings,
   type NodeLocation,
   type NodeOperator,
@@ -710,6 +711,127 @@ function uptime(sec: number): string {
   return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m ${sec % 60}s`;
 }
 
+/**
+ * HostingCard — the host side of the compute marketplace. Set the per-epoch price you charge to run
+ * one agent, see your net hosting revenue, and view who's renting your capacity. Selling your
+ * contributed RAM earns aETH here (minus the platform commission).
+ */
+function HostingCard() {
+  const [price, setPrice] = useState('');
+  const [offerPrice, setOfferPrice] = useState(0);
+  const [revenue, setRevenue] = useState(0);
+  const [leases, setLeases] = useState<Lease[]>([]);
+  const [me, setMe] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [offer, rev, ls, acct] = await Promise.all([
+        api.hostingOffer(),
+        api.hostingRevenue(),
+        api.hostingLeases(),
+        api.me(),
+      ]);
+      setOfferPrice(offer.pricePerEpoch);
+      setRevenue(rev.revenue);
+      setMe(acct.address);
+      setLeases(ls.leases);
+    } catch {
+      /* offline — keep last */
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const save = async () => {
+    const v = Math.round(Number(price));
+    if (!Number.isFinite(v) || v < 0) {
+      setMsg({ kind: 'err', text: 'Enter a price in aETH minor units (0 to stop offering).' });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.setHostingOffer(v);
+      setPrice('');
+      setMsg({ kind: 'ok', text: 'Hosting price updated.' });
+      await load();
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hosted = leases.filter((l) => l.active && l.host === me);
+
+  return (
+    <div className="card">
+      <div className="section-title">Hosting · sell your RAM</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        Set what you charge to run one agent per epoch. Renters pay from their wallet each epoch;
+        you keep the fee minus the platform commission.
+      </p>
+      <dl className="kv">
+        <dt>Current price / epoch</dt>
+        <dd>{offerPrice > 0 ? formatAmount(offerPrice) : 'not offering'}</dd>
+        <dt>Net hosting revenue</dt>
+        <dd>{formatAmount(revenue)}</dd>
+        <dt>Agents hosted</dt>
+        <dd>{hosted.length}</dd>
+      </dl>
+      <div className="field" style={{ maxWidth: 300, marginTop: 10 }}>
+        <label htmlFor="host-price">New price / epoch (aETH minor units)</label>
+        <input
+          id="host-price"
+          type="number"
+          min={0}
+          value={price}
+          placeholder={String(offerPrice)}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+      <div style={{ marginTop: 10 }}>
+        <button type="button" className="btn act" disabled={busy} onClick={save}>
+          {busy ? 'Saving…' : 'Update price'}
+        </button>
+      </div>
+      {hosted.length > 0 && (
+        <div className="hscroll" style={{ marginTop: 14 }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Renter</th>
+                <th>Price / epoch</th>
+                <th>Epochs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hosted.map((l) => (
+                <tr key={l.id}>
+                  <td>{l.agentId}</td>
+                  <td>{l.owner}</td>
+                  <td>{formatAmount(l.pricePerEpoch)}</td>
+                  <td>{l.epochsBilled}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Operator() {
   const [node, setNode] = useState<NodeOperator | null>(null);
   // The signed-in account's role decides what this page shows: an admin sees the node OWNER's
@@ -1083,6 +1205,8 @@ export function Operator() {
 
           {/* Node-owner cards — shown to whoever RUNS this node. Economics + Storage stay admin-only
               (network monetary policy + node persistence config, not per-operator). */}
+          {ownsNode && <HostingCard />}
+
           {ownsNode && <AuthorityCard role={node.role} />}
 
           {isAdmin && <EconomicsCard />}
