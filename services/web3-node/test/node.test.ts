@@ -975,6 +975,30 @@ describe('accounts & authentication', () => {
     await k.close();
   });
 
+  it('signs up an agent-owner (the create-agents persona) and funds its wallet', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const post = (url: string, payload: unknown) =>
+      k.http.inject({ method: 'POST', url, payload: payload as object });
+
+    const res = await post('/accounts/signup', { local: 'owner', role: 'agent-owner' });
+    expect(res.statusCode).toBe(201);
+    const created = res.json() as { address: string; role: string; token: string };
+    expect(created.address).toBe('owner@web3.0');
+    expect(created.role).toBe('agent-owner');
+
+    // /accounts/me resolves the persona, and the account gets the same faucet-funded wallet as any
+    // other — that's the aETH an agent-owner pays a host with.
+    const me = await k.http.inject({
+      method: 'GET',
+      url: '/accounts/me',
+      headers: { 'x-web3-token': created.token },
+    });
+    expect(me.json()).toMatchObject({ address: 'owner@web3.0', role: 'agent-owner' });
+    expect(k.ledger.balanceOf('owner@web3.0' as never)).toBe(k.config.faucetGrant);
+    await k.close();
+  });
+
   it('enforces roles: only an admin may list accounts, and the taken address is rejected', async () => {
     const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
     await k.init();

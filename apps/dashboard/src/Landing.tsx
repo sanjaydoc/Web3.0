@@ -143,8 +143,10 @@ export function Landing({
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [token, setToken] = useState('');
   const [local, setLocal] = useState('');
-  // Public sign-ups are always node operators. Admins are bootstrapped on the node, not self-served.
-  const role: Role = 'operator';
+  // The two mutually-exclusive marketplace personas a public sign-up can pick: `operator` (run a node
+  // & host) or `agent-owner` (create agents, pay a host). Admins are bootstrapped on the node, not
+  // self-served, so they're never an option here.
+  const [role, setRole] = useState<Role>('agent-owner');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -310,6 +312,30 @@ export function Landing({
                 </>
               ) : (
                 <>
+                  <div className="l-field">
+                    <span>I want to…</span>
+                    <div className="l-roles">
+                      <button
+                        type="button"
+                        className={role === 'agent-owner' ? 'on' : ''}
+                        onClick={() => setRole('agent-owner')}
+                      >
+                        🤖 Own an agent
+                      </button>
+                      <button
+                        type="button"
+                        className={role === 'operator' ? 'on' : ''}
+                        onClick={() => setRole('operator')}
+                      >
+                        🖥️ Run a node
+                      </button>
+                    </div>
+                    <em>
+                      {role === 'agent-owner'
+                        ? 'Create agents and pay a host to run them.'
+                        : "Contribute RAM, host others' agents, earn aETH."}
+                    </em>
+                  </div>
                   <label className="l-field">
                     <span>Handle</span>
                     <input

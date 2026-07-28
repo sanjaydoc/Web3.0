@@ -196,7 +196,8 @@ export interface NodeOperator {
   limits: NodeLimits;
 }
 
-export type Role = 'admin' | 'operator' | 'developer';
+// `operator` (host) and `agent-owner` are the two mutually-exclusive marketplace personas.
+export type Role = 'admin' | 'operator' | 'developer' | 'agent-owner';
 export interface Account {
   address: string;
   role: Role;

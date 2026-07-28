@@ -2,9 +2,13 @@ import { createHash, randomBytes } from 'node:crypto';
 import { web3Id as makeWeb3Id } from '@web3/core';
 import type { Store } from '../store/index.js';
 
-/** The three roles the node enforces. `admin` runs the node; `developer` publishes dApps; `operator` hosts. */
-export type Role = 'admin' | 'operator' | 'developer';
-export const ROLES: Role[] = ['admin', 'operator', 'developer'];
+/**
+ * The roles the node enforces. `admin` runs the node; `developer` publishes dApps; `operator` hosts
+ * (contributes RAM, earns hosting fees); `agent-owner` creates/owns agents and pays a host to run them.
+ * `operator` and `agent-owner` are the two mutually-exclusive marketplace personas picked at signup.
+ */
+export type Role = 'admin' | 'operator' | 'developer' | 'agent-owner';
+export const ROLES: Role[] = ['admin', 'operator', 'developer', 'agent-owner'];
 
 /** A user account: a human address + role + a hashed API token. The raw token is shown once, at signup. */
 export interface Account {

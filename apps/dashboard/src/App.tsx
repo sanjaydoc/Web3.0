@@ -91,6 +91,17 @@ const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
  *  running a single node doesn't need. */
 const ADMIN_ONLY = new Set<View>(['network', 'traffic']);
 
+/**
+ * The AGENT-OWNER dashboard: creating & managing your own agents (+ your wallet). Operators host,
+ * owners create — so these are the only non-admin views an agent-owner sees. Genesis/Developers/
+ * Hosted dApps stay in LOCKED_ON_MAIN, so on the reserved main node an owner sees just their Account
+ * until they have a host to run on (the marketplace).
+ */
+const AGENT_OWNER_NAV = new Set<View>(['account', 'genesis', 'developers', 'hosteddapps']);
+
+/** Agent-creation views that now belong to the agent-owner persona — hidden from node operators. */
+const OWNER_ONLY = new Set<View>(['genesis', 'developers', 'hosteddapps']);
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -205,6 +216,9 @@ export function App() {
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
+  // The agent-owner persona (create/own agents, pay a host) gets its own dashboard — Genesis + dApps +
+  // wallet — instead of the node-operator console. Mutually exclusive with operator at signup.
+  const isAgentOwner = account?.role === 'agent-owner';
   const role: Role = isAdmin ? rolePref : 'operator';
 
   // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
@@ -216,6 +230,10 @@ export function App() {
   // views and make "Run a node" their home — participation happens on their own node.
   const mainNodeLocked = adminOnly && !isAdmin;
   const operatorHome: View = mainNodeLocked ? 'download' : OPERATOR_HOME;
+  // Where each persona lands (and falls back to). An agent-owner's home is Genesis (create an agent);
+  // on the reserved main node, where hosting is locked, they fall back to their Account until a host
+  // (the marketplace) is available.
+  const personaHome: View = isAgentOwner ? (mainNodeLocked ? 'account' : 'genesis') : operatorHome;
 
   // You get the FULL node console (network, ledger, connectors, skills, telegram, …) whenever you
   // run THIS node: an admin on any node, OR any operator on a node that isn't the reserved main node
@@ -223,12 +241,22 @@ export function App() {
   // to their personal items. (ownsNode === !mainNodeLocked, named for readability.)
   const ownsNode = !mainNodeLocked;
 
-  const visibleNav = NAV.filter(
-    (n) =>
+  const visibleNav = NAV.filter((n) => {
+    // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
+    if (isAdmin) return true;
+    // Agent-owner: only their own agent-creation + account views (Genesis/Developers/Hosted dApps stay
+    // locked on the reserved main node until the marketplace gives them a host).
+    if (isAgentOwner)
+      return AGENT_OWNER_NAV.has(n.id) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id));
+    // Operator: full console on their own node, personal items on the main node — minus the
+    // agent-owner views (Genesis/Developers/Hosted dApps now live in the agent-owner dashboard).
+    return (
       (ownsNode || n.operator) &&
+      !OWNER_ONLY.has(n.id) &&
       !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)) &&
-      !(!isAdmin && ADMIN_ONLY.has(n.id)),
-  );
+      !ADMIN_ONLY.has(n.id)
+    );
+  });
 
   const changeRole = (r: Role) => {
     setRolePref(r);
@@ -237,15 +265,13 @@ export function App() {
     if (r === 'operator' && !NAV.find((n) => n.id === view)?.operator) setView(operatorHome);
   };
 
-  // Never leave a non-admin sitting on a view they can't use (admin-only, or locked on the main node).
+  // Never leave a non-admin sitting on a view that isn't in their persona's menu — send them home.
+  const visibleKey = visibleNav.map((n) => n.id).join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleKey is the stable signature of visibleNav
   useEffect(() => {
-    const item = NAV.find((n) => n.id === view);
-    const blocked =
-      (!ownsNode && !item?.operator) ||
-      (mainNodeLocked && LOCKED_ON_MAIN.has(view)) ||
-      (!isAdmin && ADMIN_ONLY.has(view));
-    if (blocked) setView(operatorHome);
-  }, [ownsNode, isAdmin, view, mainNodeLocked, operatorHome]);
+    if (isAdmin) return;
+    if (!visibleNav.some((n) => n.id === view)) setView(personaHome);
+  }, [visibleKey, view, personaHome, isAdmin]);
 
   useEffect(() => {
     // The console's network/ledger views need this feed. Fetch it whenever the viewer owns this node

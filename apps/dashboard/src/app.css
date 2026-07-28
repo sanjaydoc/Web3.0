@@ -1875,6 +1875,59 @@ button.connector:not(:disabled):hover {
   gap: 10px;
   margin-top: 16px;
 }
+/* Persona fork — two big choice cards (own an agent / run a node). */
+.onboard-personas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 560px) {
+  .onboard-personas {
+    grid-template-columns: 1fr;
+  }
+}
+.onboard-persona {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 12px);
+  background: var(--paper-2, var(--paper));
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.onboard-persona:hover {
+  border-color: var(--ok);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+.onboard-persona b {
+  font-size: var(--fs-md, 15px);
+}
+.onboard-persona-emoji {
+  font-size: 26px;
+}
+/* Landing create-account persona toggle (mirrors .l-tabs). */
+.l-roles {
+  display: flex;
+  gap: 8px;
+}
+.l-roles button {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 10px);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.l-roles button.on {
+  border-color: var(--ok);
+  color: var(--ink, inherit);
+}
 .onboard-ram-presets {
   display: flex;
   flex-wrap: wrap;
