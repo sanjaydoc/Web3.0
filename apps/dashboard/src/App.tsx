@@ -87,20 +87,29 @@ const OPERATOR_HOME: View = 'mynode';
  */
 const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
 
-/** Views reserved for a real admin even on your own node — network-wide observability an operator
- *  running a single node doesn't need. */
-const ADMIN_ONLY = new Set<View>(['network', 'traffic']);
-
 /**
- * The two personas differ by only these items; everything else in the console (Overview, Account,
- * Connectors, Skills, Payments, Telegram, Agents, Guardrails) is shared:
- *  - HOST_ONLY — running/earning from a node. Operators only; an agent-owner never sees these.
- *  - OWNER_ONLY — creating & managing your own agents. Agent-owners only; an operator never sees these.
- * OWNER_ONLY views stay in LOCKED_ON_MAIN, so on the reserved main node an owner can't launch there
- * until they have a host to run on (the marketplace).
+ * Exactly which views each non-admin persona sees (an admin always sees everything). The two are
+ * mutually exclusive at signup:
+ *  - OPERATOR — runs/earns from a node: a lean host console.
+ *  - AGENT_OWNER — creates & manages agents: the builder console.
+ * Network + Live traffic (network-wide observability) are in neither list, so they stay admin-only.
+ * The OWNER's Genesis/Developers/Hosted dApps are in LOCKED_ON_MAIN, so on the reserved main node an
+ * owner can't launch there until they have a host to run on (the marketplace).
  */
-const HOST_ONLY = new Set<View>(['download', 'mynode']);
-const OWNER_ONLY = new Set<View>(['genesis', 'developers', 'hosteddapps']);
+const OPERATOR_NAV = new Set<View>(['overview', 'account', 'download', 'mynode', 'ledger']);
+const AGENT_OWNER_NAV = new Set<View>([
+  'overview',
+  'account',
+  'genesis',
+  'developers',
+  'hosteddapps',
+  'skills',
+  'connectors',
+  'ledger',
+  'telegram',
+  'agents',
+  'guardrails',
+]);
 
 interface Snapshot {
   stats?: Stats;
@@ -216,10 +225,9 @@ export function App() {
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
-  // The agent-owner persona (create/own agents, pay a host) sees the create-agent views but not the
-  // host views; the operator persona is the reverse. Mutually exclusive at signup.
+  // The agent-owner persona (create/own agents, pay a host) sees the builder console; every other
+  // non-admin (operator/developer/guest) sees the lean node-operator console. Exclusive at signup.
   const isAgentOwner = account?.role === 'agent-owner';
-  const isOperator = !isAdmin && !isAgentOwner; // operator/developer/guest → node-operator persona
   const role: Role = isAdmin ? rolePref : 'operator';
 
   // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
@@ -242,18 +250,16 @@ export function App() {
   // to their personal items. (ownsNode === !mainNodeLocked, named for readability.)
   const ownsNode = !mainNodeLocked;
 
+  const personaNav = isAgentOwner ? AGENT_OWNER_NAV : OPERATOR_NAV;
   const visibleNav = NAV.filter((n) => {
     // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
     if (isAdmin) return true;
-    // Persona differentiators: hosts see HOST_ONLY, owners see OWNER_ONLY, never the other's.
-    if (HOST_ONLY.has(n.id) && !isOperator) return false;
-    if (OWNER_ONLY.has(n.id) && !isAgentOwner) return false;
-    // Shared console: the full node view on your own node, or the operator-safe items on the main node.
-    return (
-      (ownsNode || n.operator) &&
-      !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)) &&
-      !ADMIN_ONLY.has(n.id)
-    );
+    // Otherwise, exactly the signed-in persona's views.
+    if (!personaNav.has(n.id)) return false;
+    // Compute/hosting views stay reserved for the admin on the main node; and on the main node a
+    // non-admin is limited to their personal (operator-safe) items — participation is on their own node.
+    if (mainNodeLocked && (LOCKED_ON_MAIN.has(n.id) || !n.operator)) return false;
+    return true;
   });
 
   const changeRole = (r: Role) => {
