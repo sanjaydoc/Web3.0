@@ -88,8 +88,10 @@ export interface FeesConfig {
   burnBps: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
-  // ── Proof-of-Contribution: reward plain nodes for lending uptime/compute (all 0/off default) ──
-  /** aETH minted per epoch and split across live contributing nodes by contribution score. */
+  // ── Proof-of-Contribution: an OPTIONAL, default-off bootstrap subsidy. The primary earn path is now
+  // the hosting marketplace (demand-funded fees, see HostingService), not this minted pool — keep it
+  // 0 unless subsidising early hosts before real hosting demand exists. ──
+  /** aETH minted per epoch and split across live contributing nodes by contribution score (0 = off). */
   nodeRewardPool: number;
   /** Epoch length in blocks — the pool is distributed once every this many blocks. */
   epochBlocks: number;

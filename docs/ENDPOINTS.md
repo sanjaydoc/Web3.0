@@ -84,6 +84,19 @@ serve this same surface and converge on the **one shared chain**. Base URL is th
 | PUT | `/operator/location` · GET `/operator/locations` | opt-in node map position / all advertised positions |
 | POST | `/operator/authority/request` · GET `/operator/authority/mine` | ask to become an authority / my request |
 | GET | `/operator/authority/requests` · POST `/operator/authority/decide` | pending requests / approve (admin) |
+| POST | `/node/limits` | set contributed RAM; hosting capacity (maxAgents) is derived at 256 MB/agent (admin) |
+
+## Hosting marketplace (sell/rent RAM)
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/hosting/offer` | host publishes its per-epoch price (signed-in host) |
+| GET | `/hosting/offer` · `/hosting/market` | this host's offer / the market (hosts, price, free capacity) |
+| POST | `/hosting/rent` | agent-owner rents a host for an agent → creates a lease |
+| GET | `/hosting/leases` | caller's leases (owner or host); admin sees all |
+| POST | `/hosting/lease/:id/end` | end a lease (owner/host/admin) |
+| GET | `/hosting/revenue` | signed-in host's net hosting revenue |
+| POST | `/hosting/bill` | charge active leases one epoch — host gets 97%, treasury 3% commission (admin; also runs on an epoch timer) |
 
 ## Connectors, guardrails, hosted dApps, Telegram, settlement
 
