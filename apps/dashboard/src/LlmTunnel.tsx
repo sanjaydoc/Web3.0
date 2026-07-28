@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type LlmOffer, type LlmUsageRow, api, formatAmount } from './api.js';
+import {
+  type LlmOffer,
+  type LlmUsageRow,
+  type LocalModel,
+  type RamDetect,
+  api,
+  formatAmount,
+} from './api.js';
+
+const gb = (mb: number) => (mb / 1024).toFixed(1);
 
 /**
  * Host LLM tunnel — the node operator's dedicated section for selling inference. The operator
@@ -17,6 +26,9 @@ export function LlmTunnel() {
   const [ctx, setCtx] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [detect, setDetect] = useState<RamDetect | null>(null);
+  const [local, setLocal] = useState<{ available: boolean; models: LocalModel[] } | null>(null);
+  const [scanBusy, setScanBusy] = useState<'ram' | 'models' | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -76,6 +88,37 @@ export function LlmTunnel() {
     }
   };
 
+  // Detect free RAM on this machine and pre-fill the form with the model that fits it.
+  const detectRam = async () => {
+    setScanBusy('ram');
+    setMsg(null);
+    try {
+      const d = await api.llmDetect();
+      setDetect(d);
+      if (d.recommended) {
+        setModel(d.recommended.model);
+        setRam(gb(d.recommended.ramMb));
+      }
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setScanBusy(null);
+    }
+  };
+
+  // List models the operator already pulled locally with Ollama.
+  const scanLocal = async () => {
+    setScanBusy('models');
+    setMsg(null);
+    try {
+      setLocal(await api.llmLocalModels());
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setScanBusy(null);
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -96,6 +139,73 @@ export function LlmTunnel() {
           <dt>Models hosted</dt>
           <dd>{offers.length}</dd>
         </dl>
+
+        {/* One-click helpers: size a model to free RAM, or reuse a model already pulled locally. */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '4px 0 12px' }}>
+          <button type="button" className="btn" disabled={scanBusy !== null} onClick={detectRam}>
+            {scanBusy === 'ram' ? 'Detecting…' : 'Detect free RAM → suggest model'}
+          </button>
+          <button type="button" className="btn" disabled={scanBusy !== null} onClick={scanLocal}>
+            {scanBusy === 'models' ? 'Scanning…' : 'Detect installed Ollama models'}
+          </button>
+        </div>
+
+        {detect && (
+          <div className="note note-ok" style={{ marginBottom: 12 }}>
+            {gb(detect.freeMb)} GB free of {gb(detect.systemMb)} GB total.{' '}
+            {detect.recommended ? (
+              <>
+                Suggested: <b>{detect.recommended.model}</b> ({detect.recommended.label}) — filled
+                in below. Pull it with <code>ollama pull {detect.recommended.model}</code>, then
+                Publish.
+              </>
+            ) : (
+              <>
+                Not enough free RAM for a local model right now — free some up, or host a tiny 2B
+                tag.
+              </>
+            )}
+          </div>
+        )}
+
+        {local && (
+          <div className="note" style={{ marginBottom: 12 }}>
+            {local.available ? (
+              local.models.length > 0 ? (
+                <>
+                  <div style={{ marginBottom: 6 }}>
+                    Models already on this machine — click to use:
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {local.models.map((m) => (
+                      <button
+                        key={m.name}
+                        type="button"
+                        className="btn ghost"
+                        style={{ padding: '4px 10px' }}
+                        onClick={() => setModel(m.name)}
+                      >
+                        {m.name}
+                        {m.sizeMb > 0 && <span className="muted"> · {gb(m.sizeMb)} GB</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  Ollama is running but no models are pulled yet. Try{' '}
+                  <code>ollama pull qwen2.5:3b</code>.
+                </>
+              )
+            ) : (
+              <>
+                Ollama isn't reachable on this machine. Install it from <b>ollama.com</b>, then
+                click again.
+              </>
+            )}
+          </div>
+        )}
+
         <div className="form-grid">
           <div className="field">
             <label htmlFor="llm-model">Model tag</label>

@@ -264,6 +264,25 @@ export interface RepSummary {
 export interface LlmMarketOffer extends LlmOffer {
   rep: RepSummary;
 }
+/** A RAM→model tier from the node (drives the "detect RAM → suggest model" button). */
+export interface ModelTier {
+  minRamMb: number;
+  model: string;
+  ramMb: number;
+  label: string;
+}
+/** Result of the one-click free-RAM detection on the operator's machine. */
+export interface RamDetect {
+  systemMb: number;
+  freeMb: number;
+  recommended: ModelTier | null;
+  tiers: ModelTier[];
+}
+/** A model the operator already pulled locally with Ollama. */
+export interface LocalModel {
+  name: string;
+  sizeMb: number;
+}
 /** Per-model inference usage on the tunnel — the operator's traffic + earnings row. */
 export interface LlmUsageRow {
   owner: string;
@@ -565,6 +584,10 @@ export const api = {
   /** Rate a hosted model 1–5 (agent owner → marketplace reputation). */
   rateLlm: (host: string, model: string, score: number) =>
     post<RepSummary>('/llm/rate', { host, model, score }),
+  /** Detect this machine's free RAM right now and the model that fits it. */
+  llmDetect: () => get<RamDetect>('/llm/detect'),
+  /** List models already pulled locally with Ollama on the node's machine. */
+  llmLocalModels: () => get<{ available: boolean; models: LocalModel[] }>('/llm/local-models'),
   signup: (local: string, role: Role, pubkey?: string) =>
     post<SignupResult>('/accounts/signup', { local, role, pubkey }),
   /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */
