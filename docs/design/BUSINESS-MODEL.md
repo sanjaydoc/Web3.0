@@ -4,6 +4,29 @@ Status: **strategy (agreed direction).** This ties together the decisions in
 [HOLES-AND-OPTIONS.md](HOLES-AND-OPTIONS.md), [COMPUTE-MARKETPLACE.md](COMPUTE-MARKETPLACE.md), and
 [PREPAID-CREDITS.md](PREPAID-CREDITS.md) into one coherent model.
 
+## Old vs new — what changed
+
+The **technical architecture is mostly unchanged** (PQC ledger, PoA consensus, registry/relay, hosted
+agents, marketplace, personas, fee-split). What changed is the **economic / go-to-market model** on top.
+
+| Dimension | Old model (as built/framed) | New model — GitHub for agents | Status |
+|---|---|---|---|
+| **Positioning** | "The Agentic Internet" — a decentralized Web3 network for agents | Free, quantum-safe, always-on **home** for agents | 🔄 reframe |
+| **Primary hosting** | Paid — owner rents RAM from an operator | **Free tier** (sleep-on-idle) + **paid tier** (always-on/dedicated) | ➕ new free tier |
+| **Agent-owner value** | No-VPS hosting, but *paid* → weak vs a \$5 VPS | **Free** always-on home + PQC identity + discovery + get-paid rails | 🔄 stronger |
+| **Who provides RAM** | Node operators (paid marketplace) | Same — node operators, crowd-sourced supply | ✅ same |
+| **Operator pay** | Hosting fees + **minted** contribution pool | Direct fees + **fee-funded** pool (covers free-tier RAM too) | ✅ fixed |
+| **Reward funding** | Inflationary (minting) | **Non-inflationary** — 1/1/1 split of real fees | ✅ fixed |
+| **aETH value** | Faucet-minted, **no external value** (circular) | **Backed 1:1** by a fiat reserve (prepaid credits, Stripe) | 🛠️ roadmap |
+| **Business model** | 3% commission — circular, ≈ \$0 real | Freemium + marketplace take + **credits spread** + **enterprise PQC** | 🔄 new, real |
+| **Why hosting is worth it** | Cheap compute (loses to a VPS) | **Discoverability + always-on + auto-paid** (not compute) | 🔄 reframe |
+| **Enterprise / PQC** | A feature, not monetized | The **high-value wedge** — regulated buyers (health/finance) | ➕ new |
+| **Cold-start** | Pay operators with minted tokens | **Seed both sides yourself**, let real fees pull others in | 🔄 honest |
+| **"Free compute" cost risk** | Would bleed money | Defused: **BYO LLM key** + **sleep-on-idle** relay | ➕ insight |
+
+*Legend:* ✅ same/already-done · 🔄 reframed · ➕ genuinely new · 🛠️ roadmap. **~70% of the system is
+unchanged** — the new model keeps the tech and changes the economics.
+
 ## Positioning
 
 **Web3.0 is GitHub for agents.** The default *home* for an AI agent: a free, quantum-safe, always-on
