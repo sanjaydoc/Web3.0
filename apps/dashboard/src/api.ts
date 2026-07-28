@@ -239,6 +239,41 @@ export interface SkillDef {
   createdBy: string;
   createdAt: string;
 }
+/** A model a node operator hosts and sells inference for (Host-LLM tunnel). `host` is the operator's
+ *  address (the tunnel serving id); `model` is the local Ollama tag it runs. */
+export interface LlmOffer {
+  host: string;
+  model: string;
+  pricePerMTok: number;
+  maxContext: number;
+  ramMb: number;
+  createdAt: string;
+}
+/** A hosted model's marketplace trust summary (agent-owner ratings + canary checks). */
+export interface RepSummary {
+  host: string;
+  model: string;
+  ratingCount: number;
+  avgRating: number;
+  canaryPass: number;
+  canaryTotal: number;
+  score: number;
+  verified: boolean;
+}
+/** A market offer decorated with its reputation summary. */
+export interface LlmMarketOffer extends LlmOffer {
+  rep: RepSummary;
+}
+/** Per-model inference usage on the tunnel — the operator's traffic + earnings row. */
+export interface LlmUsageRow {
+  owner: string;
+  host: string;
+  model: string;
+  unbilledTokens: number;
+  billedTokens: number;
+  paidTotal: number;
+  earnedByHost: number;
+}
 export interface CustomConnector {
   id: string;
   name: string;
@@ -512,6 +547,24 @@ export const api = {
   hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
   endLease: (id: string) =>
     post<{ ended: boolean }>(`/hosting/lease/${encodeURIComponent(id)}/end`, {}),
+  // Host-LLM tunnel — operators host local models and sell inference; owners pick one from the market.
+  llmMarket: () => get<{ offers: LlmMarketOffer[] }>('/llm/market'),
+  llmOffers: () => get<{ offers: LlmOffer[] }>('/llm/offer'),
+  setLlmOffer: (input: {
+    model: string;
+    pricePerMTok?: number;
+    maxContext?: number;
+    ramMb?: number;
+  }) => post<LlmOffer>('/llm/offer', input),
+  removeLlmOffer: (model: string) =>
+    send<{ removed: boolean }>('DELETE', `/llm/offer/${encodeURIComponent(model)}`),
+  /** The signed-in operator's inference revenue + per-model traffic (Host LLM tunnel). */
+  llmRevenue: () => get<{ host: string; revenue: number; usage: LlmUsageRow[] }>('/llm/revenue'),
+  /** The signed-in agent owner's total inference spend. */
+  llmSpend: () => get<{ owner: string; spend: number }>('/llm/spend'),
+  /** Rate a hosted model 1–5 (agent owner → marketplace reputation). */
+  rateLlm: (host: string, model: string, score: number) =>
+    post<RepSummary>('/llm/rate', { host, model, score }),
   signup: (local: string, role: Role, pubkey?: string) =>
     post<SignupResult>('/accounts/signup', { local, role, pubkey }),
   /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */

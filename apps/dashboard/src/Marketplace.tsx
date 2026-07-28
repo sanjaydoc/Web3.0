@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Lease, type MarketHost, api, formatAmount } from './api.js';
+import { type Lease, type LlmMarketOffer, type MarketHost, api, formatAmount } from './api.js';
 import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 
 /**
@@ -10,6 +10,8 @@ import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 export function Marketplace() {
   const [hosts, setHosts] = useState<MarketHost[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
+  const [models, setModels] = useState<LlmMarketOffer[]>([]);
+  const [inferenceSpend, setInferenceSpend] = useState(0);
   const [agentId, setAgentId] = useState('');
   const [me, setMe] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -17,10 +19,18 @@ export function Marketplace() {
 
   const load = useCallback(async () => {
     try {
-      const [m, l, acct] = await Promise.all([api.hostingMarket(), api.hostingLeases(), api.me()]);
+      const [m, l, acct, brains, spend] = await Promise.all([
+        api.hostingMarket(),
+        api.hostingLeases(),
+        api.me(),
+        api.llmMarket(),
+        api.llmSpend().catch(() => ({ spend: 0 })),
+      ]);
       setHosts(m.hosts);
       setLeases(l.leases);
       setMe(acct.address);
+      setModels(brains.offers);
+      setInferenceSpend(spend.spend);
     } catch {
       /* node offline — keep last */
     }
@@ -84,6 +94,15 @@ export function Marketplace() {
     }
   };
 
+  const rate = async (host: string, model: string, score: number) => {
+    try {
+      await api.rateLlm(host, model, score);
+      await load();
+    } catch {
+      /* keep */
+    }
+  };
+
   const mine = leases.filter((l) => l.active);
 
   return (
@@ -139,6 +158,83 @@ export function Marketplace() {
                       >
                         {busy === h.host ? '…' : 'Rent'}
                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="section-title">Hosted models · pick a brain</div>
+        <p className="muted" style={{ margin: '2px 0 12px' }}>
+          Local LLMs that node operators host and sell inference for. Use one as your agent's brain
+          by its <code>host</code> address — inference runs on their machine over the relay, billed
+          per token.
+        </p>
+        <p className="hint">
+          Operators are independent hosts: an <b>unverified</b> one has no ratings or passed canary
+          checks yet, and it can see prompts it runs. Prefer higher-reputation hosts for sensitive
+          work, and rate the models you use to help everyone.
+        </p>
+        <dl className="kv">
+          <dt>Your inference spend</dt>
+          <dd>{formatAmount(inferenceSpend)}</dd>
+        </dl>
+        {models.length === 0 ? (
+          <div className="empty">No hosted models are on offer yet.</div>
+        ) : (
+          <div className="hscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Host</th>
+                  <th>Price / Mtok</th>
+                  <th>Reputation</th>
+                  <th>Rate it</th>
+                </tr>
+              </thead>
+              <tbody>
+                {models.map((o) => (
+                  <tr key={`${o.host}:${o.model}`}>
+                    <td>
+                      <strong>{o.model}</strong>
+                    </td>
+                    <td className="mono-hash">{o.host}</td>
+                    <td>{o.pricePerMTok > 0 ? formatAmount(o.pricePerMTok) : 'free'}</td>
+                    <td>
+                      {o.rep.verified ? (
+                        <span
+                          title={`${o.rep.ratingCount} rating(s), ${o.rep.canaryPass}/${o.rep.canaryTotal} canaries`}
+                        >
+                          {o.rep.score}/100
+                          {o.rep.ratingCount > 0 && ` · ★${o.rep.avgRating}`}
+                        </span>
+                      ) : (
+                        <span
+                          className="muted"
+                          title="No ratings or canary checks yet — trust unproven"
+                        >
+                          unverified
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className="btn ghost"
+                          style={{ padding: '2px 6px' }}
+                          onClick={() => rate(o.host, o.model, n)}
+                          title={`Rate ${n}/5`}
+                        >
+                          {n}
+                        </button>
+                      ))}
                     </td>
                   </tr>
                 ))}
