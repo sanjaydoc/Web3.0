@@ -1965,23 +1965,17 @@ button.connector:not(:disabled):hover {
   width: 220px;
   height: 62px;
   padding: 0 18px;
-  /* Match the desktop-installer .dl-btn language on the same dark panel: a translucent-white tile
-     with a hairline border and an accent-tinted hover — instead of a solid black pill that blends
-     into the panel and reads as unstyled. Accent defaults to Android green; iOS overrides below. */
-  --store-accent: #3ddc84;
-  background: rgba(255, 255, 255, 0.03);
+  background: #0d0d0f;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 13px;
   text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s
-    ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 .store-badge:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
-  border-color: var(--store-accent);
-  background: color-mix(in srgb, var(--store-accent) 10%, transparent);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38);
+  border-color: rgba(255, 255, 255, 0.32);
 }
 .store-badge-icon {
   flex-shrink: 0;

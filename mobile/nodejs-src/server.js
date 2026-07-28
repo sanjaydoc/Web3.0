@@ -87,11 +87,6 @@ process.env.WEB3_LOG_LEVEL = process.env.WEB3_LOG_LEVEL || 'info';
 // project dir, which is wiped on update; NOT the home dir, which is unreliable on Android).
 process.env.WEB3_CONFIG_PATH = path.join(dir, 'config.json');
 process.env.WEB3_STORE_MODE_FILE = path.join(dir, 'store-mode');
-// A phone has no database, so persist node state (the operator's created AGENTS, the hosted-agent
-// config, Telegram config, and this node's own ledger entries) to JSON files in the persistent data
-// dir — otherwise it all lives in RAM and is wiped every time the app is closed. Balances/history
-// still rebuild from the network re-sync; this is what makes an operator's agents survive a restart.
-process.env.WEB3_STORE_PATH = path.join(dir, 'store');
 // The bundled genesis/peer config makes the node JOIN the shared network instead of booting solo.
 if (fs.existsSync(networkFile)) process.env.WEB3_NETWORK_FILE = networkFile;
 

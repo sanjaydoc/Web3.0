@@ -541,7 +541,9 @@ export function Onboarding({
           setAddr(me.address);
           p = me.role === 'agent-owner' ? 'agent-owner' : 'operator';
           // Identity is already done; resume past it. For an operator, walk the node-setup steps
-          // (location → RAM); an agent-owner has none, so jump straight to "Save your key".
+          // (location → RAM); an agent-owner has none, so jump straight to "Save your key". A fully
+          // set-up operator (has location + RAM) lands on the final "Save your key" step (step 3)
+          // rather than being silently dropped into the dashboard.
           s = 1;
           if (p === 'operator') {
             const [locs, node] = await Promise.all([api.nodeLocations(), api.node()]);
