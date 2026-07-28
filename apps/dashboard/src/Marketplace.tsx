@@ -7,7 +7,7 @@ import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
  * rent one to run an agent (creating a lease billed each epoch), and manage your active rentals. The
  * host earns the fee minus the platform commission; you pay from your wallet.
  */
-export function Marketplace() {
+export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
   const [hosts, setHosts] = useState<MarketHost[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [models, setModels] = useState<LlmMarketOffer[]>([]);
@@ -103,6 +103,12 @@ export function Marketplace() {
     }
   };
 
+  // "Use this model": stash the tag and jump to Genesis, which preselects the tunnel brain + model.
+  const useModel = (model: string) => {
+    localStorage.setItem('web3.tunnelModel', model);
+    go?.('genesis');
+  };
+
   const mine = leases.filter((l) => l.active);
 
   return (
@@ -195,6 +201,7 @@ export function Marketplace() {
                   <th>Price / Mtok</th>
                   <th>Reputation</th>
                   <th>Rate it</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -235,6 +242,17 @@ export function Marketplace() {
                           {n}
                         </button>
                       ))}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn act"
+                        style={{ padding: '4px 10px' }}
+                        onClick={() => useModel(o.model)}
+                        title="Create an agent that uses this model as its brain"
+                      >
+                        Use this model
+                      </button>
                     </td>
                   </tr>
                 ))}

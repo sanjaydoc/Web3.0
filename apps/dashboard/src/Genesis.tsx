@@ -1,12 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BUILTIN_CONNECTORS } from './Connectors.js';
-import { type CustomConnector, type HostedAgent, NODE_URL, api } from './api.js';
+import {
+  type CustomConnector,
+  type HostedAgent,
+  type LlmMarketOffer,
+  NODE_URL,
+  api,
+} from './api.js';
 
 const ADMIN_KEY = 'web3.adminToken';
+// A model chosen from the Marketplace "Use this model" button is stashed here for Genesis to pick up.
+const TUNNEL_PICK_KEY = 'web3.tunnelModel';
 
 // Provider → a sensible default model to prefill when the provider changes.
 const PROVIDERS: { id: string; label: string; model: string; needsKey: boolean }[] = [
   { id: 'local', label: 'Local (Ollama)', model: 'qwen2.5:7b', needsKey: false },
+  { id: 'tunnel', label: 'Hosted model (network tunnel)', model: '', needsKey: false },
   { id: 'openai', label: 'OpenAI', model: 'gpt-4o-mini', needsKey: true },
   {
     id: 'openrouter',
@@ -45,8 +54,43 @@ export function Genesis() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [connectors, setConnectors] = useState<string[]>([]);
   const [customConns, setCustomConns] = useState<CustomConnector[]>([]);
+  // Federated hosted models an agent can use as a 'tunnel' brain (from the network marketplace).
+  const [tunnelModels, setTunnelModels] = useState<LlmMarketOffer[]>([]);
 
   const current = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
+
+  // Distinct model tags on offer across the network, with how many hosts serve each (the tunnel
+  // auto-routes to the best host, so an agent only needs to pick the model tag).
+  const tunnelChoices = useMemo(() => {
+    const byTag = new Map<string, number>();
+    for (const o of tunnelModels) byTag.set(o.model, (byTag.get(o.model) ?? 0) + 1);
+    return [...byTag.entries()].map(([tag, hosts]) => ({ tag, hosts }));
+  }, [tunnelModels]);
+
+  // Load the federated model market whenever the tunnel brain is selected.
+  useEffect(() => {
+    if (provider !== 'tunnel') return;
+    let live = true;
+    api
+      .llmMarket()
+      .then((r) => {
+        if (live) setTunnelModels(r.offers);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [provider]);
+
+  // If the user arrived via Marketplace → "Use this model", preselect the tunnel brain + that model.
+  useEffect(() => {
+    const picked = localStorage.getItem(TUNNEL_PICK_KEY);
+    if (picked) {
+      localStorage.removeItem(TUNNEL_PICK_KEY);
+      setProvider('tunnel');
+      setModel(picked);
+    }
+  }, []);
 
   // Connectors the operator can assign to the agent: built-in catalogue + any custom ones.
   const connectorOptions = useMemo(
@@ -261,10 +305,29 @@ while True:
                 : 'runs locally, no key'}
             </span>
           </div>
-          <div className="field">
-            <label htmlFor="g-model">Model</label>
-            <input id="g-model" value={model} onChange={(e) => setModel(e.target.value)} />
-          </div>
+          {provider === 'tunnel' ? (
+            <div className="field">
+              <label htmlFor="g-model-tunnel">Hosted model</label>
+              <select id="g-model-tunnel" value={model} onChange={(e) => setModel(e.target.value)}>
+                <option value="">— pick a hosted model —</option>
+                {tunnelChoices.map((c) => (
+                  <option key={c.tag} value={c.tag}>
+                    {c.tag} ({c.hosts} host{c.hosts === 1 ? '' : 's'})
+                  </option>
+                ))}
+              </select>
+              <span className="hint">
+                {tunnelChoices.length === 0
+                  ? 'no hosted models on the network yet — an operator must publish one'
+                  : 'runs on a network operator’s machine, billed per token from your wallet'}
+              </span>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="g-model">Model</label>
+              <input id="g-model" value={model} onChange={(e) => setModel(e.target.value)} />
+            </div>
+          )}
 
           {current.needsKey && (
             <div className="field wide">

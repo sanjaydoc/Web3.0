@@ -483,7 +483,7 @@ export function App() {
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
-        {view === 'marketplace' && <Marketplace />}
+        {view === 'marketplace' && <Marketplace go={(v) => setView(v as View)} />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}
