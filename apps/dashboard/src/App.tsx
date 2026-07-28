@@ -552,34 +552,38 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
         {agents.length === 0 ? (
           <div className="empty">No agents registered yet. Run the two-agents demo.</div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Web3.0 ID</th>
-                <th>Kind</th>
-                <th>Skills</th>
-                <th>Wallet</th>
-                <th>DID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((a) => (
-                <tr key={a.web3Id}>
-                  <td>
-                    <strong>{a.web3Id}</strong>
-                  </td>
-                  <td>
-                    <span className="chip">{a.kind}</span>
-                  </td>
-                  <td>
-                    {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
-                  </td>
-                  <td>{formatAmount(balanceOf(a.web3Id))}</td>
-                  <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+          // Scroll wrapper: five columns overflow a phone's width; scroll inside the card instead
+          // of the last columns (Wallet/DID) bleeding past the edge. (Agents view only.)
+          <div className="hscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Web3.0 ID</th>
+                  <th>Kind</th>
+                  <th>Skills</th>
+                  <th>Wallet</th>
+                  <th>DID</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {agents.map((a) => (
+                  <tr key={a.web3Id}>
+                    <td>
+                      <strong>{a.web3Id}</strong>
+                    </td>
+                    <td>
+                      <span className="chip">{a.kind}</span>
+                    </td>
+                    <td>
+                      {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
+                    </td>
+                    <td>{formatAmount(balanceOf(a.web3Id))}</td>
+                    <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </>

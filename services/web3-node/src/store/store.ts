@@ -10,7 +10,7 @@ import type { LedgerEntry } from '@web3/ledger';
  * from the ledger (replayed on startup by `Ledger.hydrate`), so they never need their own storage.
  */
 export interface Store {
-  readonly kind: 'memory' | 'mongodb' | 'postgres';
+  readonly kind: 'memory' | 'file' | 'mongodb' | 'postgres';
   /** Connect / create indexes. Called once before load. */
   init(): Promise<void>;
   loadAgents(): Promise<AgentCard[]>;

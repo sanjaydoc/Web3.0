@@ -129,8 +129,9 @@ export class Kernel {
     const PERSISTENCE_MSG: Record<typeof this.store.kind, string> = {
       postgres: 'persistence: PostgreSQL connected (state survives restarts)',
       mongodb: 'persistence: MongoDB connected (state survives restarts)',
+      file: 'persistence: file-backed store on disk (state survives restarts)',
       memory:
-        'persistence: in-memory (state is lost on restart — set WEB3_POSTGRES_URL or WEB3_MONGODB_URI to persist)',
+        'persistence: in-memory (state is lost on restart — set WEB3_POSTGRES_URL, WEB3_MONGODB_URI, or WEB3_STORE_PATH to persist)',
     };
     this.http.log.info(PERSISTENCE_MSG[this.store.kind]);
     this.http.log.info(`settlement: ${this.settlement.describe()}`);

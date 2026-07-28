@@ -139,6 +139,13 @@ export interface Web3Config {
   /** Database name to use within the MongoDB cluster. */
   mongodbDb: string;
   /**
+   * Directory for a file-backed store. When set (and no Postgres/Mongo URL is), state persists to
+   * JSON files on disk — the durable option for an on-device node (desktop app / phone) that has no
+   * database but does have a private, update-surviving data directory. Lower precedence than a real
+   * DB, higher than the in-memory default.
+   */
+  storePath?: string;
+  /**
    * Browser origins allowed to call this node (CORS). Undefined/empty ⇒ reflect any origin (dev
    * default). In production set `WEB3_CORS_ORIGIN` to your dashboard's origin(s) — comma-separated,
    * e.g. `https://sanjaydoc.github.io,https://console.web3.example` — to lock it down.
@@ -180,6 +187,7 @@ interface LocalConfigFile {
   postgresUrl?: string;
   mongodbUri?: string;
   mongodbDb?: string;
+  storePath?: string;
 }
 
 const networkFile =
@@ -251,6 +259,7 @@ export const DEFAULT_CONFIG: Web3Config = {
   postgresUrl: process.env.WEB3_POSTGRES_URL ?? localFile.postgresUrl,
   mongodbUri: process.env.WEB3_MONGODB_URI ?? localFile.mongodbUri,
   mongodbDb: process.env.WEB3_MONGODB_DB ?? localFile.mongodbDb ?? 'web3',
+  storePath: process.env.WEB3_STORE_PATH ?? localFile.storePath,
 };
 
 /** Parse a comma-separated env var into a trimmed, non-empty list. */

@@ -2,12 +2,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { Web3Config } from '../config.js';
+import { FileStore } from './file.js';
 import { MemoryStore } from './memory.js';
 import { MongoStore } from './mongo.js';
 import { PostgresStore } from './postgres.js';
 import type { Store } from './store.js';
 
 export type { Store } from './store.js';
+export { FileStore } from './file.js';
 export { MemoryStore } from './memory.js';
 export { MongoStore } from './mongo.js';
 export { PostgresStore } from './postgres.js';
@@ -62,13 +64,18 @@ export function createStore(config: Web3Config): Store {
     ? 'postgres'
     : config.mongodbUri
       ? 'mongodb'
-      : 'memory';
+      : config.storePath
+        ? 'file'
+        : 'memory';
 
   if (configuredKind === 'memory') {
     const prior = readStoreMode();
+    // A prior real-backend node (postgres/mongo/file) that now finds no persistence configured must
+    // NOT silently fall back to memory — that would drop every account and open auth. (A prior
+    // 'file' node counts: losing its on-disk state is just as bad.)
     if (prior && prior !== 'memory') {
       throw new Error(
-        `refusing to boot on the in-memory store: this node last ran on '${prior}', but no database is configured now (WEB3_POSTGRES_URL / WEB3_MONGODB_URI is missing). Booting on memory would drop every account and open auth. Restore the database URL (e.g. in .env or the process env), or delete ${storeModeFile()} to intentionally reset this node to a fresh in-memory instance.`,
+        `refusing to boot on the in-memory store: this node last ran on '${prior}', but no database or store path is configured now (WEB3_POSTGRES_URL / WEB3_MONGODB_URI / WEB3_STORE_PATH is missing). Booting on memory would drop every account and open auth. Restore the persistence config, or delete ${storeModeFile()} to intentionally reset this node to a fresh in-memory instance.`,
       );
     }
   }
@@ -78,6 +85,9 @@ export function createStore(config: Web3Config): Store {
   }
   if (config.mongodbUri) {
     return new MongoStore(config.mongodbUri, config.mongodbDb);
+  }
+  if (config.storePath) {
+    return new FileStore(config.storePath);
   }
   return new MemoryStore();
 }

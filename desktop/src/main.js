@@ -54,6 +54,10 @@ function startNode() {
     WEB3_LOG_LEVEL: 'info',
     // Keep the node's GUI-saved settings next to the app's user data.
     WEB3_CONFIG_PATH: path.join(app.getPath('userData'), 'config.json'),
+    // Persist node state (created agents, hosted-agent + Telegram config, this node's own ledger
+    // entries) to JSON files on disk instead of RAM, so an operator's agents survive a restart.
+    // Balances/history still rebuild from the network re-sync.
+    WEB3_STORE_PATH: path.join(app.getPath('userData'), 'store'),
   };
   // The bundled genesis/peer config makes the node JOIN the shared network (authorities + peers).
   if (fs.existsSync(networkFile)) env.WEB3_NETWORK_FILE = networkFile;
