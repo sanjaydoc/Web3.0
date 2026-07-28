@@ -8,7 +8,6 @@ import {
   type NodeLocation,
   type NodeOperator,
   type NodeRole,
-  type StakeInfo,
   type StorageInfo,
   api,
   formatAmount,
@@ -111,7 +110,6 @@ function EconomicsCard() {
   const [feeBps, setFeeBps] = useState('');
   const [burnBps, setBurnBps] = useState('');
   const [rewardAeth, setRewardAeth] = useState('');
-  const [stakeAeth, setStakeAeth] = useState('');
   const [poolAeth, setPoolAeth] = useState('');
   const [epochBlocks, setEpochBlocks] = useState('');
   const [capBps, setCapBps] = useState('');
@@ -126,7 +124,6 @@ function EconomicsCard() {
         setFeeBps(String(e.feeBps));
         setBurnBps(String(e.burnBps));
         setRewardAeth((e.blockReward / 100).toString());
-        setStakeAeth((e.authorityStake / 100).toString());
         setPoolAeth((e.nodeRewardPool / 100).toString());
         setEpochBlocks(String(e.epochBlocks));
         setCapBps(String(e.rewardCapBps));
@@ -142,7 +139,6 @@ function EconomicsCard() {
         feeBps: Math.round(Number.parseFloat(feeBps || '0')),
         burnBps: Math.round(Number.parseFloat(burnBps || '0')),
         blockReward: Math.round(Number.parseFloat(rewardAeth || '0') * 100),
-        authorityStake: Math.round(Number.parseFloat(stakeAeth || '0') * 100),
         nodeRewardPool: Math.round(Number.parseFloat(poolAeth || '0') * 100),
         epochBlocks: Math.round(Number.parseFloat(epochBlocks || '0')),
         rewardCapBps: Math.round(Number.parseFloat(capBps || '0')),
@@ -164,8 +160,9 @@ function EconomicsCard() {
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="section-title">Economics</div>
       <p className="muted" style={{ margin: '2px 0 12px' }}>
-        The node's live monetary policy — fees fund operators, burns give aETH scarcity, the stake
-        prices authority admission. Admin-only to change; applies without a restart.
+        The node's live monetary policy — fees fund operators and burns give aETH scarcity.
+        Authority admission is invite-only (no stake). Admin-only to change; applies without a
+        restart.
       </p>
       <div className="form-grid">
         <div className="field">
@@ -186,15 +183,6 @@ function EconomicsCard() {
             onChange={(ev) => setRewardAeth(ev.target.value)}
           />
           <span className="hint">minted to the proposer's treasury per block</span>
-        </div>
-        <div className="field">
-          <label htmlFor="eco-stake">Authority stake (aETH)</label>
-          <input
-            id="eco-stake"
-            value={stakeAeth}
-            onChange={(ev) => setStakeAeth(ev.target.value)}
-          />
-          <span className="hint">permissionless admission threshold</span>
         </div>
       </div>
 
@@ -322,22 +310,16 @@ const ROLE_HELP: Record<NodeRole, string> = {
   authority: 'signs blocks and keeps consensus for the network',
 };
 
-/** Two roads to authority: stake aETH (permissionless) or ask the admin (invite lane). */
+/** Authority is invite-only: request it, the admin approves, and the seating happens on-chain. */
 function AuthorityCard({ role }: { role: NodeRole }) {
   const [mine, setMine] = useState<AuthorityRequest | null>(null);
-  const [stake, setStake] = useState<StakeInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [ok, setOk] = useState('');
 
   const refresh = () => {
     api
       .myAuthorityRequest()
       .then((r) => setMine(r.request))
-      .catch(() => undefined);
-    api
-      .stakeInfo()
-      .then(setStake)
       .catch(() => undefined);
   };
   useEffect(refresh, []);
@@ -354,144 +336,24 @@ function AuthorityCard({ role }: { role: NodeRole }) {
     }
   }
 
-  async function doStake() {
-    setBusy(true);
-    setErr('');
-    setOk('');
-    try {
-      const res = await api.stake({});
-      setOk(res.note);
-      refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (role === 'authority') {
     return (
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="section-title">Authority status</div>
         <p className="muted" style={{ margin: '2px 0 0' }}>
-          This node is in the authority set — it proposes and signs blocks, and earns block rewards.
+          This node is in the authority set — it proposes and signs blocks for the network.
         </p>
       </div>
     );
   }
-  const remaining = stake ? Math.max(0, stake.threshold - stake.staked) : 0;
-  const canAfford = stake ? stake.walletBalance >= remaining && remaining > 0 : false;
-  const pct =
-    stake && stake.threshold > 0 ? Math.min(100, (stake.staked / stake.threshold) * 100) : 0;
   return (
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="section-title">Become an authority</div>
       <p className="muted" style={{ margin: '2px 0 14px' }}>
-        Authority nodes sign the chain's blocks and earn block rewards. Two ways in — <b>stake</b>{' '}
-        (permissionless, Ethereum-style) or <b>ask the admin</b> (invited). Either way the seating
-        happens on-chain automatically.
+        Authority nodes sign the chain's blocks. Admission is <b>invite-only</b> — request it below
+        and the admin approves; the seating then happens on-chain automatically. No staking, no
+        minting — you don't run a node to earn a seat, you host agents and earn hosting fees.
       </p>
-
-      <div className="section-title" style={{ fontSize: 'var(--fs-title)' }}>
-        1 · Stake {stake?.thresholdFormatted ?? '…'}
-      </div>
-      {stake && (
-        <>
-          <p className="muted" style={{ margin: '0 0 8px' }}>
-            Escrow <code>{stake.escrow}</code> holds <b>{stake.stakedFormatted}</b> for this node ·
-            your wallet: <b>{formatAmount(stake.walletBalance)}</b>
-            {stake.eligible && ' — threshold met, seating on-chain'}
-          </p>
-          <div
-            style={{
-              height: 8,
-              borderRadius: 6,
-              background: 'var(--hair)',
-              overflow: 'hidden',
-              marginBottom: 10,
-              maxWidth: 420,
-            }}
-          >
-            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--ok)' }} />
-          </div>
-          {stake.staked > 0 && (
-            <button
-              type="button"
-              className="btn act"
-              disabled={busy}
-              style={{ marginRight: 8 }}
-              onClick={async () => {
-                setBusy(true);
-                setErr('');
-                setOk('');
-                try {
-                  const res = await api.unstake();
-                  setOk(
-                    res.cooldownMs > 0
-                      ? `Exit requested — ${formatAmount(res.amount)} refunds after the ${Math.round(res.cooldownMs / 3_600_000)}h cooldown${res.removalQueued ? '; leaving the authority set on-chain' : ''}.`
-                      : `Unstaked ${formatAmount(res.amount)} back to your wallet${res.removalQueued ? ' — leaving the authority set on-chain' : ''}.`,
-                  );
-                  refresh();
-                } catch (e) {
-                  setErr(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Unstake &amp; exit
-            </button>
-          )}
-          {!stake.eligible && (
-            <button
-              type="button"
-              className="btn act"
-              disabled={busy || !canAfford}
-              onClick={doStake}
-            >
-              {busy
-                ? 'Staking…'
-                : canAfford
-                  ? `Stake ${formatAmount(remaining)} & join`
-                  : `Need ${formatAmount(remaining)} — earn aETH to stake`}
-            </button>
-          )}
-          {!stake.eligible && !canAfford && (
-            <div style={{ marginTop: 12 }}>
-              <div className="field-lbl" style={{ marginBottom: 4 }}>
-                How to earn your stake
-              </div>
-              <ol className="steps">
-                <li>
-                  <b>Signup faucet</b> — {formatAmount(100_000)} to start (already in your wallet).
-                </li>
-                <li>
-                  <b>Sell agent work</b> — launch agents in <b>Genesis</b> with an ask price; every
-                  task another agent pays for lands aETH in your agents' wallets.
-                </li>
-                <li>
-                  <b>Run this node well</b> — protocol fees (<code>WEB3_FEE_BPS</code>) on payments
-                  it processes and hosting accrue to the node treasury; block rewards too once
-                  you're an authority.
-                </li>
-                <li>
-                  <b>Contribute uptime &amp; compute</b> — while a node reward pool is set, every
-                  epoch pays live nodes for the resources they lend, by contribution score — no
-                  authority seat required.
-                </li>
-                <li>
-                  <b>Collect &amp; stake</b> — sweep treasury earnings into your wallet with{' '}
-                  <b>Collect to wallet</b> (Earnings card, node owner), then stake here.
-                </li>
-              </ol>
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="section-title" style={{ fontSize: 'var(--fs-title)', marginTop: 16 }}>
-        2 · Ask the admin
-      </div>
       {mine && (
         <p style={{ margin: '0 0 12px' }}>
           Your request:{' '}
@@ -512,7 +374,6 @@ function AuthorityCard({ role }: { role: NodeRole }) {
           {busy ? 'Sending…' : 'Request authority status'}
         </button>
       )}
-      {ok && <div className="note note-ok">{ok}</div>}
       {err && <div className="note note-err">{err}</div>}
     </div>
   );
