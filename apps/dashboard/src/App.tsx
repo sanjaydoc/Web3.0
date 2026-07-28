@@ -92,14 +92,14 @@ const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
 const ADMIN_ONLY = new Set<View>(['network', 'traffic']);
 
 /**
- * The AGENT-OWNER dashboard: creating & managing your own agents (+ your wallet). Operators host,
- * owners create — so these are the only non-admin views an agent-owner sees. Genesis/Developers/
- * Hosted dApps stay in LOCKED_ON_MAIN, so on the reserved main node an owner sees just their Account
+ * The two personas differ by only these items; everything else in the console (Overview, Account,
+ * Connectors, Skills, Payments, Telegram, Agents, Guardrails) is shared:
+ *  - HOST_ONLY — running/earning from a node. Operators only; an agent-owner never sees these.
+ *  - OWNER_ONLY — creating & managing your own agents. Agent-owners only; an operator never sees these.
+ * OWNER_ONLY views stay in LOCKED_ON_MAIN, so on the reserved main node an owner can't launch there
  * until they have a host to run on (the marketplace).
  */
-const AGENT_OWNER_NAV = new Set<View>(['account', 'genesis', 'developers', 'hosteddapps']);
-
-/** Agent-creation views that now belong to the agent-owner persona — hidden from node operators. */
+const HOST_ONLY = new Set<View>(['download', 'mynode']);
 const OWNER_ONLY = new Set<View>(['genesis', 'developers', 'hosteddapps']);
 
 interface Snapshot {
@@ -216,9 +216,10 @@ export function App() {
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
-  // The agent-owner persona (create/own agents, pay a host) gets its own dashboard — Genesis + dApps +
-  // wallet — instead of the node-operator console. Mutually exclusive with operator at signup.
+  // The agent-owner persona (create/own agents, pay a host) sees the create-agent views but not the
+  // host views; the operator persona is the reverse. Mutually exclusive at signup.
   const isAgentOwner = account?.role === 'agent-owner';
+  const isOperator = !isAdmin && !isAgentOwner; // operator/developer/guest → node-operator persona
   const role: Role = isAdmin ? rolePref : 'operator';
 
   // Agents a non-admin may see: the treasury is admin-only node infrastructure, so drop it from the
@@ -244,15 +245,12 @@ export function App() {
   const visibleNav = NAV.filter((n) => {
     // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
     if (isAdmin) return true;
-    // Agent-owner: only their own agent-creation + account views (Genesis/Developers/Hosted dApps stay
-    // locked on the reserved main node until the marketplace gives them a host).
-    if (isAgentOwner)
-      return AGENT_OWNER_NAV.has(n.id) && !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id));
-    // Operator: full console on their own node, personal items on the main node — minus the
-    // agent-owner views (Genesis/Developers/Hosted dApps now live in the agent-owner dashboard).
+    // Persona differentiators: hosts see HOST_ONLY, owners see OWNER_ONLY, never the other's.
+    if (HOST_ONLY.has(n.id) && !isOperator) return false;
+    if (OWNER_ONLY.has(n.id) && !isAgentOwner) return false;
+    // Shared console: the full node view on your own node, or the operator-safe items on the main node.
     return (
       (ownsNode || n.operator) &&
-      !OWNER_ONLY.has(n.id) &&
       !(mainNodeLocked && LOCKED_ON_MAIN.has(n.id)) &&
       !ADMIN_ONLY.has(n.id)
     );
