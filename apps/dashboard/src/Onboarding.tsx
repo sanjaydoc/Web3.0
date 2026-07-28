@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, formatAmount, getWeb3Token, setWeb3Token } from './api.js';
+import { api, getWeb3Token, setWeb3Token } from './api.js';
 import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js';
 
 /**
@@ -10,10 +10,9 @@ import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js'
  * existing views are untouched. Progress is shown as green-filling step cards.
  */
 
-// A friendly, clearly-labelled earnings estimate: what you earn scales with the RAM you lend. The
-// real payout is score-based and depends on live network activity + the reward pool — so this is an
-// estimate to set expectations, not a promise.
-const EST_AETH_PER_GB_DAY = 2;
+// RAM budget assumed per hosted agent — mirrors the node's `ramMbPerAgent` default so the capacity
+// shown in onboarding matches what the node actually enforces at launch. Keep in sync with config.ts.
+const RAM_MB_PER_AGENT = 256;
 const RAM_PRESETS = [1, 2, 4, 8];
 
 type StepState = 'done' | 'active' | 'todo';
@@ -257,17 +256,19 @@ function LocationStep({ onDone }: { onDone: (label: string) => void }) {
   );
 }
 
-/** Step 3 — choose RAM to contribute; shows a friendly earnings estimate; PUT /node/limits. */
+/** Step 3 — choose RAM to contribute; shows the real hosting capacity it buys; PUT /node/limits. */
 function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) {
   const [gb, setGb] = useState(2);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const perDay = gb * EST_AETH_PER_GB_DAY;
+  // Your contributed RAM is a real ceiling: capacity = floor(RAM / ~256 MB per agent). Mirrors the
+  // node's ramMbPerAgent default so the number shown here matches what the node will actually enforce.
+  const agents = Math.floor((gb * 1024) / RAM_MB_PER_AGENT);
 
   async function start() {
     // On the main node (canHost = false, e.g. the website) you don't run a node here — allocating RAM
     // is done on your OWN node via the desktop app, and the endpoint is admin-gated anyway. So we keep
-    // the step as an informational earnings preview and just advance; no allocation call is made.
+    // the step as an informational capacity preview and just advance; no allocation call is made.
     if (!canHost) {
       onDone();
       return;
@@ -287,8 +288,8 @@ function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) 
     <>
       <p className="muted" style={{ margin: '0 0 12px' }}>
         {canHost
-          ? 'Choose how much RAM your node lends to the network — more resources, more rewards.'
-          : 'See what your node could earn. To actually contribute RAM and earn, run a node with the desktop app — you can’t host on the main node.'}
+          ? 'Choose how much RAM your node lends — this sets how many agents you can host. More RAM, more capacity.'
+          : 'See the hosting capacity your RAM would buy. To actually contribute RAM and host, run a node with the desktop app — you can’t host on the main node.'}
       </p>
       <div className="onboard-ram-presets">
         {RAM_PRESETS.map((v) => (
@@ -315,12 +316,12 @@ function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) 
       </div>
       <div className="onboard-earn">
         <div className="onboard-earn-big">
-          ~{formatAmount(perDay * 100)} <span className="muted">/ day</span>
+          {agents} <span className="muted">{agents === 1 ? 'agent' : 'agents'}</span>
         </div>
-        <div className="muted">≈ {formatAmount(perDay * 100 * 30)} / month · estimated</div>
+        <div className="muted">hosting capacity at ~{RAM_MB_PER_AGENT} MB / agent</div>
         <p className="hint" style={{ margin: '6px 0 0' }}>
-          Estimate only — actual rewards are shared each epoch across all live nodes by
-          contribution, and depend on network activity and the reward pool.
+          You earn hosting fees when agent owners run their agents on your node — the more capacity
+          you contribute, the more you can host. (Marketplace pricing coming soon.)
         </p>
       </div>
       {err && <div className="note note-err">{err}</div>}

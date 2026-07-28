@@ -60,6 +60,16 @@ const DEFAULT_LIMITS: NodeLimits = { contribute: true, maxRamMb: 0, maxAgents: 0
 export const LIMITS_KEY = 'node-limits';
 
 /**
+ * Hosting capacity (max agents) derived from contributed RAM: floor(maxRamMb / ramMbPerAgent).
+ * 0 when no RAM is contributed — which, in the NodeLimits convention, means "uncapped" (the admin /
+ * main node never sets RAM). Once RAM is set, the returned number is a real ceiling.
+ */
+export function capacityFromRam(maxRamMb: number, ramMbPerAgent: number): number {
+  if (maxRamMb <= 0) return 0;
+  return Math.floor(maxRamMb / Math.max(1, ramMbPerAgent));
+}
+
+/**
  * operator — the "my node" console for whoever runs the node: live earnings (treasury balance,
  * fees vs block rewards), traffic, resource usage (RAM, uptime), and the resources they choose to
  * contribute. Read endpoints are open; changing limits is admin-gated.
@@ -604,14 +614,19 @@ export function operatorModule(): Web3Module {
         if (!checkAdmin(request, reply)) return;
         const body = (request.body ?? {}) as Partial<NodeLimits>;
         const current = (await ctx.store.loadSetting<NodeLimits>(LIMITS_KEY)) ?? DEFAULT_LIMITS;
+        const maxRamMb = Number.isFinite(body.maxRamMb)
+          ? Math.max(0, Number(body.maxRamMb))
+          : current.maxRamMb;
+        // An explicit maxAgents wins; otherwise the hosting capacity is DERIVED from the contributed
+        // RAM (floor(maxRamMb / ramMbPerAgent)), so the RAM the operator picks in onboarding becomes a
+        // real ceiling on how many agents this node will host — not a cosmetic number.
+        const explicitAgents = Number.isFinite(body.maxAgents)
+          ? Math.max(0, Number(body.maxAgents))
+          : undefined;
         const next: NodeLimits = {
           contribute: typeof body.contribute === 'boolean' ? body.contribute : current.contribute,
-          maxRamMb: Number.isFinite(body.maxRamMb)
-            ? Math.max(0, Number(body.maxRamMb))
-            : current.maxRamMb,
-          maxAgents: Number.isFinite(body.maxAgents)
-            ? Math.max(0, Number(body.maxAgents))
-            : current.maxAgents,
+          maxRamMb,
+          maxAgents: explicitAgents ?? capacityFromRam(maxRamMb, config.ramMbPerAgent),
         };
         await ctx.store.saveSetting(LIMITS_KEY, next);
         return next;

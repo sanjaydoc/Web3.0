@@ -160,11 +160,24 @@ export class HostedAgentService {
     if (this.ctx.registry.has(id) && !this.agents.has(id)) {
       throw new Error(`${id} is already taken by another agent`);
     }
-    // Respect the operator's contributed-capacity limit (set in the "my node" console).
-    const limits = await this.ctx.store.loadSetting<{ maxAgents?: number }>('node-limits');
+    // Respect the operator's contributed-capacity limit. An explicit maxAgents wins; otherwise the
+    // cap is derived from the contributed RAM (floor(maxRamMb / ramMbPerAgent)) — this is what makes
+    // lent RAM a real hosting ceiling. 0 = uncapped (no RAM set, e.g. the admin/main node).
+    const limits = await this.ctx.store.loadSetting<{ maxAgents?: number; maxRamMb?: number }>(
+      'node-limits',
+    );
+    const perAgent = Math.max(1, this.ctx.config.ramMbPerAgent);
+    const cap =
+      limits?.maxAgents && limits.maxAgents > 0
+        ? limits.maxAgents
+        : limits?.maxRamMb && limits.maxRamMb > 0
+          ? Math.floor(limits.maxRamMb / perAgent)
+          : 0;
     const running = [...this.agents.values()].filter((a) => a.running).length;
-    if (limits?.maxAgents && running >= limits.maxAgents && !this.agents.has(id)) {
-      throw new Error(`node is at its hosting capacity (${limits.maxAgents} agents)`);
+    if (cap > 0 && running >= cap && !this.agents.has(id)) {
+      throw new Error(
+        `node is at its hosting capacity (${cap} agents for ${limits?.maxRamMb ?? 0} MB of contributed RAM)`,
+      );
     }
     // Stamp the creation time on first launch (kept across restarts via the persisted config).
     const stamped: HostedAgentConfig = {

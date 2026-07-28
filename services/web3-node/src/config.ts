@@ -110,6 +110,12 @@ export interface Web3Config {
   /** Opening balance minted to every new account (a testnet faucet). */
   faucetGrant: number;
   /**
+   * RAM budget (MB) assumed per hosted agent. A node's hosting capacity (max agents) is derived from
+   * the RAM it contributes: floor(maxRamMb / ramMbPerAgent). This is what makes contributed RAM a real
+   * capacity ceiling instead of a cosmetic number. Default 256 MB/agent.
+   */
+  ramMbPerAgent: number;
+  /**
    * Admin-only mode. When true, this node is reserved for its admin: non-admins may still sign up
    * and read public data, but compute/hosting actions (launching agents) are refused with a prompt
    * to run their own node. Set on the network's main node so operators contribute from their own
@@ -207,6 +213,7 @@ export const DEFAULT_CONFIG: Web3Config = {
   port: Number(process.env.WEB3_PORT ?? 8787),
   modules: [...ALL_MODULES],
   faucetGrant: Number(process.env.WEB3_FAUCET ?? 100_000), // 1,000.00 aETH
+  ramMbPerAgent: Math.max(1, Number(process.env.WEB3_RAM_MB_PER_AGENT ?? 256)),
   adminOnly: envBool('WEB3_ADMIN_ONLY', false),
   corsOrigins: (process.env.WEB3_CORS_ORIGIN ?? '')
     .split(',')

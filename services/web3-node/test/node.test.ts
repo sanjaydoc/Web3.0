@@ -861,6 +861,50 @@ describe('operator console (my node)', () => {
   });
 });
 
+describe('hosting capacity from contributed RAM', () => {
+  it('derives maxAgents from maxRamMb (floor / ramMbPerAgent), explicit maxAgents wins', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const limits = (payload: unknown) =>
+      k.http
+        .inject({ method: 'POST', url: '/node/limits', payload: payload as object })
+        .then((r) => r.json() as { maxRamMb: number; maxAgents: number });
+
+    // RAM alone → capacity is derived at the 256 MB/agent default.
+    expect(await limits({ maxRamMb: 1024 })).toMatchObject({ maxRamMb: 1024, maxAgents: 4 });
+    expect(await limits({ maxRamMb: 512 })).toMatchObject({ maxRamMb: 512, maxAgents: 2 });
+    // Below one agent's budget → zero capacity (honest: can't host).
+    expect((await limits({ maxRamMb: 100 })).maxAgents).toBe(0);
+    // An explicit maxAgents overrides the derivation.
+    expect(await limits({ maxRamMb: 2048, maxAgents: 3 })).toMatchObject({ maxAgents: 3 });
+    await k.close();
+  });
+
+  it('enforces the RAM-derived capacity at launch', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    // 256 MB of RAM → capacity for exactly one agent.
+    await k.http.inject({ method: 'POST', url: '/node/limits', payload: { maxRamMb: 256 } });
+    const svc = new HostedAgentService(ctxOf(k) as never, async () => 'x');
+    const cfg = (handle: string) => ({
+      handle,
+      name: handle,
+      description: 'a',
+      skillId: 'ask',
+      skillName: 'Ask',
+      skillDesc: 'answers',
+      price: 0,
+      provider: 'local' as const,
+      model: 'x',
+      system: 's',
+    });
+
+    await svc.launch(cfg('cap-one')); // fills the single slot
+    await expect(svc.launch(cfg('cap-two'))).rejects.toThrow(/hosting capacity/);
+    await k.close();
+  });
+});
+
 describe('operator incentives (fees & block rewards)', () => {
   it('skims a protocol fee from each payment to the node treasury', async () => {
     const k = new Kernel(
