@@ -8,6 +8,7 @@ import { HostedDapps } from './HostedDapps.js';
 import { InstallBanner } from './InstallBanner.js';
 import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
+import { LlmTunnel } from './LlmTunnel.js';
 import { Marketplace } from './Marketplace.js';
 import { Network } from './Network.js';
 import { Onboarding } from './Onboarding.js';
@@ -32,6 +33,7 @@ import {
 type View =
   | 'overview'
   | 'mynode'
+  | 'llmtunnel'
   | 'agents'
   | 'skills'
   | 'network'
@@ -66,6 +68,7 @@ const NAV: {
   { id: 'account', label: 'Account', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
+  { id: 'llmtunnel', label: 'Host LLM tunnel', operator: true },
   { id: 'network', label: 'Network' },
   { id: 'connectors', label: 'Connectors' },
   { id: 'skills', label: 'Skills' },
@@ -88,7 +91,7 @@ const OPERATOR_HOME: View = 'mynode';
  * the admin, so a non-admin viewer never mounts them — they're pointed at "Run a node" to do this on
  * their own node instead. (On a normal node, nothing is locked and these stay available.)
  */
-const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
+const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps', 'llmtunnel']);
 
 /**
  * Exactly which views each non-admin persona sees (an admin always sees everything). The two are
@@ -99,7 +102,14 @@ const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps']);
  * The OWNER's Genesis/Developers/Hosted dApps are in LOCKED_ON_MAIN, so on the reserved main node an
  * owner can't launch there until they have a host to run on (the marketplace).
  */
-const OPERATOR_NAV = new Set<View>(['overview', 'account', 'download', 'mynode', 'ledger']);
+const OPERATOR_NAV = new Set<View>([
+  'overview',
+  'account',
+  'download',
+  'mynode',
+  'llmtunnel',
+  'ledger',
+]);
 const AGENT_OWNER_NAV = new Set<View>([
   'overview',
   'account',
@@ -462,6 +472,7 @@ export function App() {
         )}
         {view === 'overview' && <Overview snap={snap} />}
         {view === 'mynode' && <Operator />}
+        {view === 'llmtunnel' && <LlmTunnel />}
         {view === 'agents' && <Agents agents={agentsForView} wallets={snap.wallets} />}
         {view === 'skills' && <Skills agents={agentsForView} />}
         {view === 'network' && <Network />}
