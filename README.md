@@ -523,6 +523,11 @@ bundles it), and **GUI storage settings** (MongoDB URI saved from the console; r
 
 Still ahead:
 
+- **💵 Real value — aETH as prepaid credits (Stripe on-ramp)**: back aETH 1:1 with a real
+  fiat/stablecoin reserve so earnings are real money, not internal points — buy credits via Stripe,
+  spend/earn in-network, redeem to cash. Design in
+  [docs/design/PREPAID-CREDITS.md](docs/design/PREPAID-CREDITS.md). *(Prereq: authorize the Stripe
+  connector.)*
 - **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
   **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
   (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid
