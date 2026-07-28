@@ -12,6 +12,16 @@
   --fs-xl: 1.8rem; /* page titles, stat numbers */
 }
 
+/* Stop the vertical rubber-band overscroll on the document scroller so the sticky mobile top bar
+   can't be dragged down on a short page (which left blank space above it — the header looked
+   "lowered" on e.g. the Payments screen). This sets ONLY overscroll-behavior: it adds no overflow
+   property, so <html> is never made into its own scroll container and vertical scrolling is
+   untouched. (The earlier attempt also put overflow-x:hidden here, which DID create an <html>
+   scroll container and locked scrolling — so overflow-x stays on <body> only, below.) */
+html,
+body {
+  overscroll-behavior-y: none;
+}
 body {
   background: var(--paper-2);
   /* Never scroll sideways — the mobile nav drawer parks off the left edge (translateX(-100%))
@@ -133,68 +143,31 @@ body {
   padding: 0.24rem 0.6rem;
 }
 
-/* --- mobile top bar + hamburger (desktop: hidden) ----------------------- */
-.mobile-bar {
+/* --- mobile top bar + drawer (hidden on desktop) ------------------------ */
+.topbar {
   display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1.5px solid var(--rule);
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: saturate(1.4) blur(10px);
 }
 .hamburger {
   display: inline-flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  gap: 4px;
   width: 40px;
   height: 40px;
+  padding: 9px;
   border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
   background: var(--paper);
   cursor: pointer;
 }
-.hamburger-box {
-  position: relative;
-  width: 20px;
-  height: 14px;
-}
-.hamburger-inner,
-.hamburger-inner::before,
-.hamburger-inner::after {
-  position: absolute;
-  left: 0;
-  width: 20px;
+.hamburger span {
+  display: block;
   height: 2px;
-  border-radius: 2px;
+  width: 100%;
   background: var(--ink);
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  border-radius: 2px;
 }
-.hamburger-inner {
-  top: 50%;
-  margin-top: -1px;
-}
-.hamburger-inner::before {
-  content: "";
-  top: -6px;
-}
-.hamburger-inner::after {
-  content: "";
-  top: 6px;
-}
-/* Morph to an X while the drawer is open. */
-.menu-open .hamburger-inner {
-  transform: rotate(45deg);
-}
-.menu-open .hamburger-inner::before {
-  top: 0;
-  transform: rotate(90deg);
-}
-.menu-open .hamburger-inner::after {
-  top: 0;
-  opacity: 0;
-}
-.nav-backdrop {
+.scrim {
   display: none;
 }
 
@@ -422,12 +395,67 @@ body {
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  /* Wrap to a second line on narrow screens instead of pushing the last button (e.g. "Stop bot")
+     out past the card's right edge. */
+  flex-wrap: wrap;
   margin: 16px 0 8px;
 }
 .copied {
   font-size: var(--fs-sm);
   color: var(--ok);
   font-weight: 600;
+}
+/* Per-agent Start / Stop control (Agents table). Outline pill that fills on hover — green to start
+   a stopped agent, red to stop a running one. */
+.btn-run {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.26rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.btn-run:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-start {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.btn-start:hover:not(:disabled) {
+  background: var(--ok);
+  color: #fff;
+}
+.btn-stop {
+  color: var(--no);
+  border-color: var(--no);
+}
+.btn-stop:hover:not(:disabled) {
+  background: var(--no);
+  color: #fff;
+}
+/* Horizontal-scroll wrapper for wide tables on narrow screens (e.g. the transactions ledger:
+   #/Type/From→To/Amount/Time/Hash). A plain width:100% table squeezes the columns until the last
+   ones (Time, Hash) clip off the card's edge. nowrap keeps each value whole; the wrapper scrolls
+   sideways within the card rather than clipping. On desktop the table still fits at full width. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table {
+  white-space: nowrap;
+}
+/* Like .table-scroll but WITHOUT forcing nowrap — for tables whose text columns should keep
+   wrapping (staying narrow) while only genuinely-wide content triggers horizontal scroll inside
+   the card. Used by the "What each platform can do" table so its status pill can't bleed out. */
+.hscroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .steps {
   font-size: var(--fs-base);
@@ -455,7 +483,8 @@ body {
   }
   .main {
     min-width: 0;
-    padding: 20px 16px 48px;
+    /* Clear the device gesture/nav bar at the bottom so the last card isn't cut off. */
+    padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px));
   }
   /* Stack the page title over its subtitle instead of fighting for one row. */
   .page-head {
@@ -464,41 +493,88 @@ body {
     gap: 4px;
   }
   /* The mobile top bar takes over; the sidebar becomes a slide-in drawer. */
-  .mobile-bar {
+  .topbar {
     display: flex;
+    align-items: center;
+    gap: 12px;
+    /* Keep the brand + hamburger BELOW the device status bar / notch. In the Capacitor app the
+       WebView draws edge-to-edge; env() insets are 0 on desktop/web, so this is a no-op there. */
+    padding: calc(10px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
+      10px calc(16px + env(safe-area-inset-left, 0px));
+    border-bottom: 1.5px solid var(--rule);
+    background: var(--paper);
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 30;
   }
+  .topbar .brand {
+    font-weight: 800;
+    font-size: var(--fs-title);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  /* Sidebar becomes an off-canvas drawer, slid in by the hamburger. */
   .side {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: 50;
-    width: 78vw;
-    max-width: 300px;
+    width: 264px;
+    max-width: 82vw;
     height: 100dvh;
+    z-index: 50;
+    flex-direction: column;
+    align-items: stretch;
+    /* Drawer opens from top:0 (under the status bar) — keep its nav clear of the insets. */
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 0
+      calc(22px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
-    border-right: 1.5px solid var(--rule);
-    box-shadow: var(--shadow);
     transform: translateX(-100%);
-    transition: transform 0.24s ease;
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 18px rgba(0, 0, 0, 0.18);
   }
   .side.open {
     transform: translateX(0);
   }
-  .nav-backdrop {
+  .side .brand {
+    display: none;
+  }
+  .scrim {
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 45;
-    border: none;
-    background: rgba(0, 0, 0, 0.4);
-    cursor: pointer;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.42);
   }
   .grid-2 {
     grid-template-columns: 1fr;
+  }
+  /* Tighter side gutters on phones so cards use the full width. min-width:0
+     lets the grid cell shrink; overflow-x:clip is a belt-and-suspenders guard
+     against any stray element forcing a horizontal page scroll. */
+  .main {
+    padding: 22px 16px 56px;
+    min-width: 0;
+    overflow-x: clip;
+  }
+  /* Stack the page title above its tagline so the tagline wraps within the
+     viewport instead of being cut off at the right edge. */
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  /* Let grid/flex children shrink and long mono tokens (ids, hashes) wrap,
+     so a card can never push wider than its column. */
+  .grid-2 > *,
+  .stats > * {
+    min-width: 0;
+  }
+  .card {
+    overflow-wrap: anywhere;
   }
   .feed-row {
     grid-template-columns: 1fr;
@@ -1078,7 +1154,11 @@ button.connector:not(:disabled):hover {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 22px clamp(18px, 4vw, 40px);
+  /* Clear the device status bar (top) and gesture/nav bar (bottom) in the Capacitor app — the
+     landing draws edge-to-edge, so its header (brand + GitHub) would otherwise hide under the status
+     bar. env() insets are 0 on desktop/web, so this is a no-op there. */
+  padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(18px, 4vw, 40px)
+    calc(22px + env(safe-area-inset-bottom, 0px));
 }
 .l-top {
   display: flex;
@@ -1797,6 +1877,59 @@ button.connector:not(:disabled):hover {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 16px;
+}
+/* Persona fork — two big choice cards (own an agent / run a node). */
+.onboard-personas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 560px) {
+  .onboard-personas {
+    grid-template-columns: 1fr;
+  }
+}
+.onboard-persona {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 12px);
+  background: var(--paper-2, var(--paper));
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.onboard-persona:hover {
+  border-color: var(--ok);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+.onboard-persona b {
+  font-size: var(--fs-md, 15px);
+}
+.onboard-persona-emoji {
+  font-size: 26px;
+}
+/* Landing create-account persona toggle (mirrors .l-tabs). */
+.l-roles {
+  display: flex;
+  gap: 8px;
+}
+.l-roles button {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm, 10px);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.l-roles button.on {
+  border-color: var(--ok);
+  color: var(--ink, inherit);
 }
 .onboard-ram-presets {
   display: flex;

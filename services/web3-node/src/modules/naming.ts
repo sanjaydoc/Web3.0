@@ -1,0 +1,29 @@
+import { isValidWeb3Id } from '@web3/core';
+import type { Web3Id } from '@web3/core';
+import type { ModuleContext, Web3Module } from '../context.js';
+
+/**
+ * naming — resolves an email-like Web3.0 ID (`alice@web3.0`) to its DID and public keys, the way
+ * DNS resolves a hostname. Uniqueness of handles is enforced at registration time.
+ */
+export function namingModule(): Web3Module {
+  return {
+    name: 'naming',
+    version: '0.1.0',
+    register({ http, registry }: ModuleContext) {
+      http.get('/resolve/:web3Id', (request, reply) => {
+        const { web3Id } = request.params as { web3Id: string };
+        if (!isValidWeb3Id(web3Id)) return reply.code(400).send({ error: 'invalid Web3.0 ID' });
+        const card = registry.get(web3Id as Web3Id);
+        if (!card) return reply.code(404).send({ error: 'not found' });
+        return {
+          web3Id: card.web3Id,
+          did: card.did,
+          kind: card.kind,
+          signPublicKey: card.signPublicKey,
+          kemPublicKey: card.kemPublicKey,
+        };
+      });
+    },
+  };
+}

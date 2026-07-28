@@ -1,0 +1,10 @@
+{
+  "//": "Genesis defaults for YOUR Web3.0 network. Copy to network.json (or bundle with the desktop app) so every downloaded node joins the network instead of booting solo. Env vars override these values.",
+  "consensus": {
+    "mode": "poa",
+    "authorities": ["<base64url node key of the founding authority>"],
+    "peers": ["https://node.your-network.example"],
+    "blockMs": 3000,
+    "slotMs": 6000
+  }
+}

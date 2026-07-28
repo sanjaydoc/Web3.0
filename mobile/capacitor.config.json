@@ -1,0 +1,14 @@
+{
+  "appId": "com.web3.mobile",
+  "appName": "Web3.0",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http"
+  },
+  "plugins": {
+    "CapacitorNodeJS": {
+      "nodeDir": "nodejs",
+      "startMode": "auto"
+    }
+  }
+}

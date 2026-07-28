@@ -1,0 +1,146 @@
+name: desktop
+
+# Builds the desktop installers. Runs on a version tag (attaches the installers to a GitHub Release)
+# or on demand via "Run workflow".
+#   Windows → .msi + .exe   |   Linux → .AppImage + .deb   |   macOS → .dmg (universal)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# The desktop app runs its OWN peer node (see desktop/src/main.js) and the bundled dashboard talks
+# to that local node — so VITE_WEB3_URL is intentionally unset here (the dashboard defaults to
+# http://127.0.0.1:8787). The local node joins the shared chain via the bundled network.json.
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    # The release is published cross-repo with PUBLIC_RELEASE_TOKEN (a PAT), so GITHUB_TOKEN's
+    # contents scope isn't strictly needed here — kept at write as a harmless safety net.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # No version here — pnpm/action-setup@v4 reads it from package.json "packageManager".
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Workspace deps — needed so the dashboard can build from the monorepo.
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      # Desktop deps (electron, electron-builder, esbuild) — standalone, not in the workspace.
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+
+      # Builds the dashboard, bundles the node into one file, then packages the installers.
+      - name: Build installers
+        working-directory: desktop
+        run: npm run dist
+
+      # No CI artifact copy on purpose: the installers are large and Actions storage is a small
+      # metered quota (0.5 GB free). The real, permanent delivery is the public Release below —
+      # release assets don't count against Actions storage. To grab a one-off test build, add a
+      # temporary upload-artifact step with `retention-days: 1`.
+
+      - name: Attach installers to the PUBLIC release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          # Publish to the PUBLIC repo so anyone can download — private-repo release assets sit
+          # behind a login wall. Cross-repo publishing needs a PAT with Contents:write on
+          # sanjaydoc/Web3.0, stored in THIS repo as the PUBLIC_RELEASE_TOKEN secret (GITHUB_TOKEN
+          # can't write to another repo).
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            desktop/release/*.msi
+            desktop/release/*.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+
+      # Builds the dashboard, bundles the node, then packages the .AppImage + .deb.
+      - name: Build installers
+        working-directory: desktop
+        run: npm run dist:linux
+
+      # No CI artifact copy on purpose (see the Windows job) — the public Release below is the real
+      # delivery and doesn't count against the small Actions storage quota.
+
+      - name: Attach installers to the PUBLIC release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            desktop/release/*.AppImage
+            desktop/release/*.deb
+
+  macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    # Unsigned build — don't let electron-builder hunt for a Developer ID cert (it ad-hoc signs instead).
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+
+      # Builds the dashboard, bundles the node, then packages the universal .dmg.
+      - name: Build installer
+        working-directory: desktop
+        run: npm run dist:mac
+
+      # No CI artifact copy on purpose (see the Windows job) — the public Release below is the real
+      # delivery and doesn't count against the small Actions storage quota.
+
+      - name: Attach installer to the PUBLIC release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: sanjaydoc/Web3.0
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          files: desktop/release/*.dmg

@@ -1,0 +1,24 @@
+{
+  "name": "web3",
+  "version": "0.1.17",
+  "description": "Web3.0 desktop — an Electron app that runs a node and shows the dashboard.",
+  "private": true,
+  "author": "DR SANJAY ANBU",
+  "homepage": "https://github.com/sanjaydoc/Web3.0",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build:dashboard": "pnpm --dir .. --filter @web3/dashboard build",
+    "bundle": "node scripts/esbuild.mjs",
+    "prepare:app": "npm run build:dashboard && npm run bundle",
+    "dev": "npm run prepare:app && electron dist/main.cjs",
+    "dist": "npm run prepare:app && electron-builder --win",
+    "dist:linux": "npm run prepare:app && electron-builder --linux",
+    "dist:mac": "npm run prepare:app && electron-builder --mac",
+    "dist:all": "npm run prepare:app && electron-builder -mwl"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0"
+  }
+}

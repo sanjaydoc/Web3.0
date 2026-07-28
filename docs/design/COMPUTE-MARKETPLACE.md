@@ -1,8 +1,53 @@
 # Design: decentralized compute marketplace
 
-Status: **design** (roadmap item). The "self-building internet" promise: agents earn by **hosting
-other people's agents**, and anyone can rent that capacity — no VPS. This doc turns that into a plan
-grounded in what already exists.
+Status: **partially shipped**. The "self-building internet" promise: agents earn by **hosting other
+people's agents**, and anyone can rent that capacity — no VPS.
+
+## Shipped (Phases 1–5)
+
+- **Two personas** (mutually exclusive at signup): **agent-owner** (creates agents, pays to have them
+  hosted) and **node operator** (contributes RAM, hosts, earns). Each gets its own dashboard.
+- **RAM is real capacity**: a node's `maxAgents` is derived from contributed RAM
+  (`floor(maxRamMb / ramMbPerAgent)`, 256 MB/agent default) and enforced at launch — you can't host
+  more than your RAM backs. (Closes the "100s of agents, no RAM" gaming hole.)
+- **Hosting marketplace** (`hosting` module + `HostingService`): a host publishes a per-epoch price
+  (`POST /hosting/offer`); an agent-owner browses `GET /hosting/market` and rents capacity for an
+  agent (`POST /hosting/rent`), creating a **lease** billed each epoch. Dashboard: Marketplace view
+  (owner) + Hosting card (host).
+- **Demand-funded, with a platform commission**: each epoch the owner pays the lease price; the host
+  receives the fee **minus a 3% platform commission** (`hostingCommissionBps`, default 300) which goes
+  to the treasury. This replaces the minted reward pool as the primary earn path — money flows from
+  real demand, not issuance.
+- **Minted pool demoted**: `nodeRewardPool` stays as an **optional, default-off bootstrap subsidy**;
+  marketplace fees are primary.
+
+### Where ML-DSA fits
+
+The marketplace runs on the existing post-quantum foundation: owner/host **identities and wallets**
+are ML-DSA keypairs bound on-chain; every hosting-fee and commission transfer is recorded on the
+**PQC-signed, hash-chained ledger** and sealed by **ML-DSA authority signatures** (PoA). Manual
+transfers (`/tx`) are individually ML-DSA-signed by the payer.
+
+**Signed lease mandate (shipped):** the recurring per-epoch charge is now individually **owner-signed**.
+At rent time the owner ML-DSA-signs a mandate — `{owner, host, agentId, maxPerEpoch, maxEpochs, expiry,
+nonce}` — with the same canonicalization the node verifies (`HostingService.verifyMandate`). On every
+charge the node checks the signature against the owner's **on-chain** key, that the terms match the
+lease, and that the debit is within the per-epoch cap / epoch count / expiry — otherwise the charge is
+skipped. A tampered or forged mandate never debits. (An unsigned rental still falls back to the legacy
+node-side debit for clients without a local key.)
+
+### Remaining / hardening
+
+- **Cross-node placement runtime**: leases + billing + offers are implemented node-locally; launching
+  the owner's agent on a *remote* host's `HostedAgentService` (and on-chain replicated leases for
+  cross-node deterministic billing) is the remaining integration.
+- Reputation/SLAs and market-clearing pricing.
+
+---
+
+## Original design (for reference)
+
+This doc turned the promise into a plan grounded in what already existed.
 
 ## What already exists (building blocks)
 - **Hosted agents** (`hosted` module + `HostedAgentService`): a node runs others' agents/dApps

@@ -1,0 +1,20 @@
+{
+  "name": "@web3/core",
+  "version": "0.1.0",
+  "description": "Core Web3.0 protocol types: Web3.0 IDs, DIDs, agent cards, wallets, signed envelopes and tasks.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@web3/crypto": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

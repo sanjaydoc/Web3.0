@@ -1,21 +1,38 @@
 # dependencies
 node_modules/
-# builds
+.pnpm-store/
+
+# build output
 dist/
 build/
-*.egg-info/
-# python
-__pycache__/
-.venv/
-venv/
-.pytest_cache/
-.ruff_cache/
-# env / local
-.env
-.env.*
-*.local
-# os / editor
-.DS_Store
+*.tsbuildinfo
 
 # turbo
 .turbo/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ledger / runtime state
+*.web3log
+data/*.json
+!data/.gitkeep
+
+# logs & os
+*.log
+.DS_Store
+
+# editors
+.vscode/
+.idea/

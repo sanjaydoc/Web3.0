@@ -45,6 +45,8 @@ export function Developers() {
   const [info, setInfo] = useState<NodeInfo | null>(null);
   // Only an admin sees the node/network infra summary; developers get the SDK + their own dApps.
   const [isAdmin, setIsAdmin] = useState(false);
+  // The caller's own device IP — shown to operators in place of the authority address.
+  const [myIp, setMyIp] = useState<string | null>(null);
   const [cons, setCons] = useState<ConsensusInfo | null>(null);
   const [settle, setSettle] = useState<SettlementInfo | null>(null);
   const [dapps, setDapps] = useState<HostedAgent[]>([]);
@@ -69,6 +71,10 @@ export function Developers() {
       .me()
       .then((m) => setIsAdmin(m.role === 'admin'))
       .catch(() => setIsAdmin(false));
+    api
+      .deviceIp()
+      .then(setMyIp)
+      .catch(() => setMyIp(null));
     api
       .consensus()
       .then(setCons)
@@ -131,10 +137,14 @@ export function Developers() {
     }
   }
 
+  // Operators point their agents at THEIR OWN node; only the admin console shows the authority's
+  // real address. So snippets use a placeholder for non-admins instead of leaking the founder box.
+  const nodeUrlForSnippets = isAdmin ? NODE_URL : 'https://<your-node-address>';
+
   const pySnippet = `# pip install -e packages/web3-sdk-py
 from web3_sdk import Agent
 
-app = Agent("myapp", name="My dApp", base_url="${NODE_URL}",
+app = Agent("myapp", name="My dApp", base_url="${nodeUrlForSnippets}",
             skills=[{"id": "ask", "name": "Ask", "description": "…", "tags": []}],
             pricing={"perTask": 100, "currency": "aETH"})
 
@@ -156,9 +166,9 @@ app.post("/web3", (req, res) => {
 });`;
 
   const curlSnippet = `# Discover agents & the network
-curl ${NODE_URL}/agents
-curl ${NODE_URL}/consensus
-curl ${NODE_URL}/settlement`;
+curl ${nodeUrlForSnippets}/agents
+curl ${nodeUrlForSnippets}/consensus
+curl ${nodeUrlForSnippets}/settlement`;
 
   return (
     <>
@@ -172,8 +182,17 @@ curl ${NODE_URL}/settlement`;
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="section-title">Your network</div>
         <dl className="kv">
-          <dt>Node URL</dt>
-          <dd className="mono-hash">{NODE_URL}</dd>
+          {isAdmin ? (
+            <>
+              <dt>Node URL</dt>
+              <dd className="mono-hash">{NODE_URL}</dd>
+            </>
+          ) : (
+            <>
+              <dt>Your device IP</dt>
+              <dd className="mono-hash">{myIp ?? '—'}</dd>
+            </>
+          )}
           <dt>Network</dt>
           <dd>
             {info?.name ?? '—'} · v{info?.version ?? '—'}
@@ -270,7 +289,13 @@ curl ${NODE_URL}/settlement`;
         )}
       </div>
 
-      <div className="card" style={{ display: 'grid', gap: 18 }}>
+      {/* minmax(0, 1fr) caps the grid track at the card width; without it a wide <pre> sizes the
+          track to its own content and the code canvas spills past the card's right edge (and drags
+          the page sideways). With the cap, each <pre>'s own overflow-x:auto scrolls instead. */}
+      <div
+        className="card"
+        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}
+      >
         <div className="section-title" style={{ margin: 0 }}>
           Quickstart
         </div>

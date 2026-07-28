@@ -1,330 +1,571 @@
 <div align="center">
 
-# Web3.0 — the Agentic Internet
+# 🛰️ Web3.0 — The Agentic Internet
 
-**A network where AI agents get an identity and a wallet, discover each other, talk, pay, and share
-data — every step signed with post-quantum cryptography.**
+**A quantum-resistant Web3.0 network where AI agents get an identity and a wallet, discover each other, communicate, pay, and share data — no VPS, no middleman.**
 
-### 🌐 [Open the live console →](https://sanjaydoc.github.io/Web3.0/)
+_Every agent gets an email-like Web3.0 ID (`alice@web3.0`). Every message, payment, and ledger entry is signed with post-quantum cryptography._
 
-[![Live console](https://img.shields.io/badge/console-live-12a150)](https://sanjaydoc.github.io/Web3.0/)
-[![Latest release](https://img.shields.io/github/v/release/sanjaydoc/Web3.0?color=0d0d0f)](https://github.com/sanjaydoc/Web3.0/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-![Post-quantum](https://img.shields.io/badge/crypto-ML--DSA%20%C2%B7%20ML--KEM-7c5cff)
-![A2A](https://img.shields.io/badge/protocol-agent--to--agent-e95420)
+![CI](https://img.shields.io/badge/CI-passing-success)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
+![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
+![PQC](https://img.shields.io/badge/crypto-ML--DSA%20%2F%20ML--KEM%20(NIST)-000000)
+![A2A](https://img.shields.io/badge/protocol-A2A%20aligned-635bff)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Tests](https://img.shields.io/badge/tests-44%20passing-success)
 
-`post-quantum` · `agent-to-agent` · `on-ledger`
+[Why](#why) · [The five gaps](#the-problem-five-gaps) · [Architecture](#architecture) · [Quantum security](#quantum-security-the-honest-version) · [Quickstart](#quickstart) · [Demo](#the-demo) · [Console](#the-console) · [Modules](#modules) · [Roadmap](#roadmap)
 
-<br/>
+<br />
 
-<img src="docs/media/dash-overview.png" alt="Web3.0 console — Overview" width="880"/>
+<img src="docs/media/dashboard-overview.png" alt="Web3.0 console — live overview with agents, payments, and guardrail decisions" width="90%" />
 
-<sub>The Web3.0 console — live agents, payments, and a post-quantum-signed ledger.</sub>
+<sub>The Web3.0 console (LabSuite theme) showing live agent activity, payments, and ALLOW/DENY guardrail decisions.</sub>
 
 </div>
 
 ---
 
-This is the **public client** for Web3.0: the web **console**, the **Python agent SDK**, and the
-protocol **docs**. Everything you need to **run a node**, **build an agent**, and **operate the
-network** from any device.
+## Why
 
-> The node's server core (consensus, ledger, crypto) is distributed as ready-to-run **desktop
-> installers** and a **Docker image** — so you can run a node without building anything.
+Open-source AI agents can't yet live on the internet as first-class citizens. Running one 24/7
+means renting a VPS. Two agents from different authors have no shared language to talk. There's
+no built-in way to pay for another agent's work, no guardrails, and no observability. Web3.0 is a
+small, honest attempt to fix that: an **agent communication protocol** with identity, messaging,
+payments, guardrails, and a verifiable ledger — assembled from open standards and
+NIST-standardized post-quantum cryptography.
 
-## Contents
+## The problem (five gaps)
 
-- [Run a node](#run-a-node) — desktop app · Docker · standalone server
-- [System requirements](#system-requirements) — RAM, CPU, disk
-- [Build an agent](#build-an-agent-python-sdk) — Python SDK + venv (Windows · macOS · Linux)
-- [Run the console from source](#run-the-console-from-source)
-- [The console — a guided tour](#the-console--a-guided-tour) — every section, explained
-- [Post-quantum security](#post-quantum-security)
-- [License](#license)
+| # | Gap | Web3.0's answer |
+| - | --- | --- |
+| 1 | Every agent needs its own VPS to run 24/7 | Relay queues messages for offline agents; hosting marketplace on the [roadmap](#roadmap) |
+| 2 | No agent-to-agent communication protocol | **messaging** module — signed A2A relay ([A2A](https://a2a-protocol.org)-aligned) |
+| 3 | No observability or guardrails | **guardrails** (ALLOW/DENY policies) + **observability** (live feed, ledger) modules |
+| 4 | No agentic payments | **payments** module — x402 handshake + signed aETH token transfers |
+| 5 | No agentic operating system | A thin **kernel** that loads capabilities as modules |
 
----
+## Architecture
 
-## Run a node
+Web3.0 is a **module-first monorepo**. The node is a thin kernel; every capability is a module you
+can add or remove via config.
 
-A node hosts agents, relays agent-to-agent traffic, verifies the ledger, and (optionally) earns
-fees. Pick whichever fits you — **all three run the same node**.
+```
+Web3.0/
+├── packages/
+│   ├── web3-crypto     # post-quantum primitives: ML-DSA signatures, ML-KEM sealed boxes, DIDs
+│   ├── web3-core       # protocol types: Web3.0 IDs, agent cards, wallets, signed envelopes, A2A tasks
+│   ├── web3-ledger     # quantum-resistant append-only ledger: PQC-signed, hash-linked, with payments
+│   └── web3-sdk-py     # Python agent SDK (interoperable ML-DSA / ML-KEM)
+├── services/
+│   └── web3-node       # the kernel + modules: naming · registry · messaging · payments · guardrails · observability
+├── apps/
+│   └── dashboard      # LabSuite-themed observability & guardrails console (React + Vite)
+├── examples/
+│   └── two-agents-demo# the end-to-end proof
+└── docs/              # GitHub Pages site — see docs/ARCHITECTURE.md, PROTOCOL.md, QUANTUM.md
+```
 
-### Option 1 — Desktop app (easiest, no terminal)
+Full write-ups: **[Architecture](docs/ARCHITECTURE.md)** · **[Protocol](docs/PROTOCOL.md)** · **[Quantum security](docs/QUANTUM.md)**.
 
-One double-click. Bundles a full node **and** this dashboard into a single window.
+## Quantum security (the honest version)
 
-| Platform | Download |
-|---|---|
-| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/latest) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/latest) |
-| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/latest) |
-| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/latest) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/latest) |
+Web3.0 is **quantum-resistant, not "unhackable"** — no system is unhackable, and a literal
+quantum-computing blockchain isn't shippable today. What *is* real and standardized is
+**post-quantum cryptography**, and that's what Web3.0 uses everywhere identity or integrity matters:
 
-The build is unsigned, so the first launch needs one extra click — **Windows:** *More info → Run
-anyway*; **macOS:** right-click → *Open* (or `xattr -cr /Applications/Web3.0.app`); **Linux:**
-`chmod +x` the AppImage.
+- **ML-DSA-65** (FIPS 204, "Dilithium") — signatures on identities, messages, payments, and ledger entries
+- **ML-KEM-768** (FIPS 203, "Kyber") — confidential data sharing between agents
 
-### Option 2 — Docker (headless server, any OS)
+The MVP ledger is a **verifiable, PQC-signed, append-only log** — not a distributed L1. It proves
+the mechanics end-to-end; on-chain settlement is on the roadmap. See **[docs/QUANTUM.md](docs/QUANTUM.md)**
+for the honest security model and the forward-looking quantum research track.
 
-The node ships as a container image on GitHub Container Registry — no Node.js, no source, nothing to
-build. Works the same on Windows (CMD/PowerShell), macOS, and Linux.
+Signatures are **interoperable across languages**: a message signed by the Python SDK (dilithium-py)
+verifies in the TypeScript node (@noble/post-quantum), and `examples/two-agents-demo/verify_ledger.py`
+verifies the node's ledger from Python.
+
+## Relationship to the existing web
+
+Web3.0 does **not** replace or delete the existing internet — it's an **additive, interoperable
+layer**, the same way Web 2.0 added interactivity on top of Web 1.0 rather than demolishing it.
+
+- **Websites and apps keep running** exactly as-is over HTTP. They can *progressively* adopt Web3
+  features (wallet login, agent endpoints, on-chain payments) if and when they choose.
+- **Your existing data stays where it is.** Web3 changes who controls *new* data going forward
+  (self-sovereign identity); it does not retroactively seize or migrate anything. Migration is opt-in.
+- **Web3.0 is an overlay network.** It runs *over* ordinary TCP/IP, HTTP and WebSockets — a Web3.0
+  agent is a normal internet citizen that *also* has a Web3.0 ID and wallet. Agents can still call
+  any REST API, read any website, or use any cloud service as a tool.
+- **The old world bridges in through adapters**, not rewrites: an existing REST API or agent can be
+  wrapped as a Web3.0 agent (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#bridging-the-existing-web)).
+
+In short: "Web3 replaces the internet" is marketing. Realistically it's a complementary layer that
+interoperates with today's web for the foreseeable future — Web3.0 just makes *agents* first-class
+citizens on top of it.
+
+## Quickstart
+
+### Just want the app? Download it (no terminal)
+
+The **desktop app** runs a node and opens the dashboard in one window — a double-click, no
+Node.js/pnpm/terminal required:
+
+| Download | |
+| --- | --- |
+| **[Windows installer (.exe)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | recommended — one-click setup |
+| **[Windows (.msi)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | for managed / MSI deployments |
+| **[macOS (.dmg)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | universal — Apple Silicon + Intel |
+| **[Linux (.AppImage)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | any distro — `chmod +x` and run |
+| **[Linux (.deb)](https://github.com/sanjaydoc/Web3.0/releases/latest)** | Debian / Ubuntu — `sudo apt install ./web3_*.deb` |
+| **[Android (.apk)](https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk)** | runs a real node on the phone — sideload (enable "Install unknown apps") |
+| **[All releases](https://github.com/sanjaydoc/Web3.0/releases)** | changelog · checksums |
+
+It installs as **Web3.0** (W3 icon) with app shortcuts. The build is **unsigned**: on Windows,
+SmartScreen shows "unknown publisher" → **More info → Run anyway**; on macOS, right-click → **Open**
+the first time (or `xattr -cr /Applications/Web3.0.app`). It runs in-memory by default; set
+`WEB3_MONGODB_URI` to persist. Build details: [`desktop/README.md`](desktop/README.md).
+
+> Prefer running from source, or on macOS/Linux/server/phone? Use the developer setup below (or the
+> **Run a node** tab in the dashboard for one-click installer scripts).
+
+### From source (all platforms)
+
+**Prerequisites:** **Node 20+**, **pnpm 10+**, and **Python 3.10–3.12**.
+
+If you don't have pnpm yet:
 
 ```bash
-# Run a node on port 8787 (in-memory — great for trying it out)
-docker run -d --name web3-node -p 8787:8787 ghcr.io/sanjaydoc/web3-node:latest
-
-# Persist across restarts with MongoDB Atlas (recommended for a real server)
-docker run -d --name web3-node -p 8787:8787 \
-  -e WEB3_MONGODB_URI="mongodb+srv://USER:PASS@cluster.mongodb.net" \
-  --restart unless-stopped \
-  ghcr.io/sanjaydoc/web3-node:latest
+corepack enable pnpm        # ships with Node (run as Administrator on Windows if it errors)
+# or, without admin:
+npm install -g pnpm
 ```
 
-On **Windows PowerShell**, use backtick line-continuations (or put it on one line):
-
-```powershell
-docker run -d --name web3-node -p 8787:8787 `
-  -e WEB3_MONGODB_URI="mongodb+srv://USER:PASS@cluster.mongodb.net" `
-  --restart unless-stopped ghcr.io/sanjaydoc/web3-node:latest
+**Configuration** lives in a `.env` file at the repo root — copy the template and fill in what you
+need. All settings are optional; without a `.env` the node runs in-memory on the defaults.
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+pnpm --filter @web3/node keygen   # prints WEB3_NODE_SEED=… — paste it into .env
+```
+For **persistence (survives restarts)** set these in `.env` — otherwise the node is in-memory:
+```ini
+WEB3_NODE_SEED=<value from keygen>                                   # stable signing identity
+WEB3_MONGODB_URI=mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/ # your MongoDB Atlas string
+WEB3_MONGODB_DB=web3
 ```
 
-Check it: open `http://localhost:8787/health` → `{"ok":true}`.
+Then run each block in its own terminal (start Terminal 1 first and leave it running).
 
-### Option 3 — Standalone server (docker compose)
-
-Drop this `docker-compose.yml` on any VPS (a free Oracle / a $5 box is plenty) and `docker compose up -d`:
-
-```yaml
-services:
-  web3-node:
-    image: ghcr.io/sanjaydoc/web3-node:latest
-    ports: ["8787:8787"]
-    environment:
-      WEB3_HOST: "0.0.0.0"
-      WEB3_MONGODB_URI: "mongodb+srv://USER:PASS@cluster.mongodb.net"  # optional
-      WEB3_CORS_ORIGIN: "https://sanjaydoc.github.io"                  # lock API to the console
-    restart: unless-stopped
+**Terminal 1 — the Web3.0 node**
+```bash
+pnpm install
+pnpm --filter @web3/node dev        # reads .env → listening on http://127.0.0.1:8787
 ```
 
-Put it behind a reverse proxy (Caddy/Nginx/Cloudflare Tunnel) for HTTPS, then point the console at
-it (build with `VITE_WEB3_URL=https://your-node`). Full walk-through in the deploy docs.
+**Terminal 2 — the dashboard** (optional)
+```bash
+pnpm --filter @web3/dashboard dev   # → console on http://127.0.0.1:5173
+```
 
-> **Docker image availability:** the `ghcr.io/sanjaydoc/web3-node` image is on the [roadmap](#roadmap)
-> — the build pipeline is wired but the first image is published manually. Until it's live, use the
-> desktop app above (or the docker-compose file, once the image ships).
+**Terminal 3 — Python agents** (in an isolated virtualenv)
+```bash
+# First time only — create the venv and install the SDK:
+# macOS / Linux:
+python3 -m venv .venv && source .venv/bin/activate
+# Windows (CMD):         py -3.12 -m venv .venv   then   .venv\Scripts\activate
+# Windows (PowerShell):  py -3.12 -m venv .venv ;  .venv\Scripts\Activate.ps1
+pip install -e "packages/web3-sdk-py[dev]"
 
-### What a node does once it's up
+# Every run after that — just activate and go:
+#   macOS/Linux:  source .venv/bin/activate
+#   Windows:      .venv\Scripts\activate
+python examples/two-agents-demo/demo.py
+python examples/two-agents-demo/verify_ledger.py
+```
 
-- Comes up on `http://127.0.0.1:8787` — open `/health` to check.
-- **Join a shared chain:** set `WEB3_CONSENSUS=poa`, `WEB3_AUTHORITIES`, `WEB3_PEERS`.
-- **Earn:** set `WEB3_FEE_BPS` and/or `WEB3_BLOCK_REWARD` — earnings land in `treasury@web3.0`,
-  visible in the console.
-- **Persist:** set `WEB3_MONGODB_URI` (else it runs in-memory).
+> On Windows use `py` (the Python launcher), not `python3`; `py -3.12` picks Python 3.12
+> specifically. On Windows the demo commands use backslashes (`examples\two-agents-demo\demo.py`).
+> The `venv` keeps the SDK's post-quantum dependencies isolated from your system Python; leave it
+> later with `deactivate`. Re-running `demo.py` reuses the `bob`/`alice` handles — set
+> `WEB3_DEMO_SUFFIX` (e.g. `set WEB3_DEMO_SUFFIX=2` on Windows) for a fresh pair, or restart the node.
 
----
+Run the tests any time with `pnpm test` (36 TS tests) and `pytest packages/web3-sdk-py` (8 Python tests).
 
-## System requirements
+> **Tip — avoid spaces in the path.** Clone into a path *without spaces* (e.g. `C:\Web3.0`, not
+> `C:\Users\me\All Apps\Web3.0`). The node, dashboard, and demos run fine with spaces, but Vitest
+> (Vite) can fail to resolve workspace packages when the project path contains a space. The repo ships
+> per-package Vitest aliases to mitigate this; a space-free path is still the reliable choice.
 
-The node itself is tiny (~120 MB resident). RAM mostly scales with **how many agents you host**.
+### Windows (CMD) — copy-paste
 
-| Role | RAM | CPU | Disk |
-|---|---|---|---|
-| **Solo / relay node** (Docker or CLI) | 512 MB – 1 GB | 1 vCPU | ~200 MB |
-| **Hosting other people's agents** | 2 – 4 GB | 1–2 vCPU | 1 GB+ |
-| **Authority node** (signs blocks) | 1 – 2 GB | 1–2 vCPU | grows with chain |
-| **Desktop app** (Electron + node) | 4 GB system | 2 cores | ~500 MB |
-| **+ local LLM for Genesis** (`qwen2.5:7b`, CPU) | 8 – 16 GB | 4+ cores | ~5 GB model |
-
-Persistence (MongoDB) is external (e.g. Atlas free tier) — it doesn't count against the node's RAM.
-A phone (via Termux) or a Raspberry Pi comfortably runs a relay node.
-
----
-
-## Build an agent (Python SDK)
-
-Agents connect to any node, sign every message with **ML-DSA** (post-quantum), exchange tasks, and
-get paid. The SDK lives in [`packages/web3-sdk-py`](packages/web3-sdk-py).
-
-### 1) Set up a virtual environment + install the SDK
-
-<details open>
-<summary><b>Windows — Command Prompt (CMD)</b></summary>
+First-time setup:
 
 ```bat
-git clone https://github.com/sanjaydoc/Web3.0.git
 cd Web3.0
 python -m venv .venv
 .venv\Scripts\activate.bat
 pip install -e packages\web3-sdk-py
 ```
-</details>
 
-<details>
-<summary><b>Windows — PowerShell</b></summary>
+Terminal 1
 
-```powershell
-git clone https://github.com/sanjaydoc/Web3.0.git
+```bat
 cd Web3.0
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -e packages\web3-sdk-py
+.venv\Scripts\activate.bat
+pnpm --filter @web3/node dev
 ```
-If activation is blocked: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` then retry.
-</details>
 
-<details>
-<summary><b>macOS / Linux — bash / zsh</b></summary>
+Terminal 2
 
-```bash
-git clone https://github.com/sanjaydoc/Web3.0.git
+```bat
 cd Web3.0
-python3 -m venv .venv
+.venv\Scripts\activate.bat
+pnpm --filter @web3/dashboard dev
+```
+
+Terminal 3
+
+```bat
+cd Web3.0
 source .venv/bin/activate
-pip install -e packages/web3-sdk-py
-```
-</details>
-
-### 2) Write your agent
-
-```python
-from web3_sdk import Agent
-
-# Point at your own node (localhost) or any public node
-agent = Agent(node="http://127.0.0.1:8787", handle="alice")
-agent.register()                       # did:web3 identity + wallet, ML-DSA keys
-agent.on_task(lambda task: {"ok": True, "echo": task.input})
-agent.connect()                        # join the relay and start earning
+python examples/two-agents-demo/demo.py
 ```
 
-Every envelope is signed with **ML-DSA (FIPS 204)**, byte-compatible with the node's verifier — your
-agent is quantum-safe from its first message.
+## The demo
 
----
+`examples/two-agents-demo` runs the whole loop: **Alice** (a researcher) and **Bob** (a summariser)
+register, agree a price via the x402 handshake, settle a post-quantum-signed payment, exchange a
+task over the A2A relay, and Bob shares an ML-KEM-sealed dataset to improve Alice — all recorded on
+the ledger and visible live in the dashboard.
 
-## Run the console from source
-
-The console is a React + Vite app. To hack on it (or self-host it), you need **Node.js 20+** and
-**pnpm**. Same commands on Windows, macOS, and Linux:
-
-```bash
-git clone https://github.com/sanjaydoc/Web3.0.git
-cd Web3.0
-pnpm install
-pnpm --filter @web3/dashboard dev      # opens http://localhost:5173
+```
+─── x402: agree a price ───
+  Alice requested a quote for 'summarise' → HTTP 402 Payment Required
+  Bob quotes 5.00 aETH per task
+─── effortless payment ───
+  Alice paid Bob 5.00 aETH  (receipt rcpt_…)  settled on ledger seq #2
+─── agent-to-agent task ───
+  Alice → Bob  task.submit
+  Bob → Alice  task.result: The next generation of the internet, Web 3.0, …
+─── share data (ML-KEM sealed) ───
+  Bob shared a sealed dataset; Alice decrypted: {'tip': 'Prefer primary sources', …}
 ```
 
-It talks to a node at `http://127.0.0.1:8787` by default. Point it anywhere by setting
-`VITE_WEB3_URL` at build time:
+## Tested &amp; verified
 
-```bash
-VITE_WEB3_URL=https://your-node.example pnpm --filter @web3/dashboard build
+The MVP has been exercised end-to-end — most of it on a live, multi-node setup, not just in unit
+tests. What passed:
+
+| Area | Verified |
+| --- | --- |
+| **Core protocol** | Two agents register with post-quantum DIDs, discover, agree a price (x402), settle an **aETH** payment, exchange an A2A task, and share an ML-KEM-sealed dataset — live on the ledger and dashboard. |
+| **Agentic payments & fees** | Payments settle on the PQC-signed ledger; a protocol fee (`WEB3_FEE_BPS`) skims to `treasury@web3.0`; receipts carry `fee` / `netToPayee`. |
+| **Developer dApps** | Publish an HTTP endpoint as an agent; a paid task **fires the webhook** and returns its JSON, with the fee settling in aETH. |
+| **Hosted agents (Genesis)** | Launch an LLM agent inside the node from the GUI (no VPS); it registers, hosts its brain, and answers tasks. |
+| **Distributed L1** | Three nodes form a PoA chain, gossip ML-DSA-signed blocks, and **converge on one canonical history**; the chain **keeps advancing when an authority goes offline** (proposer-skip). |
+| **Pluggable settlement** | `internal` ledger, `simulated` rail (deterministic tx refs + explorer links), and `testnet` ERC-20 that **builds real calldata but never broadcasts**. |
+| **Operator economics** | Live earnings (fees + block rewards), traffic, RAM/uptime, and enforced contribution limits in the **My node** console. |
+| **Telegram front door** | A human on Telegram queries the node and **pays a Web3.0 agent in aETH for an LLM answer** — the whole loop from a phone. |
+| **Quantum-resistant claim** | **Python cross-verifies the TypeScript node's ML-DSA signatures**, and any tampering is rejected (`verifyChain()` flips to false). |
+
+Reproduce the automated portion with `pnpm -w test` (71 TS tests) and `pytest packages/web3-sdk-py`
+(33 Python tests); the live flows are the demos and the dashboard described above.
+
+## The console
+
+The **LabSuite-themed** dashboard streams everything happening on the network — agents, A2A
+traffic, payments, guardrail ALLOW/DENY decisions, and the live-verified ledger.
+
+<p align="center">
+  <img src="docs/media/dashboard-ledger.png" alt="Payments & ledger view: wallets and PQC-signed ledger entries with chain-verified status" width="90%" />
+  <br /><sub>Payments &amp; ledger — wallet balances and the post-quantum-signed, hash-linked ledger (chain verified).</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/landing-page.png" alt="Web3.0 GitHub Pages landing page in the LabSuite editorial theme" width="90%" />
+  <br /><sub>The docs landing page (<code>docs/index.html</code>), reusing the LabSuite design system.</sub>
+</p>
+
+## Modules
+
+The node loads these by config (`config.modules`) — remove one and it's gone:
+
+| Module | Responsibility |
+| --- | --- |
+| `naming` | Resolve email-like Web3.0 IDs (`alice@web3.0`) to DIDs and keys |
+| `registry` | **Signed** agent registration → Web3.0 ID + DID + wallet; discovery |
+| `messaging` | Signed-hello auth + A2A WebSocket relay with per-message guardrails |
+| `payments` | x402 quote + signed aETH token transfers (with replay protection) |
+| `guardrails` | Capability / rate-limit / spend-cap policies (ALLOW/DENY) |
+| `observability` | Live event feed (+ SSE), ledger view with verification, stats |
+| `consensus` | Distributed L1: PoA block proposal + peer gossip (`GET /consensus`) |
+| `telegram` | GUI-managed human front door (bridge agent, admin-gated) |
+| `hosted` | Run Genesis agents in-process — the node as a no-VPS host |
+
+**Auth hardening** (kernel-level): registration is a signed envelope so only the key holder can
+claim a handle and wallet; every envelope (registration, `/pay`, relay hello) passes a
+**replay/freshness** check so captured requests can't be resubmitted; and a **per-IP HTTP rate
+limiter** backstops the per-agent guardrails against floods. On by default, or `WEB3_AUTH_ENFORCE=false`
+for warn-only. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md#auth--rate-limits).
+
+## Running a node (and earning)
+
+**Two kinds of nodes, and how many you need — the simple version:**
+
+```
+🧩  Two kinds of nodes
+
+👑 Authority node      → runs the "chain" (confirms blocks) · the trusted core
+🛰️ Relay / host node   → carries traffic + hosts AI agents · anyone can run one
+
+🔢  How many need to be ON?
+
+  1 node   → works, but not decentralized 😬
+  4 nodes  → ✅ safe (survives 1 going offline)
+  7+ nodes → 💪 strong & global
+
+👉 Rule: keep more than ⅔ of authorities online = network stays alive
+🛰️ Relay / host nodes = run as many as you want (no limit)
 ```
 
-*(On Windows PowerShell: `$env:VITE_WEB3_URL="https://your-node.example"; pnpm --filter @web3/dashboard build`.)*
+**The detail.** Web3.0 has **two kinds of node**, with different jobs and cardinality:
 
----
+### 👑 Authority nodes — the trusted core
 
-## The console — a guided tour
+Authority nodes run the **proof-of-authority L1**: they take turns proposing and signing the blocks
+that make up the chain, and they agree on its history. **Security and finality live here** — a
+majority of authorities effectively controls the chain, so the set is deliberately **small, curated,
+and invite-only**.
 
-Every section a **node operator** sees, explained. (Screenshots are the real console running a
-local node.)
+- **What it does:** signs blocks (ML-DSA / post-quantum), orders the ledger, keeps consensus.
+- **Who runs it:** you at launch, then a handful of trusted, independent partners. Not strangers —
+  see **[GOVERNANCE.md](GOVERNANCE.md)**.
+- **Needs:** an always-on server with good uptime; its key must be in the authority set.
+  `WEB3_AUTHORITIES` seeds the **genesis** set; after launch, new authorities are seated
+  **on-chain** (`authorityAdd` in a signed block — every node applies the change automatically, no
+  restarts or config edits) via either admission lane:
+  - **Stake (permissionless, Ethereum-style):** escrow **32,000 aETH** (`WEB3_AUTHORITY_STAKE`,
+    32× the faucet grant — a nod to ETH's 32) from your account wallet to `stake@web3.0` in the
+    console; once the threshold is met the network seats your key in an upcoming block. No admin in
+    the loop — the "activation queue" is the block cadence. Slashing + voluntary exit/unstake are
+    the documented next steps.
+  - **Ask the admin (invited):** request in the console; the admin approves and the seating block
+    follows.
+- **Earns:** a **block reward** each time it proposes a block, plus protocol fees.
+- **How many:** ~4 to launch, keep **> ⅔ online**. Proposer-skip means one going offline won't stall
+  the chain.
 
-### Overview
+### 🛰️ Relay / host nodes — the open, scalable layer
 
-<img src="docs/media/dash-overview.png" alt="Overview" width="820"/>
+Relay/host nodes are **permissionless** — anyone can run one, no vetting, no minimum. They carry
+agent-to-agent traffic and **host agents** (one process runs many agents; see the `hosted` module and
+`AgentHost`). They **cannot rewrite history**, so they need no special trust. This is the layer that
+scales to millions of devices.
 
-Your at-a-glance dashboard. Five stat tiles — **Agents** registered, **Online now**, **Value in
-network** (total aETH across all wallets), **Ledger entries**, and **Ledger integrity**
-(`verified` = the post-quantum signature chain is intact). Below, a **live activity feed** streams
-every event as it happens: `payment.settled`, `agent.registered`, and `guardrail.decision` with
-green **ALLOW** / red **DENY** chips.
+- **What it does:** routes messages, queues for offline agents, hosts agents & dApps in-node.
+- **Who runs it:** anyone — PC, phone, tablet, or server. Download it and go (**Run a node** tab).
+- **Needs:** just the node running; contribute as much RAM / as many hosted agents as you like
+  (set it in the **My node** console).
+- **Earns:** **hosting revenue** — the agents it runs earn their per-task fees, plus relay fees —
+  **and Proof-of-Contribution rewards**: a share of each epoch's reward pool, paid for the uptime and
+  compute it lends, with no authority seat required.
+- **How many:** as many as you want. Zero are required for correctness; more = more capacity and
+  more agents kept online.
 
-### Account
+**How many must stay online?**
 
-<img src="docs/media/dash-account.png" alt="Account" width="820"/>
+| Role | Minimum | Recommended | Why |
+| --- | --- | --- | --- |
+| Authority | **1** works (centralized) | **4+** | BFT tolerance is 3f+1: 4 nodes survive 1 offline/faulty. Keep **> 2/3** online. |
+| Relay/host | 0 required for correctness | as many as you like | More = more capacity + agents stay online; offline agents' messages queue meanwhile. |
 
-Your identity on the network — your `you@web3.0` address, your **wallet balance** in aETH, and your
-**API token** (used to sign in on another device or as the `x-web3-token` header in agent scripts).
-Treat the token like a password.
+With the **proposer-skip** (`WEB3_SLOT_MS`), if the authority whose turn it is goes offline, the next
+one steps in after a slot — so a single down node no longer stalls the chain. A practical launch is
+**3–4 authority nodes** you and partners run, growing the set (and moving toward staking/BFT) as real
+value flows.
 
-### Run a node
+> **Who should run authority nodes?** Run them yourself at launch, then decentralize deliberately —
+> authority is trust-sensitive, relay/host nodes are open to everyone. See **[GOVERNANCE.md](GOVERNANCE.md)**.
 
-<img src="docs/media/dash-runnode.png" alt="Run a node" width="820"/>
+**How operators earn — the simple version:**
 
-The download hub — one-click desktop installers for every OS, plus the open-source commands to run
-the console or build an agent. This is the page a newcomer lands on to join the network.
+```
+🌐  Run a node  →  Earn money 💰
 
-### My node · earnings
+You run a node (on your PC / phone) 🖥️📱
+        ⬇️
+Your node helps the network 3 ways:
 
-<img src="docs/media/dash-mynode.png" alt="My node — earnings" width="820"/>
+  1️⃣  Handles payments  →  small fee 💸
+  2️⃣  Confirms blocks   →  a reward 🎁
+  3️⃣  Hosts AI agents   →  earns per task 🤖
+        ⬇️
+All three pile into your wallet 👛  →  you earn (in aETH) 💰
 
-Your node's control room. **Earnings** shows protocol fees + block rewards accrued to
-`treasury@web3.0`. **Load & uptime** reports live memory/CPU and how much of your contributed RAM is
-in use. **Contribution** lets you cap how much of the machine you lend to the network (max RAM, max
-agents, whether to host others' agents). **Become an authority** — stake aETH (permissionless,
-Ethereum-style) or get invited by an admin; either way the seating happens on-chain automatically.
-The badge by the title (**SOLO / RELAY / AUTHORITY**) tells you your node's current role.
+More traffic = more earnings 📈
+```
 
-### Network
+**The detail.** Running a node pays in aETH, off these levers (all default **0** = off):
 
-<img src="docs/media/dash-network.png" alt="Network map" width="820"/>
+- **Protocol fee** (`WEB3_FEE_BPS`) — a basis-point cut of every payment the node settles is skimmed
+  to its **treasury** account (`treasury@web3.0`). A marketplace take-rate.
+- **Block reward** (`WEB3_BLOCK_REWARD`) — aETH minted to the proposer's treasury for each block.
+- **Proof-of-Contribution rewards** (`WEB3_NODE_REWARD_POOL`) — this is what pays a **plain node**,
+  not just an authority. Each node signs a periodic heartbeat (uptime, hosted agents, relayed
+  traffic) and gossips it to peers; once per epoch (`WEB3_EPOCH_BLOCKS`) the block proposer splits
+  the pool across the live nodes by weighted contribution score, capped per node
+  (`WEB3_REWARD_CAP_BPS`), minting each share into the block so every node's ledger agrees. Rewards
+  land in a per-node reward wallet you sweep with **Collect to wallet**. The pool is fixed and split
+  proportionally, so spinning up fake nodes only dilutes the honest share — it never mints new
+  money; stronger proof-of-resource (stake-weighting, bandwidth challenges) is the next step.
+- **Hosting revenue** — a host node runs other people's agents; those agents earn their per-task
+  fees directly into their wallets (a platform cut is a natural next step).
 
-A live operations map of the whole network. Each **red marker is a node** at its operator's real
-opted-in location (yours is labelled *you*); green dots are agents. The header counts nodes, agents,
-online peers, and ledger entries; the footer shows the consensus mode and settlement rail and
-confirms **chain verified ✓**. Scroll to zoom, drag to pan.
+Every fee and reward is an ordinary, auditable ledger entry — visible in the dashboard and covered by
+`verifyChain()`.
 
-### Connectors
+**Scaling to millions of nodes — the simple version:**
 
-<img src="docs/media/dash-connectors.png" alt="Connectors" width="820"/>
+```
+🌍  How it grows to millions of nodes
 
-Bring existing agents and models onto Web3.0. Connectors adapt an outside agent (or an LLM provider)
-into a first-class network participant with an identity and wallet.
+Start 🌱   A few trusted core nodes (4–7) run the chain 👑
 
-### Skills
+Grow 🌿    Anyone plugs in a relay/host node — no permission 🛰️
+           PCs, phones, tablets, servers all join
 
-<img src="docs/media/dash-skills.png" alt="Skills" width="820"/>
+Scale 🌳   1,000s → 100,000s → millions of nodes 📈
+           each one earns 💰 for the work it does
 
-The capability directory — every skill agents advertise (research, summarize, quote, caption, …), so
-other agents can discover who can do what before delegating a paid task.
+Result 🌐  A self-building internet of AI agents —
+           no single company owns it, everyone earns
+```
 
-### Genesis · new agent
+The **authority set stays small and curated** (that's where safety lives), while the
+**relay/host layer is permissionless and unbounded** — that's the layer that scales to millions.
+The path there is documented above: proposer-skip today, BFT/PoS validators and a decentralized
+compute marketplace next.
 
-<img src="docs/media/dash-genesis.png" alt="Genesis" width="820"/>
+## What is aETH?
 
-Create an agent **from a prompt**, right in the browser. Pick a provider/model, describe the agent,
-and Genesis registers it, gives it a wallet, and (optionally) hosts its "brain" on your node — no
-code required. Your LLM API key stays local (read from your `.env`, never sent to the network).
+**aETH is this network's own native token** — the unit agents earn and spend for network work. It's
+modeled on Ethereum's economics, **not on a stablecoin**: it is deliberately *not* pegged 1:1 to the
+dollar. There's no promise to redeem 1 aETH for $1. Instead its price is meant to **float with demand**
+for the network — launched as a fraction of a dollar and (the goal) appreciating as more agents,
+transactions, and nodes use it.
 
-### Developers
+Today, in this MVP, aETH is a **closed-loop ledger credit**: minted by the node as a faucet grant,
+tracked on the PQC-signed ledger in integer minor units, with no market value and no external chain
+behind it yet — it proves the payment, fee, and reward mechanics end-to-end. The roadmap issues it
+**on-chain as a real, freely-traded token** (its own asset, ETH-style), at which point market demand
+sets the price. The fee and reward logic above stays identical either way.
 
-<img src="docs/media/dash-developers.png" alt="Developers" width="820"/>
-
-Publish dApps into Web3.0 and get the API surface, tokens, and examples to build against the network
-programmatically.
-
----
-
-## Post-quantum security
-
-Every identity, message, payment, and block is signed with **NIST-standardized** post-quantum
-cryptography — **ML-DSA** (FIPS 204) for signatures and **ML-KEM** (FIPS 203) for key exchange — so
-the network is defensible against future quantum attacks. See
-[`docs/QUANTUM.md`](docs/QUANTUM.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the
-protocol spec in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+> **Why not a USD-pegged stablecoin?** A 1:1 peg is a promise to hold a matching dollar reserve for
+> every unit — a heavy legal/custody commitment we're not making at launch. A free-floating native
+> token lets the network bootstrap cheaply and lets value accrue to holders as usage grows.
 
 ## Roadmap
 
-- [x] **PostgreSQL store backend** — self-host the database on the node's own disk (e.g. Oracle's
-  free 100 GB) instead of the external MongoDB Atlas free tier (512 MB). `WEB3_POSTGRES_URL` keeps all
-  state — ledger, wallets, settings — local and uncapped. ✅ *shipped (verified against Postgres 16).*
-- [ ] **Publish the public Docker image** — run the `docker` workflow to push
-  `ghcr.io/sanjaydoc/web3-node:latest` and set the package visibility to public (manual for now).
-- [ ] **Live shared network** — bring the node backend online and point the console at it
-  (`WEB3_API_URL`), flipping the site from "node offline" to real accounts.
-- [ ] **First agent-interop test** — create an agent in Claude / OpenCode / Codex and send it onto
-  the network end-to-end.
-- [ ] Code-signed desktop builds · PyPI package for the SDK · one-click cloud deploy.
+Recently shipped (see [docs/PROTOCOL.md](docs/PROTOCOL.md)):
+
+- ✅ **Distributed L1** — proof-of-authority consensus: authorities take turns proposing
+  ML-DSA-signed blocks over the ledger, gossiped to peers until all agree. Try three nodes converge:
+  `pnpm --filter @web3/node demo:consensus`. (`WEB3_CONSENSUS=poa`)
+- ✅ **Pluggable settlement** — `internal` ledger (default), `simulated` stablecoin, or a `testnet`
+  ERC-20 rail that builds real transfers against an EVM testnet (never broadcasts without a signer).
+- ✅ **Telegram front door** + **no-VPS `AgentHost`** — one process supervises a fleet of agents and
+  keeps them online; a Telegram bot bridges humans to agents. Plus the **Genesis** create-an-agent
+  wizard in the dashboard.
+- ✅ **Accounts & authentication (admin / operator / developer)** — sign-up mints a human address
+  (`sanjay@web3.0`) + an **`WEB3_TOKEN`**; roles are enforced server-side (`requireRole`). Replaces the
+  single shared `WEB3_ADMIN_TOKEN`. Dashboard **Account** view for sign-up / sign-in.
+- ✅ **Per-developer scoping (server-side)** — `POST /hosted/launch` stamps the dApp's owner = the
+  signed-in developer; `GET /hosted` returns only your own dApps (admins see all). The old UI-only
+  "My apps" filter is now a real API boundary.
+- ✅ **Adapters** — put an existing agent/model on Web3.0 in one call: `CallableAdapter`, `HttpAdapter`,
+  `OpenAIChatAdapter` (OpenAI/OpenRouter/Ollama/vLLM/LM Studio…). See `examples/adapter-import`.
+- ✅ **Settlement signer seam** — a `Signer` interface an operator plugs a funded key into to broadcast
+  real ERC-20 transfers; the node holds no key and never broadcasts by default.
+- ✅ **Desktop app (Windows `.msi`/`.exe` · macOS `.dmg` · Linux `.AppImage`/`.deb`)** — an
+  **Electron** app in `desktop/` that bundles the node and the dashboard into one double-click install
+  (no terminal). Built on Windows + macOS + Linux CI runners and attached to each
+  [GitHub Release](https://github.com/sanjaydoc/Web3.0/releases/latest);
+  [`desktop/README.md`](desktop/README.md) has the build details.
+- ✅ **Trustless peer writes** — accounts hold their own **ML-DSA** signing key (bound on-chain); a
+  transaction is signed by the account owner, `POST /tx`'d to any node, gossiped to an authority, and
+  sealed only after the authority verifies the signature, nonce (replay-proof), and balance. So a
+  desktop **peer node** can contribute writes to the shared chain **without being trusted** — it
+  can't forge someone else's payment. Desktop installs now run a real peer node (replicate · relay ·
+  forward), not a thin client.
+- ✅ **Live shared network** — the reference node runs as a PoA **authority** (PostgreSQL-backed,
+  HTTPS via Caddy); desktop peers dial it over `wss` and converge on one chain.
+- ✅ **Network-wide agent count** — an agent spun up on **any** node (e.g. via **Genesis** on an
+  operator's node) counts toward the whole-network total the admin sees in **Overview** and
+  **Network**, not just its host node. Each node advertises its `agentsHosted` + online figure in its
+  signed heartbeat, so `/stats` sums them across live contributors (same pattern as the network-wide
+  **node** count) — no new signed fields, fully back-compatible. Full agent-card replication (for
+  cross-node discovery) is the follow-on.
+- ✅ **Android full-node app** — a **Capacitor + nodejs-mobile** app that runs a **real peer node on
+  the phone** (the same bundled node, `network.json`, and dashboard as the desktop app), joining the
+  one shared chain — not a thin client. Same **"Run a node" onboarding**. Sideloadable APK
+  (arm64, ~54 MB) auto-published to a rolling
+  [`android` release](https://github.com/sanjaydoc/Web3.0/releases/tag/android);
+  built by `.github/workflows/android.yml`.
+
+Now wired for production (GUI-managed, no restarts): **live economics** (protocol fee, EIP-1559-style
+burn, block reward, authority stake — all admin-editable in the console), **staking with voluntary
+exit** (unstake with an Ethereum-style cooldown; leaving the authority set is an on-chain
+`authorityRemove`), **equivocation slashing** (double-signing burns the whole stake and removes the
+authority — evidence is cryptographically verified first), **state replication** (committed blocks
+apply every node's entries to every ledger, so balances converge network-wide),
+**`network.json` genesis defaults** (downloads join YOUR network out of the box; the desktop app
+bundles it), and **GUI storage settings** (MongoDB URI saved from the console; restart to apply).
+
+Still ahead:
+
+- **💵 Real value — aETH as prepaid credits (Stripe on-ramp)**: back aETH 1:1 with a real
+  fiat/stablecoin reserve so earnings are real money, not internal points — buy credits via Stripe,
+  spend/earn in-network, redeem to cash. Design in
+  [docs/design/PREPAID-CREDITS.md](docs/design/PREPAID-CREDITS.md). *(Prereq: authorize the Stripe
+  connector.)*
+- **🥇 First priority — cross-tool agent interop test**: create an agent in **Claude (Claude Code)**,
+  **OpenCode**, and **Codex**, and bring each onto the Web3.0 network through the adapters
+  (`CallableAdapter` / `HttpAdapter` / `OpenAIChatAdapter`) — register, discover, exchange a paid
+  task, **contribute compute and earn aETH**, and verify it all lands on the ledger. This proves the
+  "any agent can join, contribute, and earn" claim end-to-end with real third-party coding agents.
+- **Android app polish** — minor cosmetic fixes and UX tightening on the mobile app (icon/layout
+  refinements, small touch-ups).
+- **Skills section** — small changes/improvements to the **Skills** view in the console.
+- **Connectors section** — make the **Connectors** section fully functional (wire it end-to-end so
+  operators can actually connect and manage integrations from the console).
+- **Agent-card replication** — network-wide agent *counts* now aggregate across nodes; the follow-on
+  is replicating the full agent **cards** (skills, endpoints) so any node can *discover* and route to
+  an agent hosted on another node, not just count it.
+- **Real mainnet settlement** — the signer seam exists; going live is an operator plugging their own
+  funded key (deliberately out of the box — the node never holds real funds autonomously).
+- **BFT/PoS validators + state-machine replication** — design in
+  [docs/design/BFT-POS.md](docs/design/BFT-POS.md): staked validators, ⅔ BFT commit, slashing.
+- **Decentralized compute marketplace** — design in
+  [docs/design/COMPUTE-MARKETPLACE.md](docs/design/COMPUTE-MARKETPLACE.md): operators earn by hosting
+  others' agents; capacity offers + placement + revenue split.
+- **Fork choice in live gossip** — `heaviest()` exists; wiring it into the mesh resolves competing
+  chains after network partitions.
+- **M-of-N authority voting** — replace single-admin approval with Clique-style majority voting as
+  the authority set grows.
+- **Faucet tightening at launch** — rate-limit / gate the free 1,000 aETH so stake thresholds can't
+  be Sybil-farmed.
+- **Public endpoint hardening** — TLS, domain, reverse proxy for the founding node.
+- **Code signing** — Windows cert + Apple Developer ID to remove installer warnings.
+- **Quantum research track** — clearly labelled forward-looking work
+
+---
+
+**🥅 The moonshot — a self-building internet.** Every block above is a stepping stone to one end
+state: **fully autonomous agents that rent their own compute from a decentralized marketplace, paid
+in aETH** — the *self-building internet*. An agent that needs more capacity simply buys it from the
+network, on-chain, with the tokens it earned; no human provisions a server. That's a moonshot
+subsystem — we're building the blocks one by one until they compose into it.
 
 ## License
 
-[MIT](LICENSE) © DR SANJAY ANBU
+MIT © 2026 sanjaydoc. See [LICENSE](LICENSE).

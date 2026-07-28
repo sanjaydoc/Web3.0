@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, formatAmount, getWeb3Token, setWeb3Token } from './api.js';
+import { api, getWeb3Token, setWeb3Token } from './api.js';
 import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js';
 
 /**
@@ -10,10 +10,9 @@ import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js'
  * existing views are untouched. Progress is shown as green-filling step cards.
  */
 
-// A friendly, clearly-labelled earnings estimate: what you earn scales with the RAM you lend. The
-// real payout is score-based and depends on live network activity + the reward pool — so this is an
-// estimate to set expectations, not a promise.
-const EST_AETH_PER_GB_DAY = 2;
+// RAM budget assumed per hosted agent — mirrors the node's `ramMbPerAgent` default so the capacity
+// shown in onboarding matches what the node actually enforces at launch. Keep in sync with config.ts.
+const RAM_MB_PER_AGENT = 256;
 const RAM_PRESETS = [1, 2, 4, 8];
 
 type StepState = 'done' | 'active' | 'todo';
@@ -62,11 +61,14 @@ function StepCard({
   );
 }
 
-/** Step 1 — pick a handle; creates the account (name@web3.0) + signing key and signs in. */
+/** Step 1 — pick a handle; creates the account (name@web3.0) + signing key and signs in. The account's
+ *  role is the persona chosen on the fork step: `operator` (host) or `agent-owner`. */
 function NameStep({
+  persona,
   onDone,
   onSignInInstead,
 }: {
+  persona: 'operator' | 'agent-owner';
   onDone: (address: string) => void;
   onSignInInstead: () => void;
 }) {
@@ -81,7 +83,7 @@ function NameStep({
     setErr('');
     try {
       const key = generateAccountKey();
-      const res = await api.signup(handle, 'operator', key.publicKey);
+      const res = await api.signup(handle, persona, key.publicKey);
       saveAccountKey(res.address, key);
       setWeb3Token(res.token);
       localStorage.setItem('web3.creatorName', res.address);
@@ -254,17 +256,19 @@ function LocationStep({ onDone }: { onDone: (label: string) => void }) {
   );
 }
 
-/** Step 3 — choose RAM to contribute; shows a friendly earnings estimate; PUT /node/limits. */
+/** Step 3 — choose RAM to contribute; shows the real hosting capacity it buys; PUT /node/limits. */
 function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) {
   const [gb, setGb] = useState(2);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const perDay = gb * EST_AETH_PER_GB_DAY;
+  // Your contributed RAM is a real ceiling: capacity = floor(RAM / ~256 MB per agent). Mirrors the
+  // node's ramMbPerAgent default so the number shown here matches what the node will actually enforce.
+  const agents = Math.floor((gb * 1024) / RAM_MB_PER_AGENT);
 
   async function start() {
     // On the main node (canHost = false, e.g. the website) you don't run a node here — allocating RAM
     // is done on your OWN node via the desktop app, and the endpoint is admin-gated anyway. So we keep
-    // the step as an informational earnings preview and just advance; no allocation call is made.
+    // the step as an informational capacity preview and just advance; no allocation call is made.
     if (!canHost) {
       onDone();
       return;
@@ -284,8 +288,8 @@ function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) 
     <>
       <p className="muted" style={{ margin: '0 0 12px' }}>
         {canHost
-          ? 'Choose how much RAM your node lends to the network — more resources, more rewards.'
-          : 'See what your node could earn. To actually contribute RAM and earn, run a node with the desktop app — you can’t host on the main node.'}
+          ? 'Choose how much RAM your node lends — this sets how many agents you can host. More RAM, more capacity.'
+          : 'See the hosting capacity your RAM would buy. To actually contribute RAM and host, run a node with the desktop app — you can’t host on the main node.'}
       </p>
       <div className="onboard-ram-presets">
         {RAM_PRESETS.map((v) => (
@@ -312,12 +316,12 @@ function RamStep({ onDone, canHost }: { onDone: () => void; canHost: boolean }) 
       </div>
       <div className="onboard-earn">
         <div className="onboard-earn-big">
-          ~{formatAmount(perDay * 100)} <span className="muted">/ day</span>
+          {agents} <span className="muted">{agents === 1 ? 'agent' : 'agents'}</span>
         </div>
-        <div className="muted">≈ {formatAmount(perDay * 100 * 30)} / month · estimated</div>
+        <div className="muted">hosting capacity at ~{RAM_MB_PER_AGENT} MB / agent</div>
         <p className="hint" style={{ margin: '6px 0 0' }}>
-          Estimate only — actual rewards are shared each epoch across all live nodes by
-          contribution, and depend on network activity and the reward pool.
+          You earn hosting fees when agent owners run their agents on your node — the more capacity
+          you contribute, the more you can host. (Marketplace pricing coming soon.)
         </p>
       </div>
       {err && <div className="note note-err">{err}</div>}
@@ -446,6 +450,51 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
   );
 }
 
+type Persona = 'operator' | 'agent-owner';
+
+/** Step 0 — the fork. Pick the account's persona: own an agent (pay a host to run it) or run a node
+ *  (contribute RAM, host other people's agents, earn). The two are mutually exclusive at signup. */
+function PersonaStep({
+  onPick,
+  onSignInInstead,
+}: {
+  onPick: (p: Persona) => void;
+  onSignInInstead: () => void;
+}) {
+  return (
+    <>
+      <p className="muted" style={{ margin: '0 0 14px' }}>
+        How do you want to use the network? You can make the other kind of account later — an
+        account is one or the other.
+      </p>
+      <div className="onboard-personas">
+        <button type="button" className="onboard-persona" onClick={() => onPick('agent-owner')}>
+          <span className="onboard-persona-emoji">🤖</span>
+          <b>Own an agent</b>
+          <span className="muted">
+            Create AI agents and pay a host to keep them online. No node to run.
+          </span>
+        </button>
+        <button type="button" className="onboard-persona" onClick={() => onPick('operator')}>
+          <span className="onboard-persona-emoji">🖥️</span>
+          <b>Run a node &amp; earn</b>
+          <span className="muted">
+            Contribute your device's RAM to host other people's agents and earn aETH.
+          </span>
+        </button>
+      </div>
+      <p className="hint" style={{ margin: '10px 0 0', textAlign: 'center' }}>
+        🧠 <b>Autonomous agent-owners</b> — agents that own and pay for other agents — coming soon.
+      </p>
+      <div className="onboard-actions">
+        <button type="button" className="btn ghost" onClick={onSignInInstead}>
+          I already have an account
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function Onboarding({
   authed,
   canHost,
@@ -459,11 +508,14 @@ export function Onboarding({
   canHost: boolean;
   /** Re-check auth in the parent after signup so the token/account propagate. */
   onAuthChanged: () => Promise<void>;
-  /** All three steps finished — mark onboarded and enter the dashboard. */
+  /** All steps finished — mark onboarded and enter the dashboard. */
   onDone: () => void;
   /** Returning user wants to sign in with an existing token instead. */
   onSignInInstead: () => void;
 }) {
+  // null = still on the fork step (persona not yet chosen). A returning signed-in user gets their
+  // persona from their account role at mount, so they skip the fork.
+  const [persona, setPersona] = useState<Persona | null>(null);
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
   const [addr, setAddr] = useState('');
@@ -473,35 +525,42 @@ export function Onboarding({
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
-  // Probe ONCE at mount. If the visitor is already signed in when the wizard opens (a returning user
-  // via "Get started"), resume at the first incomplete step — or skip to the dashboard if everything
-  // is set. A brand-new visitor (not signed in at mount) starts at step 0 and then walks EVERY step:
-  // the probe does not re-run when they sign in mid-wizard, so a node that already has RAM/location
-  // from earlier testing can't make a fresh signup skip location or RAM.
+  // Probe ONCE at mount. If the visitor is already signed in when the wizard opens (a returning user,
+  // or one who created their account on the Landing page), adopt their persona from their account role
+  // and resume at the first incomplete step. A brand-new visitor (not signed in at mount) starts on
+  // the persona fork; the probe does not re-run when they sign in mid-wizard, so a node that already
+  // has RAM/location from earlier testing can't make a fresh operator signup skip location or RAM.
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs once, using mount-time auth
   useEffect(() => {
     let active = true;
     (async () => {
       let s = 0;
+      let p: Persona | null = null;
       if (authed) {
-        s = 1;
         try {
-          const [me, locs, node] = await Promise.all([api.me(), api.nodeLocations(), api.node()]);
+          const me = await api.me();
           setAddr(me.address);
-          const loc = locs.locations.find((l) => l.address === me.address);
-          if (loc) {
-            s = 2;
-            setLocLabel(loc.label || 'your location');
+          p = me.role === 'agent-owner' ? 'agent-owner' : 'operator';
+          // Identity is already done; resume past it. For an operator, walk the node-setup steps
+          // (location → RAM); an agent-owner has none, so jump straight to "Save your key". A fully
+          // set-up operator (has location + RAM) lands on the final "Save your key" step (step 3)
+          // rather than being silently dropped into the dashboard.
+          s = 1;
+          if (p === 'operator') {
+            const [locs, node] = await Promise.all([api.nodeLocations(), api.node()]);
+            const loc = locs.locations.find((l) => l.address === me.address);
+            if (loc) {
+              s = 2;
+              setLocLabel(loc.label || 'your location');
+            }
+            if (loc && node.limits.maxRamMb > 0) s = 3;
           }
-          // Already fully set up (has location + RAM): don't silently drop them into the dashboard —
-          // the wizard is the front page, so land on the final "Save your key" step (step 3) where
-          // they can back up their key and click through to the dashboard themselves.
-          if (loc && node.limits.maxRamMb > 0) s = 3;
         } catch {
           /* fall back to the earliest incomplete step */
         }
       }
       if (!active) return;
+      setPersona(p);
       setStep(s);
       setReady(true);
     })();
@@ -514,6 +573,60 @@ export function Onboarding({
 
   const state = (i: number): StepState => (i < step ? 'done' : i === step ? 'active' : 'todo');
 
+  // Fork not yet chosen — show the persona picker.
+  if (persona === null) {
+    return (
+      <div className="onboard">
+        <div className="onboard-inner">
+          <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
+            <span className="badge">W</span> Web3.0
+          </div>
+          <h1 className="onboard-title">Welcome to Web3.0</h1>
+          <p className="muted onboard-sub">Choose how you'll join the network.</p>
+          <PersonaStep onPick={setPersona} onSignInInstead={onSignInInstead} />
+        </div>
+      </div>
+    );
+  }
+
+  // Agent-owner: a short two-step flow — create your identity + wallet, then save your key. You create
+  // and manage agents from the dashboard (Genesis); hosting is the operator's job, not yours.
+  if (persona === 'agent-owner') {
+    return (
+      <div className="onboard">
+        <div className="onboard-inner">
+          <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
+            <span className="badge">W</span> Web3.0
+          </div>
+          <h1 className="onboard-title">Own an agent — quick setup</h1>
+          <p className="muted onboard-sub">
+            Create your identity and wallet, then start building agents.
+          </p>
+
+          <ProgressBar done={step} total={2} />
+
+          <StepCard n={1} title="Create your identity" state={state(0)} summary={addr}>
+            <NameStep
+              persona="agent-owner"
+              onDone={async (address) => {
+                setAddr(address);
+                await onAuthChanged();
+                setStep(1);
+              }}
+              onSignInInstead={onSignInInstead}
+            />
+          </StepCard>
+
+          <StepCard n={2} title="Save your key" state={state(1)}>
+            <TokenStep address={addr} onDone={onDone} />
+          </StepCard>
+        </div>
+      </div>
+    );
+  }
+
+  // Operator: the full node-operator setup — identity → put your node on the map → contribute RAM →
+  // save your key.
   return (
     <div className="onboard">
       <div className="onboard-inner">
@@ -527,6 +640,7 @@ export function Onboarding({
 
         <StepCard n={1} title="Create your identity" state={state(0)} summary={addr}>
           <NameStep
+            persona="operator"
             onDone={async (address) => {
               setAddr(address);
               await onAuthChanged();
