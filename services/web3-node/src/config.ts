@@ -14,6 +14,7 @@ export const ALL_MODULES = [
   'telegram',
   'hosted',
   'operator',
+  'hosting',
 ] as const;
 
 export type ModuleName = (typeof ALL_MODULES)[number];
@@ -100,6 +101,11 @@ export interface FeesConfig {
   relayWeight: number;
   /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
   rewardCapBps: number;
+  /**
+   * Platform commission on every hosting fee (aETH earned from selling RAM), in basis points. The
+   * host receives the remainder; the commission goes to the treasury. Default 300 = 3%.
+   */
+  hostingCommissionBps: number;
 }
 
 export interface Web3Config {
@@ -259,6 +265,7 @@ export const DEFAULT_CONFIG: Web3Config = {
     hostWeight: Number(process.env.WEB3_HOST_WEIGHT ?? 2),
     relayWeight: Number(process.env.WEB3_RELAY_WEIGHT ?? 1),
     rewardCapBps: Number(process.env.WEB3_REWARD_CAP_BPS ?? 2_000), // 20% per node by default
+    hostingCommissionBps: Number(process.env.WEB3_HOSTING_COMMISSION_BPS ?? 300), // 3% platform cut
   },
   authorityStake: Number(process.env.WEB3_AUTHORITY_STAKE ?? 3_200_000), // 32,000.00 aETH
   unstakeCooldownMs: Number(process.env.WEB3_UNSTAKE_COOLDOWN_MS ?? 86_400_000), // 24 h

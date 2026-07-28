@@ -8,6 +8,7 @@ import { Kernel } from '../src/kernel.js';
 import { AccountsService } from '../src/services/accounts.js';
 import { ConnectorsService } from '../src/services/connectors.js';
 import { HostedAgentService } from '../src/services/hosted.js';
+import { HostingService } from '../src/services/hosting.js';
 import { SkillsService } from '../src/services/skills.js';
 import { TelegramService } from '../src/services/telegram.js';
 import { MemoryStore } from '../src/store/index.js';
@@ -459,6 +460,7 @@ describe('consensus (PoA)', () => {
           hostWeight: 2,
           relayWeight: 1,
           rewardCapBps: 2_000,
+          hostingCommissionBps: 300,
         },
         consensus: { mode: 'poa', authorities: [], peers: [], blockMs: 10 ** 9, slotMs: 0 },
       },
@@ -821,6 +823,7 @@ describe('operator console (my node)', () => {
           hostWeight: 2,
           relayWeight: 1,
           rewardCapBps: 2_000,
+          hostingCommissionBps: 300,
         },
       },
       generateKeypair(),
@@ -921,6 +924,7 @@ describe('operator incentives (fees & block rewards)', () => {
           hostWeight: 2,
           relayWeight: 1,
           rewardCapBps: 2_000,
+          hostingCommissionBps: 300,
         },
       },
       generateKeypair(),
@@ -963,6 +967,7 @@ describe('operator incentives (fees & block rewards)', () => {
           hostWeight: 2,
           relayWeight: 1,
           rewardCapBps: 2_000,
+          hostingCommissionBps: 300,
         },
       },
       generateKeypair(),
@@ -1694,6 +1699,76 @@ describe('CORS', () => {
     });
     // A disallowed origin gets no ACAO header, so the browser blocks the response.
     expect(blocked.headers['access-control-allow-origin']).toBeUndefined();
+    await k.close();
+  });
+});
+
+describe('hosting marketplace (fees + 3% commission)', () => {
+  const signup = (k: Kernel, local: string, role: string) =>
+    k.http
+      .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+      .then((r) => (r.json() as { address: string }).address);
+
+  it('bills a lease each epoch: host gets 97%, treasury takes the 3% commission', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const owner = await signup(k, 'ownr', 'agent-owner');
+    const host = await signup(k, 'hostr', 'operator');
+    const svc = new HostingService(ctxOf(k) as never);
+
+    await svc.setOffer(host as never, 1000);
+    const lease = await svc.rent(owner as never, 'ownedagent@web3.0' as never);
+    expect(lease.pricePerEpoch).toBe(1000);
+
+    const faucet = k.config.faucetGrant;
+    const receipts = await svc.billEpoch();
+    expect(receipts).toHaveLength(1);
+    // 3% of 1000 = 30 commission, 970 net to the host.
+    expect(receipts[0]).toMatchObject({ gross: 1000, commission: 30, net: 970 });
+    expect(k.ledger.balanceOf(owner as never)).toBe(faucet - 1000);
+    expect(k.ledger.balanceOf(host as never)).toBe(faucet + 970);
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(30);
+
+    // A second epoch charges again (recurring rent).
+    await svc.billEpoch();
+    expect(k.ledger.balanceOf(host as never)).toBe(faucet + 970 * 2);
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(60);
+    await k.close();
+  });
+
+  it('respects derived capacity when renting, and stops billing an ended lease', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const owner = await signup(k, 'ownr', 'agent-owner');
+    const host = await signup(k, 'hostr', 'operator');
+    // 256 MB RAM → capacity for exactly one hosted agent.
+    await k.http.inject({ method: 'POST', url: '/node/limits', payload: { maxRamMb: 256 } });
+    const svc = new HostingService(ctxOf(k) as never);
+    await svc.setOffer(host as never, 500);
+
+    const lease = await svc.rent(owner as never, 'a1@web3.0' as never);
+    await expect(svc.rent(owner as never, 'a2@web3.0' as never)).rejects.toThrow(/capacity/);
+
+    await svc.billEpoch(); // charged once
+    expect(k.ledger.balanceOf(owner as never)).toBe(k.config.faucetGrant - 500);
+    await svc.endLease(lease.id);
+    await svc.billEpoch(); // ended → no further charge
+    expect(k.ledger.balanceOf(owner as never)).toBe(k.config.faucetGrant - 500);
+    await k.close();
+  });
+
+  it('skips billing when the owner cannot cover the fee (retried next epoch)', async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const owner = await signup(k, 'broke', 'agent-owner');
+    const host = await signup(k, 'hostr', 'operator');
+    const svc = new HostingService(ctxOf(k) as never);
+    await svc.setOffer(host as never, 999_999_999); // more than the faucet grant
+
+    await svc.rent(owner as never, 'a@web3.0' as never);
+    const receipts = await svc.billEpoch();
+    expect(receipts).toHaveLength(0); // insufficient funds → nothing settled
+    expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant);
     await k.close();
   });
 });

@@ -5,6 +5,7 @@ import { connectorsModule } from './connectors.js';
 import { consensusModule } from './consensus.js';
 import { guardrailsModule } from './guardrails.js';
 import { hostedModule } from './hosted.js';
+import { hostingModule } from './hosting.js';
 import { messagingModule } from './messaging.js';
 import { namingModule } from './naming.js';
 import { observabilityModule } from './observability.js';
@@ -31,4 +32,5 @@ export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
   telegram: telegramModule,
   hosted: hostedModule,
   operator: operatorModule,
+  hosting: hostingModule,
 };

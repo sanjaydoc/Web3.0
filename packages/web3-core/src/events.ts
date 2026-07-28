@@ -26,6 +26,8 @@ export type EventKind =
   | 'task.updated'
   | 'tx.submitted'
   | 'payment.settled'
+  | 'hosting.leased'
+  | 'hosting.billed'
   | 'guardrail.decision'
   | 'auth.rejected'
   | 'data.shared';
