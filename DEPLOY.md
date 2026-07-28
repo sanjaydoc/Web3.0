@@ -210,6 +210,39 @@ Now `https://api.web3.example/stats` works, and that's the URL the dashboard wil
 > **Free alternative to a VM + domain:** [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-tunnel/)
 > gives the node a public `https://…` hostname with zero open ports and free TLS.
 
+### 2.8 Updating a running deployment (pull → rebuild → restart)
+
+To roll out new code onto a node that's already live:
+
+```bash
+cd web3-core
+git pull                                 # or: git fetch && git checkout <branch> && git pull
+pnpm install                             # picks up any new deps
+pnpm -r build                            # rebuilds all workspace packages incl. @web3/node
+pm2 restart web3-node --update-env
+pm2 save
+```
+
+No database migration is needed for schema: the node auto-creates its tables and account records
+are a JSON blob, so new per-account fields (e.g. `plan`, the `agent-owner` role) upgrade themselves
+on load. Old rows keep working.
+
+> **⚠️ Economics gotcha — new code defaults do NOT override saved settings.** Monetary policy (the
+> payment fee, block reward, node-reward pool, hosting commission) is **persisted in the store**
+> (`settings` table, key `economics`) and, once saved, *wins over* the code defaults on every boot.
+> So on a node that has been running, deploying new code alone will **not** change the live fee — it
+> keeps whatever was last saved (often `0`). To actually apply a new policy, either:
+>
+> 1. **Set it in the GUI** — dashboard → admin → **Economics** card → set the values → Save; or
+> 2. **Clear the saved row** so the code default (currently a 3% fee, mints off) takes over:
+>    ```bash
+>    sudo -u postgres psql -d web3 -c "DELETE FROM settings WHERE key='economics';"
+>    pm2 restart web3-node
+>    ```
+>
+> Confirm with `curl http://localhost:8787/operator/economics` — `feeBps` should read what you expect
+> (e.g. `300` for 3%).
+
 ---
 
 ## Part 3 — GitHub Pages (the dashboard)
@@ -312,6 +345,46 @@ wall. `.github/workflows/desktop.yml` is already wired to publish cross-repo to 
 
 > The workflow's tag (`v0.1.1`) is created on the public repo pointing at its current `main` — it's
 > just the container for the binaries. The source that built them stays private.
+
+---
+
+## Part 7 — Reset to a fresh network (wipe everything, new admin)
+
+To start the network over from scratch — no agents, no wallets, no ledger, no accounts. **This is
+irreversible**, so `pg_dump` a backup first if you might want the old state.
+
+```bash
+# 0. (optional) back up
+pg_dump "postgresql://web3:PASSWORD@127.0.0.1:5432/web3" > ~/web3-backup-$(date +%F).sql
+
+# 1. stop the node
+pm2 stop web3-node
+
+# 2. wipe the database — pick ONE:
+#    A) keep the DB, clear every row:
+sudo -u postgres psql -d web3 -c "TRUNCATE agents, ledger_entries, settings RESTART IDENTITY CASCADE;"
+#    B) or drop and recreate the whole database:
+#    sudo -u postgres psql -c "DROP DATABASE web3;"
+#    sudo -u postgres psql -c "CREATE DATABASE web3 OWNER web3;"
+
+# 3. (optional) rotate the admin secret to a brand-new one
+#    edit services/web3-node/.env → WEB3_ADMIN_TOKEN=$(openssl rand -hex 24)
+
+# 4. restart — the node re-creates empty tables and re-seeds genesis (treasury + faucet)
+pm2 restart web3-node --update-env && pm2 save
+```
+
+Then verify and sign in as the fresh admin:
+
+```bash
+curl http://localhost:8787/stats                 # agents: 0
+curl http://localhost:8787/operator/economics    # feeBps back to the code default (300 = 3%)
+```
+
+The admin isn't a stored account — it's whoever holds `WEB3_ADMIN_TOKEN`. Open the dashboard →
+**Sign in with token** → paste the value from step 3. New users self-serve as agent-owner/operator
+through onboarding. (Wiping `settings` also clears the saved economics row, so the 3% code default
+applies automatically — no separate step.)
 
 ---
 
