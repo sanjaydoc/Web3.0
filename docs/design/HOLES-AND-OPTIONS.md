@@ -24,10 +24,18 @@ dead code paths.
 
 ---
 
-## Hole 2 — Operator earnings depend entirely on demand
+## Hole 2 — Operator earnings depend entirely on demand *(addressed)*
 
-**What's there:** four earn paths, but with default config only **hosting fees** are live
-(`feeBps`/`blockReward`/`nodeRewardPool` all default 0). So an operator earns **only if someone rents**.
+**Update:** three earn paths are now on by default —
+- **`feeBps` = 300 (3%)** take-rate on every payment → treasury (non-inflationary),
+- **`blockReward` = 50** (0.50 aETH/active block → proposer) and **`nodeRewardPool` = 1000** (10 aETH/epoch,
+  split by contribution) — **inflationary bootstrap incentives**, on to attract early nodes, to be tuned
+  down / sunset once real demand carries the network. Both mint only when consensus is running.
+
+Original framing below.
+
+**What was there:** four earn paths, but with the old default config only **hosting fees** were live
+(`feeBps`/`blockReward`/`nodeRewardPool` all defaulted 0). So an operator earned **only if someone rents**.
 
 **Why it's a hole:** no demand ⇒ no earnings ⇒ no operators ⇒ no network. Classic cold-start. The old
 minted pool "solved" it by paying operators to merely exist — which is exactly the gameable,

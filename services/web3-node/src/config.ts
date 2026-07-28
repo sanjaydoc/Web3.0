@@ -88,9 +88,9 @@ export interface FeesConfig {
   burnBps: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
-  // ── Proof-of-Contribution: an OPTIONAL, default-off bootstrap subsidy. The primary earn path is now
-  // the hosting marketplace (demand-funded fees, see HostingService), not this minted pool — keep it
-  // 0 unless subsidising early hosts before real hosting demand exists. ──
+  // ── Proof-of-Contribution: a bootstrap subsidy (INFLATIONARY). ON by default to attract early nodes;
+  // the durable earn path is the hosting marketplace (demand-funded fees, see HostingService), so tune
+  // this down / sunset it once real demand carries the network. ──
   /** aETH minted per epoch and split across live contributing nodes by contribution score (0 = off). */
   nodeRewardPool: number;
   /** Epoch length in blocks — the pool is distributed once every this many blocks. */
@@ -258,10 +258,13 @@ export const DEFAULT_CONFIG: Web3Config = {
   },
   fees: {
     protocolBps: Number(process.env.WEB3_FEE_BPS ?? 300), // 3% take-rate on payments → node treasury
-    blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0),
+    // Bootstrap incentives (INFLATIONARY — they mint new aETH). On to attract early nodes; tune down /
+    // sunset once real hosting + payment demand carries the network. Both mint only when consensus is
+    // running (mode != 'off'), so they're inert on a solo/dev node.
+    blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 50), // 0.50 aETH minted per active block → proposer
     burnBps: Number(process.env.WEB3_BURN_BPS ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
-    nodeRewardPool: Number(process.env.WEB3_NODE_REWARD_POOL ?? 0),
+    nodeRewardPool: Number(process.env.WEB3_NODE_REWARD_POOL ?? 1_000), // 10 aETH minted per epoch, split by contribution
     epochBlocks: Math.max(1, Number(process.env.WEB3_EPOCH_BLOCKS ?? 20)),
     uptimeWeight: Number(process.env.WEB3_UPTIME_WEIGHT ?? 1),
     hostWeight: Number(process.env.WEB3_HOST_WEIGHT ?? 2),
