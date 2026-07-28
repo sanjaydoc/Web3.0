@@ -102,9 +102,24 @@ export function LlmTunnel() {
             <input
               id="llm-model"
               value={model}
-              placeholder="llama3:8b"
+              placeholder="qwen2.5:3b"
+              list="llm-model-suggestions"
               onChange={(e) => setModel(e.target.value)}
             />
+            <datalist id="llm-model-suggestions">
+              <option value="gemma2:2b">Gemma 2 · 2B — tiny, ~2 GB</option>
+              <option value="qwen2.5:3b">Qwen2.5 · 3B — light default, ~2 GB</option>
+              <option value="llama3.2:3b">Llama 3.2 · 3B — ~2 GB</option>
+              <option value="phi3:mini">Phi-3 mini · 3.8B — ~2.3 GB</option>
+              <option value="mistral:7b">Mistral · 7B — ~4.5 GB</option>
+              <option value="qwen2.5:7b">Qwen2.5 · 7B — ~4.7 GB</option>
+              <option value="llama3.1:8b">Llama 3.1 · 8B — ~5 GB</option>
+              <option value="qwen2.5:14b">Qwen2.5 · 14B — ~9 GB</option>
+            </datalist>
+            <span className="hint">
+              Pick a suggestion or type any Ollama tag. Pull it first:{' '}
+              <code>ollama pull &lt;tag&gt;</code>
+            </span>
           </div>
           <div className="field">
             <label htmlFor="llm-price">Price / Mtok (aETH minor)</label>
@@ -154,8 +169,8 @@ export function LlmTunnel() {
         <div className="section-title">Your hosted models</div>
         {offers.length === 0 ? (
           <div className="empty">
-            You're not hosting any models yet. Pull one with <code>ollama pull llama3:8b</code>,
-            then publish it above.
+            You're not hosting any models yet. Pull a light one with{' '}
+            <code>ollama pull qwen2.5:3b</code>, then publish it above.
           </div>
         ) : (
           <div className="hscroll">
