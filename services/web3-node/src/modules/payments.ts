@@ -3,7 +3,9 @@ import type { Amount, Currency, SignedEnvelope, Web3Id } from '@web3/core';
 import { randomId } from '@web3/crypto';
 import { InsufficientFundsError } from '@web3/ledger';
 import type { ModuleContext, Web3Module } from '../context.js';
+import { CONTRIBUTION_POOL_ID, nodeRewardWalletId } from '../services/contribution.js';
 import { BURN_ID } from '../services/economics.js';
+import { splitFee } from '../services/fees.js';
 
 /** A signed instruction to move funds. The signature proves the payer authorised it. */
 interface PaymentInstruction {
@@ -36,6 +38,8 @@ export function paymentsModule(): Web3Module {
       treasuryId,
       config,
       economics,
+      consensus,
+      nodePublicKey,
     }: ModuleContext) {
       // Report the active settlement rail so clients/dashboards can show where value settles.
       http.get('/settlement', () => ({
@@ -144,15 +148,24 @@ export function paymentsModule(): Web3Module {
             taskId: instruction.taskId,
             currency: instruction.currency,
           });
-          // Protocol fee: skim a basis-point cut from the payee to the node treasury (operator
-          // revenue). The payer still pays the quoted amount; the marketplace takes its rate.
-          // Live policy from the economics service (GUI-editable) — not the boot-time env.
+          // Protocol fee: skim a basis-point cut from the payee (live policy from the economics
+          // service, GUI-editable). NO minting — the fee is split 1/1/1 across the platform treasury,
+          // the node that served this payment (its own withdrawable wallet), and the fee-funded
+          // contribution pool. On a solo node (no consensus to run epoch payouts) the pool slice folds
+          // into the treasury so it isn't stranded.
           const fee = Math.floor((instruction.amount * economics.feeBps) / 10_000);
           if (fee > 0 && ledger.balanceOf(instruction.to) >= fee) {
-            ledger.transfer(instruction.to, treasuryId as typeof instruction.to, fee, {
-              memo: 'protocol-fee',
-              taskId: instruction.taskId,
-            });
+            splitFee(
+              ledger,
+              instruction.to,
+              fee,
+              {
+                treasury: treasuryId as Web3Id,
+                node: nodeRewardWalletId(nodePublicKey),
+                pool: consensus.enabled ? CONTRIBUTION_POOL_ID : (treasuryId as Web3Id),
+              },
+              'protocol-fee',
+            );
           }
           // Burn sink (EIP-1559-style): a slice of every payment leaves circulation for good —
           // the counterweight to faucet + block-reward minting.

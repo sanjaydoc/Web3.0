@@ -110,6 +110,13 @@ export function nodeRewardWalletId(nodeKey: string): Web3Id {
   return web3Id(`noderwd-${hashJson(nodeKey).slice(0, 16)}`);
 }
 
+/**
+ * The network-wide contribution-pool wallet. Fee slices (1% of each payment/hosting fee) are paid
+ * here from real activity — NOT minted — and split across contributing nodes by score each epoch.
+ * A single shared address on the replicated ledger, so every node feeds and reads the same pool.
+ */
+export const CONTRIBUTION_POOL_ID: Web3Id = web3Id('contribution-pool');
+
 /** A non-negative integer, or the fallback — guards against NaN/negatives in reports. */
 function safeCount(v: unknown): number {
   const n = Number(v);

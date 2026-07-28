@@ -24,13 +24,19 @@ dead code paths.
 
 ---
 
-## Hole 2 — Operator earnings depend entirely on demand *(addressed)*
+## Hole 2 — Operator earnings depend entirely on demand *(addressed, non-inflationary)*
 
-**Update:** three earn paths are now on by default —
-- **`feeBps` = 300 (3%)** take-rate on every payment → treasury (non-inflationary),
-- **`blockReward` = 50** (0.50 aETH/active block → proposer) and **`nodeRewardPool` = 1000** (10 aETH/epoch,
-  split by contribution) — **inflationary bootstrap incentives**, on to attract early nodes, to be tuned
-  down / sunset once real demand carries the network. Both mint only when consensus is running.
+**Update (final design): rewards are 100% fee-funded — zero minting.** Every payment and hosting fee
+(**3%**, `feeBps`/`hostingCommissionBps`) is split **1/1/1** with no new aETH created (`splitFee`):
+- **1% → platform treasury**,
+- **1% → the node that did the work** (its own withdrawable reward wallet — this is the "block reward",
+  now recycled from fees, not minted; fixes the authority-incentive hole),
+- **1% → the contribution pool** — a real fee-fed wallet distributed across contributing nodes by score
+  each epoch (transfers from the pool, not mints).
+
+The old inflationary mint knobs (`blockReward`, `nodeRewardPool`) are **off by default**, kept only as an
+optional temporary bootstrap subsidy. Cold-start is handled by **running the first nodes yourself**
+(option A), not by printing tokens.
 
 Original framing below.
 

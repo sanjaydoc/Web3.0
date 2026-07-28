@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Web3Id } from '@web3/core';
 import { canonicalize, fromB64u, verifyString } from '@web3/crypto';
 import type { ModuleContext } from '../context.js';
+import { CONTRIBUTION_POOL_ID } from './contribution.js';
+import { splitFee } from './fees.js';
 
 /**
  * hosting — the compute marketplace's money + bookkeeping. A host (node operator) advertises a
@@ -242,12 +244,20 @@ export class HostingService {
     return who ? leases.filter((l) => l.owner === who || l.host === who) : leases;
   }
 
-  /** Net hosting revenue earned by `host` across all its leases. */
+  /**
+   * Net hosting revenue earned by `host`: for each billed epoch the host receives the base net
+   * (price − commission) plus the "node" slice of the split commission (⅓ of it), since the host is
+   * the node providing the compute.
+   */
   async revenueFor(host: Web3Id): Promise<number> {
-    const rate = 1 - this.commissionBps / 10_000;
     return (await this.loadLeases())
       .filter((l) => l.host === host)
-      .reduce((sum, l) => sum + Math.round(l.paidTotal * rate), 0);
+      .reduce((sum, l) => {
+        const commission = Math.floor((l.pricePerEpoch * this.commissionBps) / 10_000);
+        const net = l.pricePerEpoch - commission;
+        const nodeSlice = Math.floor(commission / 3);
+        return sum + l.epochsBilled * (net + nodeSlice);
+      }, 0);
   }
 
   /**
@@ -281,10 +291,21 @@ export class HostingService {
       const commission = Math.floor((gross * this.commissionBps) / 10_000);
       const net = gross - commission;
       this.ctx.ledger.transfer(lease.owner, lease.host, net, { memo: 'hosting-fee' });
+      // Split the commission 1/1/1 with NO minting: platform treasury / the host (the node providing
+      // the compute, its own wallet) / the fee-funded contribution pool. On a solo node the pool slice
+      // folds into the treasury so it isn't stranded.
       if (commission > 0) {
-        this.ctx.ledger.transfer(lease.owner, this.commissionAddress, commission, {
-          memo: 'hosting-commission',
-        });
+        splitFee(
+          this.ctx.ledger,
+          lease.owner,
+          commission,
+          {
+            treasury: this.commissionAddress,
+            node: lease.host,
+            pool: this.ctx.consensus.enabled ? CONTRIBUTION_POOL_ID : this.commissionAddress,
+          },
+          'hosting-commission',
+        );
       }
       lease.epochsBilled += 1;
       lease.paidTotal += gross;

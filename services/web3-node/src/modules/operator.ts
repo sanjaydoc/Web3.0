@@ -94,7 +94,10 @@ export function operatorModule(): Web3Module {
           const d = e.data as { to: Web3Id; from: Web3Id | null; amount: number; memo?: string };
           if (d.to !== treasuryId) continue;
           if (d.from === null) rewards += d.amount;
-          else if (d.memo === 'protocol-fee') fees += d.amount;
+          // Fee revenue to the treasury — the treasury (and, on a solo node, folded pool) slices of
+          // the 1/1/1 split of payment fees + hosting commission.
+          else if (d.memo?.startsWith('protocol-fee') || d.memo?.startsWith('hosting-commission'))
+            fees += d.amount;
         }
         const balance = ledger.balanceOf(treasuryId as Web3Id);
         // Contribution rewards accrue to the node's own reward wallet, not the treasury.

@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import { Kernel } from '../src/kernel.js';
 import { AccountsService } from '../src/services/accounts.js';
 import { ConnectorsService } from '../src/services/connectors.js';
+import { nodeRewardWalletId } from '../src/services/contribution.js';
 import { HostedAgentService } from '../src/services/hosted.js';
 import { HostingService } from '../src/services/hosting.js';
 import { SkillsService } from '../src/services/skills.js';
@@ -849,8 +850,10 @@ describe('operator console (my node)', () => {
       resources: { processRssMb: number; uptimeSec: number };
       limits: { maxAgents: number };
     };
-    expect(node.earnings.fees).toBe(25);
-    expect(node.earnings.balance).toBe(25);
+    // Fee (25) is split 1/1/1; the node slice (⌊25/3⌋=8) goes to the node's reward wallet, the rest
+    // (treasury + folded pool slice on this solo node) stays in the treasury.
+    expect(node.earnings.fees).toBe(25 - Math.floor(25 / 3));
+    expect(node.earnings.balance).toBe(25 - Math.floor(25 / 3));
     expect(node.resources.processRssMb).toBeGreaterThan(0);
     expect(node.resources.uptimeSec).toBeGreaterThanOrEqual(0);
 
@@ -948,10 +951,38 @@ describe('operator incentives (fees & block rewards)', () => {
       sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 1000 }),
     );
     const receipt = res.json().receipt as { fee: number; netToPayee: number };
-    expect(receipt.fee).toBe(25); // 2.5% of 1000
+    expect(receipt.fee).toBe(25); // 2.5% of 1000, skimmed from the payee
     expect(receipt.netToPayee).toBe(975);
     expect(k.ledger.balanceOf(payee.web3Id)).toBe(k.config.faucetGrant + 975);
-    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(25);
+    // The fee is split 1/1/1; the node slice leaves the treasury, the rest (incl. the folded pool
+    // slice on this solo node) stays. So the treasury holds 25 − ⌊25/3⌋.
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(25 - Math.floor(25 / 3));
+    await k.close();
+  });
+
+  it('routes the node slice of the fee to the serving node’s own wallet, minting nothing', async () => {
+    const nodeKeys = generateKeypair();
+    const k = new Kernel({ port: 0 }, nodeKeys, new MemoryStore());
+    await k.init();
+    const inject = (url: string, payload: unknown) =>
+      k.http.inject({ method: 'POST', url, payload: payload as object });
+    const payer = makeAgent('splitpayer');
+    const payee = makeAgent('splitpayee');
+    await inject('/agents', payer.registration);
+    await inject('/agents', payee.registration);
+
+    await inject('/pay', sealAs(payer, { from: payer.web3Id, to: payee.web3Id, amount: 900 }));
+
+    const fee = Math.floor((900 * k.config.fees.protocolBps) / 10_000); // 27 at 3%
+    const nodeSlice = Math.floor(fee / 3);
+    const nodeWallet = nodeRewardWalletId(toB64u(nodeKeys.publicKey));
+    // The serving node earns its 1% slice into its own (withdrawable) reward wallet…
+    expect(k.ledger.balanceOf(nodeWallet as never)).toBe(nodeSlice);
+    // …the treasury keeps the rest (its slice + the folded pool slice on this solo node)…
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(fee - nodeSlice);
+    // …and every part came out of the payer's 900 — nothing was minted.
+    expect(k.ledger.balanceOf(payee.web3Id)).toBe(k.config.faucetGrant + 900 - fee);
+    expect(nodeSlice + (fee - nodeSlice)).toBe(fee);
     await k.close();
   });
 
@@ -1496,7 +1527,8 @@ describe('production economics + exit + slash + replication', () => {
       url: '/pay',
       payload: sealAs(a, { from: a.web3Id, to: b.web3Id, amount: 10_000 }),
     });
-    expect(k.ledger.balanceOf('treasury@web3.0' as never)).toBe(100);
+    // Fee 100 split 1/1/1 → treasury keeps 100 − ⌊100/3⌋ (its slice + the folded pool slice on solo).
+    expect(k.ledger.balanceOf('treasury@web3.0' as never)).toBe(100 - Math.floor(100 / 3));
     expect(k.ledger.balanceOf('burn@web3.0' as never)).toBe(50);
     // stats exclude the burn from circulating value and report it
     const stats = (await k.http.inject({ method: 'GET', url: '/stats' }).then((r) => r.json())) as {
@@ -1713,7 +1745,7 @@ describe('hosting marketplace (fees + 3% commission)', () => {
       .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
       .then((r) => (r.json() as { address: string }).address);
 
-  it('bills a lease each epoch: host gets 97%, treasury takes the 3% commission', async () => {
+  it('bills a lease each epoch, splitting the commission 1/1/1 (no minting)', async () => {
     const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
     await k.init();
     const owner = await signup(k, 'ownr', 'agent-owner');
@@ -1727,16 +1759,19 @@ describe('hosting marketplace (fees + 3% commission)', () => {
     const faucet = k.config.faucetGrant;
     const receipts = await svc.billEpoch();
     expect(receipts).toHaveLength(1);
-    // 3% of 1000 = 30 commission, 970 net to the host.
+    // 3% of 1000 = 30 commission; the host gets 970 base + the node slice (⌊30/3⌋=10) = 980. The
+    // treasury keeps its slice + the folded pool slice on this solo node (30 − 10 = 20). Owner pays
+    // the full 1000. Nothing is minted — every part is recycled from the owner's payment.
     expect(receipts[0]).toMatchObject({ gross: 1000, commission: 30, net: 970 });
+    const nodeSlice = Math.floor(30 / 3); // 10
     expect(k.ledger.balanceOf(owner as never)).toBe(faucet - 1000);
-    expect(k.ledger.balanceOf(host as never)).toBe(faucet + 970);
-    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(30);
+    expect(k.ledger.balanceOf(host as never)).toBe(faucet + 970 + nodeSlice);
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(30 - nodeSlice);
 
     // A second epoch charges again (recurring rent).
     await svc.billEpoch();
-    expect(k.ledger.balanceOf(host as never)).toBe(faucet + 970 * 2);
-    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe(60);
+    expect(k.ledger.balanceOf(host as never)).toBe(faucet + (970 + nodeSlice) * 2);
+    expect(k.ledger.balanceOf(k.treasuryId as never)).toBe((30 - nodeSlice) * 2);
     await k.close();
   });
 
@@ -1838,7 +1873,8 @@ describe('signed lease mandate (owner-authorized recurring billing)', () => {
     expect(lease.mandate).toBeTruthy();
     const receipts = await svc.billEpoch();
     expect(receipts).toHaveLength(1);
-    expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant + 970); // 97% of 1000
+    // Host gets 970 base + the node slice ⌊30/3⌋=10 of the split commission = 980.
+    expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant + 970 + Math.floor(30 / 3));
     await k.close();
   });
 

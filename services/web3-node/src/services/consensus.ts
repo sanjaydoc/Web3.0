@@ -6,6 +6,7 @@ import { toB64u } from '@web3/crypto';
 import type { Ledger } from '@web3/ledger';
 import type { ConsensusConfig } from '../config.js';
 import {
+  CONTRIBUTION_POOL_ID,
   type ContributionReport,
   ContributionService,
   type ContributionWeights,
@@ -288,22 +289,34 @@ export class ConsensusCoordinator {
    * the block about to be proposed. Returns the number of shares minted (0 = nothing to do).
    */
   private distributeEpochRewards(nextHeight: number): number {
-    const pool = this.rewards.nodeRewardPool?.() ?? 0;
     const epochBlocks = Math.max(1, this.rewards.epochBlocks?.() ?? 0);
     // Reward only on the block that first completes an epoch (heights are strictly sequential, so
     // every multiple is hit exactly once). Nothing to pay at genesis or mid-epoch.
-    if (pool <= 0 || nextHeight <= 0 || nextHeight % epochBlocks !== 0) return 0;
+    if (nextHeight <= 0 || nextHeight % epochBlocks !== 0) return 0;
     const epoch = nextHeight / epochBlocks - 1; // the epoch that just finished
     if (this.epochAlreadyRewarded(epoch)) return 0;
+    // Optional bootstrap subsidy: if configured, mint a top-up INTO the pool (off by default, so the
+    // pool stays purely fee-funded / non-inflationary unless an operator opts into bootstrapping).
+    const subsidy = this.rewards.nodeRewardPool?.() ?? 0;
+    if (subsidy > 0) {
+      this.ledger.mint(CONTRIBUTION_POOL_ID as Parameters<Ledger['mint']>[0], subsidy);
+    }
+    // Distribute the contribution-pool wallet's balance — fed by the 1% pool slice of every
+    // payment/hosting fee (+ any subsidy above) — across contributing nodes by score, via transfers
+    // FROM the pool. Empty pool ⇒ nothing to pay this epoch.
+    const pool = this.ledger.balanceOf(CONTRIBUTION_POOL_ID);
+    if (pool <= 0) return 0;
     const weights = this.rewards.weights?.() ?? { uptime: 1, host: 1, relay: 1 };
     const capBps = this.rewards.rewardCapBps?.() ?? 0;
     const shares = this.contribution.distribute(pool, weights, capBps);
     for (const share of shares) {
-      this.ledger.mint(
+      this.ledger.transfer(
+        CONTRIBUTION_POOL_ID,
         share.wallet as Parameters<Ledger['mint']>[0],
         share.amount,
-        undefined,
-        `${NODE_REWARD_MEMO_PREFIX}${epoch}`,
+        {
+          memo: `${NODE_REWARD_MEMO_PREFIX}${epoch}`,
+        },
       );
     }
     return shares.length;

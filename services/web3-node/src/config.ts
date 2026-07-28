@@ -88,10 +88,10 @@ export interface FeesConfig {
   burnBps: number;
   /** Local part of the node's treasury Web3.0 ID that collects earnings. */
   treasuryLocal: string;
-  // ── Proof-of-Contribution: a bootstrap subsidy (INFLATIONARY). ON by default to attract early nodes;
-  // the durable earn path is the hosting marketplace (demand-funded fees, see HostingService), so tune
-  // this down / sunset it once real demand carries the network. ──
-  /** aETH minted per epoch and split across live contributing nodes by contribution score (0 = off). */
+  // ── Proof-of-Contribution: the contribution pool is now FEE-FUNDED (the 1% pool slice of every
+  // payment/hosting fee), distributed by score each epoch — non-inflationary. `nodeRewardPool` is only
+  // an OPTIONAL, off-by-default mint subsidy on top of that, for bootstrapping before real demand. ──
+  /** OPTIONAL extra aETH minted per epoch (0 = off; the pool itself is funded from fees, not minted). */
   nodeRewardPool: number;
   /** Epoch length in blocks — the pool is distributed once every this many blocks. */
   epochBlocks: number;
@@ -257,14 +257,14 @@ export const DEFAULT_CONFIG: Web3Config = {
     slotMs: Number(process.env.WEB3_SLOT_MS ?? networkFile.slotMs ?? 6_000),
   },
   fees: {
-    protocolBps: Number(process.env.WEB3_FEE_BPS ?? 300), // 3% take-rate on payments → node treasury
-    // Bootstrap incentives (INFLATIONARY — they mint new aETH). On to attract early nodes; tune down /
-    // sunset once real hosting + payment demand carries the network. Both mint only when consensus is
-    // running (mode != 'off'), so they're inert on a solo/dev node.
-    blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 50), // 0.50 aETH minted per active block → proposer
+    protocolBps: Number(process.env.WEB3_FEE_BPS ?? 300), // 3% take-rate on payments, split 1/1/1
+    // Minting OFF by default — the node-reward and contribution-pool rewards are now funded from the
+    // 1/1/1 split of real fees (see splitFee), so nothing is printed. These two mint knobs stay as an
+    // optional, off-by-default bootstrap subsidy (set >0 to temporarily mint before real demand).
+    blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0), // per-block mint to proposer (0 = off)
     burnBps: Number(process.env.WEB3_BURN_BPS ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',
-    nodeRewardPool: Number(process.env.WEB3_NODE_REWARD_POOL ?? 1_000), // 10 aETH minted per epoch, split by contribution
+    nodeRewardPool: Number(process.env.WEB3_NODE_REWARD_POOL ?? 0), // legacy per-epoch mint (0 = off; pool is fee-funded)
     epochBlocks: Math.max(1, Number(process.env.WEB3_EPOCH_BLOCKS ?? 20)),
     uptimeWeight: Number(process.env.WEB3_UPTIME_WEIGHT ?? 1),
     hostWeight: Number(process.env.WEB3_HOST_WEIGHT ?? 2),
