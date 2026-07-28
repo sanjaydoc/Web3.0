@@ -1,5 +1,5 @@
 import type { ModuleContext, Web3Module } from '../context.js';
-import { adminRequired, checkAdmin } from '../services/admin.js';
+import { adminRequired } from '../services/admin.js';
 import { currentAccount, requireParticipation } from '../services/auth.js';
 import { type HostedAgentConfig, HostedAgentService } from '../services/hosted.js';
 
@@ -41,12 +41,39 @@ export function hostedModule(): Web3Module {
         }
       });
 
+      // Start/stop an agent. Allowed for an admin (any agent) or the operator who created it (their
+      // own) — so a node owner can control their agents from the dashboard without an admin token,
+      // while one operator can't stop another's agent on a shared node. Mirrors /hosted/launch's
+      // participation rule (and is blocked on the reserved admin-only main node for non-admins).
+      const controlAllowed = (request: Parameters<typeof currentAccount>[0], handle: string) => {
+        const acct = currentAccount(request, ctx.accounts);
+        if (!acct || acct.role === 'admin') return true; // admin, or an open/token-authed node
+        const owner = svc.ownerOf(handle);
+        return Boolean(owner && owner.toLowerCase() === acct.address.toLowerCase());
+      };
+
       ctx.http.post('/hosted/stop', async (request, reply) => {
-        if (!checkAdmin(request, reply)) return;
         const { handle } = (request.body ?? {}) as { handle?: string };
         if (!handle) return reply.code(400).send({ error: 'handle is required' });
+        if (!requireParticipation(request, reply, ctx.accounts, ctx.config.adminOnly)) return;
+        if (!controlAllowed(request, handle))
+          return reply.code(403).send({ error: 'you can only stop an agent you created' });
         try {
           await svc.stop(handle);
+        } catch (err) {
+          return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+        }
+        return { agents: svc.status() };
+      });
+
+      ctx.http.post('/hosted/start', async (request, reply) => {
+        const { handle } = (request.body ?? {}) as { handle?: string };
+        if (!handle) return reply.code(400).send({ error: 'handle is required' });
+        if (!requireParticipation(request, reply, ctx.accounts, ctx.config.adminOnly)) return;
+        if (!controlAllowed(request, handle))
+          return reply.code(403).send({ error: 'you can only start an agent you created' });
+        try {
+          await svc.start(handle);
         } catch (err) {
           return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
         }

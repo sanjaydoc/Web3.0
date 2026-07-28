@@ -444,6 +444,8 @@ export const api = {
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
+  hostedStart: (handle: string, adminToken?: string) =>
+    post<{ agents: HostedAgent[] }>('/hosted/start', { handle }, adminToken),
   signup: (local: string, role: Role, pubkey?: string) =>
     post<SignupResult>('/accounts/signup', { local, role, pubkey }),
   /** Bind a transaction-signing key to the signed-in account (enables trustless payments). */

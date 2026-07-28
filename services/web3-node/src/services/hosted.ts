@@ -60,6 +60,12 @@ export interface HostedAgentStatus {
 type ChatFn = (config: LlmConfig, prompt: string) => Promise<string>;
 const SETTING_KEY = 'hosted-agents';
 
+/** How a hosted agent is persisted: its launch config plus whether it was running (vs stopped). */
+interface StoredHostedAgent {
+  config: HostedAgentConfig;
+  running: boolean;
+}
+
 /**
  * Runs Genesis-created agents *inside* the node: registers the agent card + wallet, then binds a
  * virtual relay connection whose task handler calls the configured LLM and replies. Configs persist
@@ -77,19 +83,50 @@ export class HostedAgentService {
   ) {}
 
   async load(): Promise<void> {
-    const saved = (await this.ctx.store.loadSetting<HostedAgentConfig[]>(SETTING_KEY)) ?? [];
-    for (const config of saved) {
+    const saved =
+      (await this.ctx.store.loadSetting<Array<StoredHostedAgent | HostedAgentConfig>>(
+        SETTING_KEY,
+      )) ?? [];
+    for (const item of saved) {
+      // Back-compat: the old format persisted bare configs (all implicitly running). The new format
+      // wraps each with its running flag, so a STOPPED agent survives a restart (still registered +
+      // in the table, just not bound) and can be started again.
+      const stored: StoredHostedAgent =
+        item && typeof item === 'object' && 'config' in item
+          ? (item as StoredHostedAgent)
+          : { config: item as HostedAgentConfig, running: true };
+      const { config, running } = stored;
       try {
         // These configs are known to be ours, so adopt them without the ownership check that a
         // fresh launch applies (after a restart the card is already in the registry from the store).
         const id = makeWeb3Id(config.handle);
         this.ensureRegistered(id, config);
-        this.agents.set(id, { config, running: true });
-        this.bindHandler(id, config);
+        this.agents.set(id, { config, running });
+        if (running) this.bindHandler(id, config);
       } catch (err) {
         this.ctx.log.warn({ err }, `hosted: could not relaunch ${config.handle}`);
       }
     }
+  }
+
+  /** The publisher/owner address of a hosted agent (from its config), or null if unknown. */
+  ownerOf(handle: string): string | null {
+    try {
+      return this.agents.get(makeWeb3Id(handle))?.config.createdBy?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Re-bind a previously-stopped hosted agent so it answers tasks again. Idempotent. */
+  async start(handle: string): Promise<void> {
+    const id = makeWeb3Id(handle);
+    const entry = this.agents.get(id);
+    if (!entry) throw new Error(`no hosted agent '${handle}'`);
+    this.ensureRegistered(id, entry.config);
+    this.bindHandler(id, entry.config);
+    entry.running = true;
+    await this.persist();
   }
 
   status(): HostedAgentStatus[] {
@@ -181,10 +218,13 @@ export class HostedAgentService {
   }
 
   private async persist(): Promise<void> {
-    await this.ctx.store.saveSetting(
-      SETTING_KEY,
-      [...this.agents.values()].filter((a) => a.running).map((a) => a.config),
-    );
+    // Persist ALL agents with their running state (not just the running ones) so a stopped agent
+    // survives a restart and can be started again — otherwise "stop" would silently delete it.
+    const stored: StoredHostedAgent[] = [...this.agents.values()].map((a) => ({
+      config: a.config,
+      running: a.running,
+    }));
+    await this.ctx.store.saveSetting(SETTING_KEY, stored);
   }
 
   /** Bind a virtual relay connection that answers task.submit with the LLM and replies. */

@@ -446,6 +446,40 @@ body {
   color: var(--ok);
   font-weight: 600;
 }
+/* Per-agent Start / Stop control (Agents table). Outline pill that fills on hover — green to start
+   a stopped agent, red to stop a running one. */
+.btn-run {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.26rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.btn-run:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-start {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.btn-start:hover:not(:disabled) {
+  background: var(--ok);
+  color: #fff;
+}
+.btn-stop {
+  color: var(--no);
+  border-color: var(--no);
+}
+.btn-stop:hover:not(:disabled) {
+  background: var(--no);
+  color: #fff;
+}
 /* Horizontal-scroll wrapper for wide tables on narrow screens (e.g. the transactions ledger:
    #/Type/From→To/Amount/Time/Hash). A plain width:100% table squeezes the columns until the last
    ones (Time, Hash) clip off the card's edge. nowrap keeps each value whole; the wrapper scrolls

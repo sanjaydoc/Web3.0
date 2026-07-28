@@ -1101,6 +1101,77 @@ describe('hosted dApp ownership scoping', () => {
     expect(anon.statusCode).toBe(401); // once accounts exist, anonymous publish is blocked
     await k.close();
   });
+
+  it('start/stop is owner-scoped, and a stopped agent survives a restart', async () => {
+    // Same node keypair + store across two kernels so the persisted (node-signed) ledger hydrates.
+    const keys = generateKeypair();
+    const store = new MemoryStore();
+    const k1 = new Kernel({ port: 0 }, keys, store);
+    await k1.init();
+    const signup = (local: string, role: string) =>
+      k1.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { address: string; token: string });
+    const op1 = await signup('opone', 'operator');
+    const op2 = await signup('optwo', 'operator');
+
+    const launch = (token: string, handle: string) =>
+      k1.http.inject({
+        method: 'POST',
+        url: '/hosted/launch',
+        headers: { 'x-web3-token': token },
+        payload: {
+          handle,
+          name: 'A',
+          description: '',
+          skillId: 'ask',
+          skillName: 'Ask',
+          skillDesc: '',
+          price: 0,
+          provider: 'http',
+          model: 'webhook',
+          webhookUrl: 'http://127.0.0.1:1/x',
+        },
+      });
+    expect((await launch(op1.token, 'myagent')).statusCode).toBe(200);
+
+    const ctl = (path: string, token: string | undefined, handle: string) =>
+      k1.http.inject({
+        method: 'POST',
+        url: path,
+        headers: token ? { 'x-web3-token': token } : undefined,
+        payload: { handle },
+      });
+    const runningOf = (res: { json: () => unknown }, id: string) =>
+      (res.json() as { agents: { web3Id: string; running: boolean }[] }).agents.find(
+        (a) => a.web3Id === id,
+      )?.running;
+
+    // A different operator cannot control op1's agent.
+    expect((await ctl('/hosted/stop', op2.token, 'myagent')).statusCode).toBe(403);
+
+    // The owner stops it → running:false, then starts it → running:true.
+    const stopped = await ctl('/hosted/stop', op1.token, 'myagent');
+    expect(stopped.statusCode).toBe(200);
+    expect(runningOf(stopped, 'myagent@web3.0')).toBe(false);
+    const started = await ctl('/hosted/start', op1.token, 'myagent');
+    expect(started.statusCode).toBe(200);
+    expect(runningOf(started, 'myagent@web3.0')).toBe(true);
+
+    // Stop it, then "restart the node" on the SAME store — the stopped agent must still be there.
+    await ctl('/hosted/stop', op1.token, 'myagent');
+    await k1.close();
+
+    const k2 = new Kernel({ port: 0 }, keys, store);
+    await k2.init();
+    const list = await k2.http
+      .inject({ method: 'GET', url: '/hosted', headers: { 'x-web3-token': op1.token } })
+      .then((r) => r.json() as { agents: { web3Id: string; running: boolean }[] });
+    const survivor = list.agents.find((a) => a.web3Id === 'myagent@web3.0');
+    expect(survivor).toBeDefined(); // a stopped agent is NOT deleted by a restart
+    expect(survivor?.running).toBe(false); // and stays stopped until started again
+    await k2.close();
+  });
 });
 
 describe('skill catalogue', () => {

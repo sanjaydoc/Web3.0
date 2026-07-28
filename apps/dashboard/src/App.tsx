@@ -17,6 +17,7 @@ import {
   type Account as Acct,
   type AgentCard,
   type Guardrails,
+  type HostedAgent,
   type LedgerEntry,
   NODE_URL,
   type Stats,
@@ -543,6 +544,43 @@ function Stat({ k, n, unit }: { k: string; n: string; unit?: string }) {
 
 function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] }) {
   const balanceOf = (id: string) => wallets.find((w) => w.owner === id)?.balance ?? 0;
+
+  // Hosted agents (Genesis-created, running IN this node) are the ones we can start/stop. The node
+  // returns only the caller's own hosted agents to a non-admin, so the Start/Stop control appears
+  // only on rows the operator owns. Externally-run SDK agents aren't hosted here → no control.
+  const [hosted, setHosted] = useState<HostedAgent[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const r = await api.hosted();
+        if (active) setHosted(r.agents);
+      } catch {
+        /* node offline / not permitted — leave controls hidden */
+      }
+    };
+    load();
+    const t = setInterval(load, 3000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, []);
+  const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
+
+  const toggle = async (h: HostedAgent) => {
+    setBusy(h.web3Id);
+    try {
+      const r = h.running ? await api.hostedStop(h.handle) : await api.hostedStart(h.handle);
+      setHosted(r.agents);
+    } catch {
+      /* keep last state; the poll will reconcile */
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -552,13 +590,14 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
         {agents.length === 0 ? (
           <div className="empty">No agents registered yet. Run the two-agents demo.</div>
         ) : (
-          // Scroll wrapper: five columns overflow a phone's width; scroll inside the card instead
-          // of the last columns (Wallet/DID) bleeding past the edge. (Agents view only.)
+          // Scroll wrapper: the columns overflow a phone's width; scroll inside the card instead of
+          // the last columns bleeding past the edge. (Agents view only.)
           <div className="hscroll">
             <table>
               <thead>
                 <tr>
                   <th>Web3.0 ID</th>
+                  <th>Control</th>
                   <th>Kind</th>
                   <th>Skills</th>
                   <th>Wallet</th>
@@ -566,21 +605,38 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
                 </tr>
               </thead>
               <tbody>
-                {agents.map((a) => (
-                  <tr key={a.web3Id}>
-                    <td>
-                      <strong>{a.web3Id}</strong>
-                    </td>
-                    <td>
-                      <span className="chip">{a.kind}</span>
-                    </td>
-                    <td>
-                      {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
-                    </td>
-                    <td>{formatAmount(balanceOf(a.web3Id))}</td>
-                    <td className="mono-hash">{a.did.slice(0, 22)}…</td>
-                  </tr>
-                ))}
+                {agents.map((a) => {
+                  const h = hostedById.get(a.web3Id);
+                  return (
+                    <tr key={a.web3Id}>
+                      <td>
+                        <strong>{a.web3Id}</strong>
+                      </td>
+                      <td>
+                        {h ? (
+                          <button
+                            type="button"
+                            className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
+                            disabled={busy === a.web3Id}
+                            onClick={() => toggle(h)}
+                          >
+                            {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
+                          </button>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="chip">{a.kind}</span>
+                      </td>
+                      <td>
+                        {a.skills.map((sk) => sk.id).join(', ') || <span className="muted">—</span>}
+                      </td>
+                      <td>{formatAmount(balanceOf(a.web3Id))}</td>
+                      <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
