@@ -32,7 +32,7 @@ export function hasRole(request: FastifyRequest, accounts: AccountsService, role
 }
 
 /**
- * Guard: allow the request if it carries ANY authenticated account (operator, developer, admin),
+ * Guard: allow the request if it carries ANY authenticated account (operator, agent-owner, admin),
  * the legacy admin token, or the node is open (no accounts configured). Replies 401 otherwise.
  * Use for actions any signed-in user may take (e.g. publishing a dApp), regardless of specific role.
  */

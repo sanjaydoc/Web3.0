@@ -21,7 +21,7 @@ async function bootWith(adminOnly: boolean) {
   };
   // First signup bootstraps as admin; the second is a plain developer.
   const adminToken = await signup('owner', 'admin');
-  const devToken = await signup('maxdev', 'developer');
+  const devToken = await signup('maxdev', 'agent-owner');
   const launch = (token: string, handle: string) =>
     kernel.http.inject({
       method: 'POST',

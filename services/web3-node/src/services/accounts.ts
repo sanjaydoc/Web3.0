@@ -3,12 +3,22 @@ import { web3Id as makeWeb3Id } from '@web3/core';
 import type { Store } from '../store/index.js';
 
 /**
- * The roles the node enforces. `admin` runs the node; `developer` publishes dApps; `operator` hosts
- * (contributes RAM, earns hosting fees); `agent-owner` creates/owns agents and pays a host to run them.
- * `operator` and `agent-owner` are the two mutually-exclusive marketplace personas picked at signup.
+ * The roles the node enforces. `admin` runs the node; `operator` hosts (contributes RAM, earns hosting
+ * fees); `agent-owner` creates/owns agents and pays a host to run them. `operator` and `agent-owner`
+ * are the two mutually-exclusive marketplace personas picked at signup.
+ *
+ * The legacy `developer` role (a dApp publisher) was folded into `agent-owner` — its views now live in
+ * the agent-owner dashboard. `normalizeRole` maps any stored/incoming `developer` to `agent-owner`, so
+ * old accounts keep working without a data migration.
  */
-export type Role = 'admin' | 'operator' | 'developer' | 'agent-owner';
-export const ROLES: Role[] = ['admin', 'operator', 'developer', 'agent-owner'];
+export type Role = 'admin' | 'operator' | 'agent-owner';
+export const ROLES: Role[] = ['admin', 'operator', 'agent-owner'];
+
+/** Coerce a stored/incoming role string to a current Role (legacy `developer` → `agent-owner`). */
+export function normalizeRole(role: string | undefined): Role {
+  if (role === 'developer') return 'agent-owner';
+  return ROLES.includes(role as Role) ? (role as Role) : 'agent-owner';
+}
 
 /** A user account: a human address + role + a hashed API token. The raw token is shown once, at signup. */
 export interface Account {
@@ -45,7 +55,9 @@ export class AccountsService {
 
   async load(): Promise<void> {
     const saved = (await this.store.loadSetting<Account[]>(SETTING_KEY)) ?? [];
-    for (const a of saved) this.index(a);
+    // Normalize legacy roles (e.g. `developer` → `agent-owner`) so old accounts resolve to a current
+    // persona without a data migration.
+    for (const a of saved) this.index({ ...a, role: normalizeRole(a.role) });
   }
 
   private index(a: Account): void {
@@ -106,7 +118,12 @@ export class AccountsService {
    */
   async adopt(address: string, role: Role, token: string): Promise<void> {
     if (this.byAddress.has(address)) return;
-    const account: Account = { address, role, tokenHash: sha256(token), createdAt: this.clock() };
+    const account: Account = {
+      address,
+      role: normalizeRole(role),
+      tokenHash: sha256(token),
+      createdAt: this.clock(),
+    };
     this.index(account);
     await this.persist();
   }

@@ -1002,11 +1002,11 @@ describe('accounts & authentication', () => {
       });
 
     // sign up a developer → gets an address + a one-time token
-    const res = await post('/accounts/signup', { local: 'sanjay', role: 'developer' });
+    const res = await post('/accounts/signup', { local: 'sanjay', role: 'agent-owner' });
     expect(res.statusCode).toBe(201);
     const created = res.json() as { address: string; role: string; token: string };
     expect(created.address).toBe('sanjay@web3.0');
-    expect(created.role).toBe('developer');
+    expect(created.role).toBe('agent-owner');
     expect(created.token).toMatch(/^web3_/);
 
     // the token authenticates /accounts/me and never leaks the hash
@@ -1016,7 +1016,7 @@ describe('accounts & authentication', () => {
       headers: { 'x-web3-token': created.token },
     });
     expect(me.statusCode).toBe(200);
-    expect(me.json()).toMatchObject({ address: 'sanjay@web3.0', role: 'developer' });
+    expect(me.json()).toMatchObject({ address: 'sanjay@web3.0', role: 'agent-owner' });
     expect(JSON.stringify(me.json())).not.toContain('tokenHash');
 
     // no/!bad token → 401
@@ -1063,7 +1063,7 @@ describe('accounts & authentication', () => {
     const admin = (await post('/accounts/signup', { local: 'boss', role: 'admin' })).json() as {
       token: string;
     };
-    const dev = (await post('/accounts/signup', { local: 'devy', role: 'developer' })).json() as {
+    const dev = (await post('/accounts/signup', { local: 'devy', role: 'agent-owner' })).json() as {
       token: string;
     };
 
@@ -1089,7 +1089,7 @@ describe('accounts & authentication', () => {
     expect(okAdmin.statusCode).toBe(201);
 
     // duplicate address is rejected
-    const dup = await post('/accounts/signup', { local: 'devy', role: 'developer' });
+    const dup = await post('/accounts/signup', { local: 'devy', role: 'agent-owner' });
     expect(dup.statusCode).toBe(400);
 
     // accounts persist across a restart over the same store
@@ -1109,8 +1109,8 @@ describe('hosted dApp ownership scoping', () => {
         .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
         .then((r) => r.json() as { address: string; token: string });
     const admin = await signup('adm', 'admin');
-    const dev1 = await signup('devone', 'developer');
-    const dev2 = await signup('devtwo', 'developer');
+    const dev1 = await signup('devone', 'agent-owner');
+    const dev2 = await signup('devtwo', 'agent-owner');
 
     const launch = (token: string, handle: string) =>
       k.http.inject({
