@@ -430,7 +430,8 @@ export function App() {
           <NavItem
             key={n.id}
             id={n.id}
-            label={n.label}
+            // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
+            label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
             view={view}
             set={go}
             count={
