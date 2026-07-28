@@ -2,7 +2,7 @@ import type { Web3Id } from '@web3/core';
 import { deriveDid, fromB64u } from '@web3/crypto';
 import type { LedgerEntry } from '@web3/ledger';
 import type { ModuleContext, Web3Module } from '../context.js';
-import { type Role, normalizeRole } from '../services/accounts.js';
+import { type Plan, type Role, normalizePlan, normalizeRole } from '../services/accounts.js';
 import { currentAccount, requireAuthed, requireRole } from '../services/auth.js';
 
 /**
@@ -187,13 +187,17 @@ export function accountsModule(): Web3Module {
         if (upstream) {
           try {
             const res = await fetch(`${upstream}/accounts/me`, { headers: passHeaders(request) });
-            const data = (await res.json().catch(() => ({}))) as { address?: string; role?: Role };
+            const data = (await res.json().catch(() => ({}))) as {
+              address?: string;
+              role?: Role;
+              plan?: Plan;
+            };
             // Adopt the account locally on sign-in so its token authenticates HERE too — otherwise
             // local-auth endpoints on a follower (e.g. PUT /operator/location) reject a valid token
             // this node simply never learned. `adopt` is a no-op once the account is known.
             const token = request.headers['x-web3-token'];
             if (res.ok && typeof token === 'string' && data.address && data.role) {
-              await accounts.adopt(data.address, data.role, token);
+              await accounts.adopt(data.address, data.role, token, data.plan);
             }
             return reply.code(res.status).send(data);
           } catch {
@@ -272,6 +276,34 @@ export function accountsModule(): Web3Module {
         }
         if (!requireRole(request, reply, accounts, 'admin')) return;
         return { accounts: accounts.list() };
+      });
+
+      // Set an account's freemium plan (free ↔ pro). Admin-only for now — this is the manual upgrade
+      // path until the prepaid-credits on-ramp lets an owner self-upgrade by buying credits.
+      http.post('/accounts/plan', async (request, reply) => {
+        const body = (request.body ?? {}) as { address?: string; plan?: string };
+        // Follower: plans live on the authority's account store — forward (admin checked there).
+        const upstream = authorityUrl();
+        if (upstream) {
+          try {
+            const res = await fetch(`${upstream}/accounts/plan`, {
+              method: 'POST',
+              headers: passHeaders(request),
+              body: JSON.stringify(body),
+            });
+            return reply.code(res.status).send(await res.json().catch(() => ({})));
+          } catch {
+            return reply.code(502).send({ error: 'could not reach an authority' });
+          }
+        }
+        if (!requireRole(request, reply, accounts, 'admin')) return;
+        const address = (body.address ?? '').trim();
+        if (!address) return reply.code(400).send({ error: 'address is required' });
+        const plan: Plan = normalizePlan(body.plan);
+        const view = await accounts.setPlan(address, plan);
+        if (!view) return reply.code(404).send({ error: 'unknown account' });
+        ctx.bus.emit({ kind: 'account.created', summary: `${address} plan set to ${plan}` });
+        return view;
       });
     },
   };

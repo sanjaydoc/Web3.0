@@ -199,9 +199,12 @@ export interface NodeOperator {
 // `operator` (host) and `agent-owner` are the two mutually-exclusive marketplace personas.
 // (The legacy `developer` role was folded into `agent-owner`.)
 export type Role = 'admin' | 'operator' | 'agent-owner';
+// Freemium plan (GitHub-for-agents): `free` (capped hosting) or `pro` (paid, higher limits).
+export type Plan = 'free' | 'pro';
 export interface Account {
   address: string;
   role: Role;
+  plan: Plan;
   createdAt: string;
 }
 export interface SignupResult {
@@ -485,6 +488,8 @@ export const api = {
   bindKey: (pubkey: string) =>
     post<{ bound: boolean; address: string }>('/accounts/key', { pubkey }),
   me: () => get<Account>('/accounts/me'),
+  /** Set an account's freemium plan (admin) — the manual upgrade path until credits ship. */
+  setPlan: (address: string, plan: Plan) => post<Account>('/accounts/plan', { address, plan }),
   /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */

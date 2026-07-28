@@ -33,7 +33,26 @@ export function hostedModule(): Web3Module {
         // The publishing account's address becomes the dApp's owner (authoritative, not free-text).
         const acct = currentAccount(request, ctx.accounts);
         const body = request.body as HostedAgentConfig;
-        if (acct) body.createdBy = acct.address;
+        if (acct) {
+          body.createdBy = acct.address;
+          // Freemium cap: a `free`-plan owner may host up to `freeMaxAgents`. Launching an agent they
+          // already own (a restart/update) doesn't count; a NEW agent past the cap is refused with a
+          // 402 + upgrade hint. `pro` accounts are uncapped. (0 = unlimited free tier.)
+          const cap = ctx.config.freeMaxAgents;
+          if (acct.plan === 'free' && cap > 0) {
+            const handle = (body.handle ?? '').trim().toLowerCase();
+            const owned = svc
+              .status()
+              .filter((a) => a.createdBy.toLowerCase() === acct.address.toLowerCase());
+            const isExisting = owned.some((a) => a.handle.toLowerCase() === handle);
+            if (!isExisting && owned.length >= cap) {
+              return reply.code(402).send({
+                error: `Free plan hosts up to ${cap} agents. Upgrade to Pro to host more.`,
+                upgradeRequired: true,
+              });
+            }
+          }
+        }
         try {
           return await svc.launch(body);
         } catch (err) {

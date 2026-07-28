@@ -1916,6 +1916,63 @@ describe('signed lease mandate (owner-authorized recurring billing)', () => {
   });
 });
 
+describe('freemium plan (free/pro hosting tiers)', () => {
+  it('defaults new accounts to free, caps hosting, and pro (admin-upgraded) lifts the cap', async () => {
+    const k = new Kernel({ port: 0, freeMaxAgents: 2 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const signup = (local: string, role: string) =>
+      k.http
+        .inject({ method: 'POST', url: '/accounts/signup', payload: { local, role } })
+        .then((r) => r.json() as { address: string; token: string });
+    const admin = await signup('boss', 'admin'); // first account bootstraps as admin
+    const owner = await signup('maker', 'agent-owner');
+
+    // New account is on the free plan.
+    const me = (await k.http
+      .inject({ method: 'GET', url: '/accounts/me', headers: { 'x-web3-token': owner.token } })
+      .then((r) => r.json())) as { plan: string };
+    expect(me.plan).toBe('free');
+
+    const launch = (handle: string, token: string) =>
+      k.http.inject({
+        method: 'POST',
+        url: '/hosted/launch',
+        headers: { 'x-web3-token': token },
+        payload: {
+          handle,
+          name: handle,
+          description: 'a',
+          skillId: 'ask',
+          skillName: 'Ask',
+          skillDesc: 'x',
+          price: 0,
+          provider: 'local',
+          model: 'x',
+          system: 's',
+        },
+      });
+
+    // Free tier hosts up to 2; the 3rd is refused with a 402 + upgrade hint.
+    expect((await launch('agentone', owner.token)).statusCode).toBe(200);
+    expect((await launch('agenttwo', owner.token)).statusCode).toBe(200);
+    const capped = await launch('agentthree', owner.token);
+    expect(capped.statusCode).toBe(402);
+    expect((capped.json() as { upgradeRequired?: boolean }).upgradeRequired).toBe(true);
+
+    // Admin upgrades the owner to pro → the cap no longer applies.
+    const up = await k.http.inject({
+      method: 'POST',
+      url: '/accounts/plan',
+      headers: { 'x-web3-token': admin.token },
+      payload: { address: owner.address, plan: 'pro' },
+    });
+    expect(up.statusCode).toBe(200);
+    expect((up.json() as { plan: string }).plan).toBe('pro');
+    expect((await launch('agentthree', owner.token)).statusCode).toBe(200);
+    await k.close();
+  });
+});
+
 function once(socket: WebSocket, event: string): Promise<void> {
   return new Promise((resolve) => socket.once(event, () => resolve()));
 }

@@ -124,6 +124,11 @@ export interface Web3Config {
    */
   ramMbPerAgent: number;
   /**
+   * Freemium cap (GitHub-for-agents): the max agents a `free`-plan owner may host. `pro` accounts are
+   * uncapped. Default 3. Set 0 for an unlimited free tier.
+   */
+  freeMaxAgents: number;
+  /**
    * Admin-only mode. When true, this node is reserved for its admin: non-admins may still sign up
    * and read public data, but compute/hosting actions (launching agents) are refused with a prompt
    * to run their own node. Set on the network's main node so operators contribute from their own
@@ -222,6 +227,7 @@ export const DEFAULT_CONFIG: Web3Config = {
   modules: [...ALL_MODULES],
   faucetGrant: Number(process.env.WEB3_FAUCET ?? 100_000), // 1,000.00 aETH
   ramMbPerAgent: Math.max(1, Number(process.env.WEB3_RAM_MB_PER_AGENT ?? 256)),
+  freeMaxAgents: Math.max(0, Number(process.env.WEB3_FREE_MAX_AGENTS ?? 3)),
   adminOnly: envBool('WEB3_ADMIN_ONLY', false),
   corsOrigins: (process.env.WEB3_CORS_ORIGIN ?? '')
     .split(',')

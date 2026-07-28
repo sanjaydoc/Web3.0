@@ -327,6 +327,17 @@ export function Account() {
             <dd>
               <span className="chip allow">{me.role}</span>
             </dd>
+            <dt>Plan</dt>
+            <dd>
+              <span className={`chip ${me.plan === 'pro' ? 'allow' : ''}`}>
+                {me.plan === 'pro' ? 'Pro' : 'Free'}
+              </span>{' '}
+              {me.plan === 'free' && (
+                <span className="muted">
+                  — host a few agents free; Pro (buy credits) lifts the limit. Coming soon.
+                </span>
+              )}
+            </dd>
             <dt>Since</dt>
             <dd>{new Date(me.createdAt).toLocaleString()}</dd>
           </dl>
