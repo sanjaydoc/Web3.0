@@ -257,7 +257,7 @@ export const DEFAULT_CONFIG: Web3Config = {
     slotMs: Number(process.env.WEB3_SLOT_MS ?? networkFile.slotMs ?? 6_000),
   },
   fees: {
-    protocolBps: Number(process.env.WEB3_FEE_BPS ?? 0),
+    protocolBps: Number(process.env.WEB3_FEE_BPS ?? 300), // 3% take-rate on payments → node treasury
     blockReward: Number(process.env.WEB3_BLOCK_REWARD ?? 0),
     burnBps: Number(process.env.WEB3_BURN_BPS ?? 0),
     treasuryLocal: process.env.WEB3_TREASURY ?? 'treasury',

@@ -80,9 +80,11 @@ describe('Web3.0 node (in-process integration)', () => {
     expect(receipt.settlement.status).toBe('settled');
     expect(receipt.settlement.txRef).toBe(receipt.ledgerHash);
 
+    // The network's protocol fee is skimmed from the payee into the node treasury.
+    const fee = Math.floor((1250 * kernel.config.fees.protocolBps) / 10_000);
     const payeeWallet = await get(`/wallets/${payee.web3Id}`);
     expect((payeeWallet.json.wallet as { balance: number }).balance).toBe(
-      kernel.config.faucetGrant + 1250,
+      kernel.config.faucetGrant + 1250 - fee,
     );
   });
 
@@ -204,10 +206,11 @@ describe('persistence (state survives a restart)', () => {
     const k2 = new Kernel({ port: 0 }, nodeKeys, store);
     await k2.init();
 
+    const fee = Math.floor((700 * k2.config.fees.protocolBps) / 10_000); // protocol fee skimmed from bob
     expect(k2.registry.size).toBe(3); // alice, bob, and the node treasury account
     expect(k2.registry.has(alice.web3Id)).toBe(true);
     expect(k2.ledger.balanceOf(alice.web3Id)).toBe(k2.config.faucetGrant - 700);
-    expect(k2.ledger.balanceOf(bob.web3Id)).toBe(k2.config.faucetGrant + 700);
+    expect(k2.ledger.balanceOf(bob.web3Id)).toBe(k2.config.faucetGrant + 700 - fee);
     expect(k2.ledger.verifyChain().ok).toBe(true);
     await k2.close();
   });
