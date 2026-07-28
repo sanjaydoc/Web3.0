@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type Lease, type MarketHost, api, formatAmount } from './api.js';
+import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 
 /**
  * Marketplace — the agent-owner side of the compute marketplace. Browse hosts selling RAM capacity,
@@ -10,14 +11,16 @@ export function Marketplace() {
   const [hosts, setHosts] = useState<MarketHost[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [agentId, setAgentId] = useState('');
+  const [me, setMe] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [m, l] = await Promise.all([api.hostingMarket(), api.hostingLeases()]);
+      const [m, l, acct] = await Promise.all([api.hostingMarket(), api.hostingLeases(), api.me()]);
       setHosts(m.hosts);
       setLeases(l.leases);
+      setMe(acct.address);
     } catch {
       /* node offline — keep last */
     }
@@ -29,18 +32,38 @@ export function Marketplace() {
     return () => clearInterval(t);
   }, [load]);
 
-  const rent = async () => {
+  const rent = async (h: MarketHost) => {
     const id = agentId.trim();
     if (!id) {
       setMsg({ kind: 'err', text: 'Enter the agent you want hosted (e.g. myagent@web3.0).' });
       return;
     }
-    setBusy('rent');
+    setBusy(h.host);
     setMsg(null);
     try {
-      await api.rentHost(id);
+      // Sign a lease mandate with the owner's ML-DSA key so every recurring debit is owner-authorized
+      // and capped at the offered price. Falls back to an unsigned rental if the key isn't on this
+      // device (e.g. signed in with only a token).
+      const key = me ? loadAccountKey(me) : null;
+      const mandate = key
+        ? signLeaseMandate(key, {
+            owner: me,
+            host: h.host,
+            agentId: id,
+            maxPerEpoch: h.pricePerEpoch,
+            maxEpochs: 0,
+            expiry: '',
+            nonce: mandateNonce(),
+          })
+        : undefined;
+      await api.rentHost(id, mandate);
       setAgentId('');
-      setMsg({ kind: 'ok', text: `Rented hosting for ${id}. You'll be billed each epoch.` });
+      setMsg({
+        kind: 'ok',
+        text: mandate
+          ? `Rented ${h.host} for ${id} — signed authorization; billed each epoch.`
+          : `Rented ${h.host} for ${id} (no local key — unsigned). Billed each epoch.`,
+      });
       await load();
     } catch (e) {
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
@@ -111,10 +134,10 @@ export function Marketplace() {
                       <button
                         type="button"
                         className="btn act"
-                        disabled={busy === 'rent' || h.free === 0}
-                        onClick={rent}
+                        disabled={busy === h.host || h.free === 0}
+                        onClick={() => rent(h)}
                       >
-                        {busy === 'rent' ? '…' : 'Rent'}
+                        {busy === h.host ? '…' : 'Rent'}
                       </button>
                     </td>
                   </tr>

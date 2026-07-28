@@ -26,19 +26,22 @@ people's agents**, and anyone can rent that capacity — no VPS.
 The marketplace runs on the existing post-quantum foundation: owner/host **identities and wallets**
 are ML-DSA keypairs bound on-chain; every hosting-fee and commission transfer is recorded on the
 **PQC-signed, hash-chained ledger** and sealed by **ML-DSA authority signatures** (PoA). Manual
-transfers (`/tx`) are individually ML-DSA-signed by the payer. The **recurring per-epoch charge** is
-settled with an internal authoritative `ledger.transfer` (like protocol fees / block rewards) — it is
-*not* individually owner-signed, because auto-billing can't prompt for the client-side secret key each
-epoch. **Hardening step (not yet built):** a **signed lease mandate** — at rent time the owner
-ML-DSA-signs a "debit up to X/epoch for this lease" authorization, verified on each charge — to make
-every recurring debit individually owner-authorized.
+transfers (`/tx`) are individually ML-DSA-signed by the payer.
+
+**Signed lease mandate (shipped):** the recurring per-epoch charge is now individually **owner-signed**.
+At rent time the owner ML-DSA-signs a mandate — `{owner, host, agentId, maxPerEpoch, maxEpochs, expiry,
+nonce}` — with the same canonicalization the node verifies (`HostingService.verifyMandate`). On every
+charge the node checks the signature against the owner's **on-chain** key, that the terms match the
+lease, and that the debit is within the per-epoch cap / epoch count / expiry — otherwise the charge is
+skipped. A tampered or forged mandate never debits. (An unsigned rental still falls back to the legacy
+node-side debit for clients without a local key.)
 
 ### Remaining / hardening
 
 - **Cross-node placement runtime**: leases + billing + offers are implemented node-locally; launching
   the owner's agent on a *remote* host's `HostedAgentService` (and on-chain replicated leases for
   cross-node deterministic billing) is the remaining integration.
-- **Signed lease mandate** (above), reputation/SLAs, and market-clearing pricing.
+- Reputation/SLAs and market-clearing pricing.
 
 ---
 

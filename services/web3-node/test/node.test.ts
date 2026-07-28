@@ -1,5 +1,5 @@
 import { toMinorUnits } from '@web3/core';
-import { generateKeypair, toB64u } from '@web3/crypto';
+import { canonicalize, generateKeypair, signString, toB64u } from '@web3/crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 process.env.WEB3_LOG_LEVEL = 'silent';
@@ -561,6 +561,7 @@ function ctxOf(k: Kernel) {
     accounts: new AccountsService(k.store, () => new Date().toISOString()),
     skills: new SkillsService(k.store, () => new Date().toISOString()),
     connectors: new ConnectorsService(k.store, () => new Date().toISOString()),
+    networkAccounts: k.networkAccounts,
     config: k.config,
     treasuryId: k.treasuryId,
     clock: () => new Date().toISOString(),
@@ -1768,6 +1769,109 @@ describe('hosting marketplace (fees + 3% commission)', () => {
     await svc.rent(owner as never, 'a@web3.0' as never);
     const receipts = await svc.billEpoch();
     expect(receipts).toHaveLength(0); // insufficient funds → nothing settled
+    expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant);
+    await k.close();
+  });
+});
+
+describe('signed lease mandate (owner-authorized recurring billing)', () => {
+  // Build a signed mandate the way the dashboard's txsign.ts does: canonicalize the 7 body fields and
+  // ML-DSA-sign them. `signKp` lets a test sign with the WRONG key to prove forgery is rejected.
+  const mandate = (
+    body: {
+      owner: string;
+      host: string;
+      agentId: string;
+      maxPerEpoch: number;
+      maxEpochs?: number;
+      expiry?: string;
+      nonce?: string;
+    },
+    keys: { publicKey: Uint8Array; secretKey: Uint8Array },
+  ) => {
+    const full = {
+      owner: body.owner,
+      host: body.host,
+      agentId: body.agentId,
+      maxPerEpoch: body.maxPerEpoch,
+      maxEpochs: body.maxEpochs ?? 0,
+      expiry: body.expiry ?? '',
+      nonce: body.nonce ?? 'n1',
+    };
+    return {
+      ...full,
+      pubkey: toB64u(keys.publicKey),
+      signature: signString(keys.secretKey, canonicalize(full)),
+    };
+  };
+
+  const setup = async () => {
+    const k = new Kernel({ port: 0 }, generateKeypair(), new MemoryStore());
+    await k.init();
+    const kp = generateKeypair(); // the owner's ML-DSA key
+    const owner = (
+      await k.http.inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'ownr', role: 'agent-owner', pubkey: toB64u(kp.publicKey) },
+      })
+    ).json() as { address: string };
+    const host = (
+      await k.http.inject({
+        method: 'POST',
+        url: '/accounts/signup',
+        payload: { local: 'hostr', role: 'operator' },
+      })
+    ).json() as { address: string };
+    const svc = new HostingService(ctxOf(k) as never);
+    await svc.setOffer(host.address as never, 1000);
+    return { k, kp, owner: owner.address, host: host.address, svc };
+  };
+
+  it('accepts a valid owner-signed mandate and bills under it', async () => {
+    const { k, kp, owner, host, svc } = await setup();
+    const m = mandate({ owner, host, agentId: 'a@web3.0', maxPerEpoch: 1000 }, kp);
+    const lease = await svc.rent(owner as never, 'a@web3.0' as never, m as never);
+    expect(lease.mandate).toBeTruthy();
+    const receipts = await svc.billEpoch();
+    expect(receipts).toHaveLength(1);
+    expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant + 970); // 97% of 1000
+    await k.close();
+  });
+
+  it('rejects a mandate whose cap is below the offered price', async () => {
+    const { k, kp, owner, host, svc } = await setup();
+    const m = mandate({ owner, host, agentId: 'a@web3.0', maxPerEpoch: 500 }, kp); // < 1000 price
+    await expect(svc.rent(owner as never, 'a@web3.0' as never, m as never)).rejects.toThrow(
+      /exceeds the mandate cap/,
+    );
+    await k.close();
+  });
+
+  it('rejects a mandate signed by a key that is not the owner’s on-chain key', async () => {
+    const { k, owner, host, svc } = await setup();
+    const impostor = generateKeypair(); // not the key bound to `owner`
+    const m = mandate({ owner, host, agentId: 'a@web3.0', maxPerEpoch: 1000 }, impostor);
+    await expect(svc.rent(owner as never, 'a@web3.0' as never, m as never)).rejects.toThrow(
+      /does not match the account on-chain/,
+    );
+    await k.close();
+  });
+
+  it('skips billing when a stored mandate is tampered after signing', async () => {
+    const { k, kp, owner, host, svc } = await setup();
+    const m = mandate({ owner, host, agentId: 'a@web3.0', maxPerEpoch: 1000 }, kp);
+    await svc.rent(owner as never, 'a@web3.0' as never, m as never);
+    // Tamper the persisted lease's mandate — the signature no longer matches the body.
+    const leases = (await k.store.loadSetting('hosting-leases')) as Array<{
+      mandate: { maxPerEpoch: number };
+    }>;
+    const tampered = leases[0];
+    if (!tampered) throw new Error('expected a persisted lease');
+    tampered.mandate.maxPerEpoch = 999_999;
+    await k.store.saveSetting('hosting-leases', leases);
+    const receipts = await svc.billEpoch();
+    expect(receipts).toHaveLength(0); // invalid signature → not charged
     expect(k.ledger.balanceOf(host as never)).toBe(k.config.faucetGrant);
     await k.close();
   });

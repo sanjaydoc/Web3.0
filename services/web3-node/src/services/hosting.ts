@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Web3Id } from '@web3/core';
+import { canonicalize, fromB64u, verifyString } from '@web3/crypto';
 import type { ModuleContext } from '../context.js';
 
 /**
@@ -21,6 +22,32 @@ export interface HostingOffer {
   updatedAt: string;
 }
 
+/**
+ * A signed lease mandate — the owner's ML-DSA authorization for recurring debits, so every epoch's
+ * charge is individually owner-signed (as quantum-safe and non-repudiable as a manual /tx) instead of
+ * a bare node-initiated transfer. The signature covers the canonical body; `pubkey` must match the
+ * owner's key bound on-chain.
+ */
+export interface LeaseMandateBody {
+  owner: Web3Id;
+  host: Web3Id;
+  agentId: Web3Id;
+  /** Max aETH minor units debitable per epoch under this mandate. */
+  maxPerEpoch: number;
+  /** Total epochs authorized (0 = unlimited). */
+  maxEpochs: number;
+  /** ISO expiry; charges after it are refused ('' = no expiry). */
+  expiry: string;
+  /** Client-random uniqueness. */
+  nonce: string;
+}
+export interface SignedLeaseMandate extends LeaseMandateBody {
+  /** base64url ML-DSA public key that signed — must equal the owner's on-chain key. */
+  pubkey: string;
+  /** base64url ML-DSA signature over canonicalize(body). */
+  signature: string;
+}
+
 /** A rental: agent-owner pays host to run `agentId`, billed `pricePerEpoch` each epoch. */
 export interface Lease {
   id: string;
@@ -32,6 +59,21 @@ export interface Lease {
   createdAt: string;
   epochsBilled: number;
   paidTotal: number; // gross aETH the owner has paid over the life of the lease
+  /** The owner's signed authorization for the recurring debit, if the lease is mandate-backed. */
+  mandate?: SignedLeaseMandate;
+}
+
+/** The 7 authorization fields the signature covers — extracted in a stable shape for canonicalize. */
+function mandateBody(m: LeaseMandateBody): LeaseMandateBody {
+  return {
+    owner: m.owner,
+    host: m.host,
+    agentId: m.agentId,
+    maxPerEpoch: m.maxPerEpoch,
+    maxEpochs: m.maxEpochs,
+    expiry: m.expiry,
+    nonce: m.nonce,
+  };
 }
 
 /** One epoch's charge on a lease: gross paid, platform commission, net to the host. */
@@ -111,8 +153,43 @@ export class HostingService {
     ];
   }
 
-  /** Rent this host to run `agentId` for `owner`. Rejects if there's no offer or no free capacity. */
-  async rent(owner: Web3Id, agentId: Web3Id): Promise<Lease> {
+  /**
+   * Verify a signed lease mandate authorizes a `gross` charge for (owner, host, agentId):
+   *  1. the mandate's key equals the owner's key bound on-chain (so it's really them),
+   *  2. the ML-DSA signature is valid over the canonical body,
+   *  3. the terms match this lease and the charge is within the per-epoch cap.
+   * Time/epoch limits (expiry, maxEpochs) are checked per-charge in `billEpoch`.
+   */
+  verifyMandate(
+    m: SignedLeaseMandate,
+    expect: { owner: string; host: string; agentId: string; gross: number },
+  ): { ok: boolean; reason?: string } {
+    const onchain = this.ctx.networkAccounts.pubkeyOf(m.owner);
+    if (!onchain) return { ok: false, reason: 'owner has no on-chain signing key' };
+    if (onchain !== m.pubkey) {
+      return { ok: false, reason: 'mandate key does not match the account on-chain' };
+    }
+    let sigOk = false;
+    try {
+      sigOk = verifyString(fromB64u(m.pubkey), canonicalize(mandateBody(m)), m.signature);
+    } catch {
+      sigOk = false;
+    }
+    if (!sigOk) return { ok: false, reason: 'invalid mandate signature' };
+    if (m.owner !== expect.owner || m.host !== expect.host || m.agentId !== expect.agentId) {
+      return { ok: false, reason: 'mandate does not match this lease' };
+    }
+    if (expect.gross > m.maxPerEpoch)
+      return { ok: false, reason: 'charge exceeds the mandate cap' };
+    return { ok: true };
+  }
+
+  /**
+   * Rent this host to run `agentId` for `owner`. Rejects if there's no offer or no free capacity. If a
+   * signed `mandate` is supplied it must authorize this exact rental (see verifyMandate) and is stored
+   * so every recurring charge is owner-authorized; without one the lease bills node-side (legacy).
+   */
+  async rent(owner: Web3Id, agentId: Web3Id, mandate?: SignedLeaseMandate): Promise<Lease> {
     const offer = await this.getOffer();
     if (!offer || offer.pricePerEpoch <= 0) throw new Error('this host is not offering capacity');
     if (owner === offer.host) throw new Error('a host cannot rent its own capacity');
@@ -123,6 +200,15 @@ export class HostingService {
     const capacity = await this.capacity();
     const used = leases.filter((l) => l.active && l.host === offer.host).length;
     if (capacity > 0 && used >= capacity) throw new Error('host is at capacity');
+    if (mandate) {
+      const v = this.verifyMandate(mandate, {
+        owner,
+        host: offer.host,
+        agentId,
+        gross: offer.pricePerEpoch,
+      });
+      if (!v.ok) throw new Error(`mandate rejected: ${v.reason}`);
+    }
     const lease: Lease = {
       id: `lease_${randomUUID()}`,
       owner,
@@ -133,6 +219,7 @@ export class HostingService {
       createdAt: this.ctx.clock(),
       epochsBilled: 0,
       paidTotal: 0,
+      mandate,
     };
     leases.push(lease);
     await this.saveLeases(leases);
@@ -173,9 +260,23 @@ export class HostingService {
     const leases = await this.loadLeases();
     const receipts: HostingReceipt[] = [];
     let mutated = false;
+    const now = this.ctx.clock();
     for (const lease of leases) {
       if (!lease.active || lease.pricePerEpoch <= 0) continue;
       const gross = lease.pricePerEpoch;
+      // Mandate-backed lease: each charge must be authorized by the owner's signed mandate, within its
+      // per-epoch cap, epoch count, and expiry. A failing check skips the charge (never force-debits).
+      if (lease.mandate) {
+        const v = this.verifyMandate(lease.mandate, {
+          owner: lease.owner,
+          host: lease.host,
+          agentId: lease.agentId,
+          gross,
+        });
+        if (!v.ok) continue;
+        if (lease.mandate.expiry && now > lease.mandate.expiry) continue;
+        if (lease.mandate.maxEpochs > 0 && lease.epochsBilled >= lease.mandate.maxEpochs) continue;
+      }
       if (this.ctx.ledger.balanceOf(lease.owner) < gross) continue; // insufficient funds → retry next epoch
       const commission = Math.floor((gross * this.commissionBps) / 10_000);
       const net = gross - commission;

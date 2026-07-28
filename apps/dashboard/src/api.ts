@@ -472,7 +472,8 @@ export const api = {
   hostingOffer: () => get<{ host: string | null; pricePerEpoch: number }>('/hosting/offer'),
   setHostingOffer: (pricePerEpoch: number) =>
     post<{ host: string; pricePerEpoch: number }>('/hosting/offer', { pricePerEpoch }),
-  rentHost: (agentId: string) => post<Lease>('/hosting/rent', { agentId }),
+  rentHost: (agentId: string, mandate?: unknown) =>
+    post<Lease>('/hosting/rent', { agentId, mandate }),
   hostingLeases: () => get<{ leases: Lease[] }>('/hosting/leases'),
   hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
   endLease: (id: string) =>

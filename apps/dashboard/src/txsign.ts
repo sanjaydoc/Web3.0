@@ -118,6 +118,46 @@ export function signTransfer(
   return signed;
 }
 
+/** The authorization fields an owner signs to allow recurring hosting debits (see HostingService). */
+export interface LeaseMandateBody {
+  owner: string;
+  host: string;
+  agentId: string;
+  maxPerEpoch: number;
+  maxEpochs: number;
+  expiry: string;
+  nonce: string;
+}
+export interface SignedLeaseMandate extends LeaseMandateBody {
+  pubkey: string;
+  signature: string;
+}
+
+/**
+ * Sign a lease mandate with the owner's ML-DSA key — the client half of owner-authorized recurring
+ * billing. Canonicalizes the SAME 7 fields the node verifies (`HostingService.verifyMandate`), so the
+ * signature checks byte-for-byte against the owner's on-chain key.
+ */
+export function signLeaseMandate(key: AccountKey, body: LeaseMandateBody): SignedLeaseMandate {
+  const ordered: LeaseMandateBody = {
+    owner: body.owner,
+    host: body.host,
+    agentId: body.agentId,
+    maxPerEpoch: body.maxPerEpoch,
+    maxEpochs: body.maxEpochs,
+    expiry: body.expiry,
+    nonce: body.nonce,
+  };
+  const message = utf8ToBytes(canonicalize(ordered));
+  const signature = toB64u(ml_dsa65.sign(message, fromB64u(key.secretKey)));
+  return { ...ordered, pubkey: key.publicKey, signature };
+}
+
+/** A fresh mandate nonce (random, base64url). */
+export function mandateNonce(): string {
+  return toB64u(randomBytes(12));
+}
+
 // ── keystore: the account's secret key, kept in this browser keyed by address ──
 const keyStoreId = (address: string): string => `web3.acctkey.${address}`;
 

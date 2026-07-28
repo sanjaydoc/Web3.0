@@ -1,7 +1,7 @@
 import type { Web3Id } from '@web3/core';
 import type { ModuleContext, Web3Module } from '../context.js';
 import { currentAccount, hasRole, requireAuthed, requireRole } from '../services/auth.js';
-import { HostingService } from '../services/hosting.js';
+import { HostingService, type SignedLeaseMandate } from '../services/hosting.js';
 
 /**
  * hosting — the compute-marketplace API. A host publishes a per-epoch price (`POST /hosting/offer`);
@@ -50,10 +50,11 @@ export function hostingModule(): Web3Module {
         if (!requireAuthed(request, reply, ctx.accounts)) return;
         const acct = currentAccount(request, ctx.accounts);
         if (!acct) return reply.code(401).send({ error: 'sign in first' });
-        const agentId = String((request.body as { agentId?: unknown })?.agentId ?? '').trim();
+        const body = (request.body ?? {}) as { agentId?: unknown; mandate?: SignedLeaseMandate };
+        const agentId = String(body.agentId ?? '').trim();
         if (!agentId) return reply.code(400).send({ error: 'agentId is required' });
         try {
-          return await svc.rent(acct.address as Web3Id, agentId as Web3Id);
+          return await svc.rent(acct.address as Web3Id, agentId as Web3Id, body.mandate);
         } catch (err) {
           return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
         }
