@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   type Account as Acct,
   ApiError,
-  NODE_URL,
   type Role,
   api,
   formatAmount,
@@ -18,7 +17,7 @@ import {
 function signinError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 0)
-      return `Couldn't reach the node at ${NODE_URL} — it may be offline, or this site's origin isn't allowed (CORS).`;
+      return "Couldn't reach the network node — it may be offline, or this site's origin isn't allowed (CORS).";
     if (err.status === 401)
       return 'Token not recognized by this node. Check for a missing character or an extra space, and make sure this token belongs to this node.';
     return `Sign-in failed (${err.status}).`;

@@ -296,7 +296,7 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(`${NODE_URL}${path}`, init);
   } catch {
-    throw new ApiError(`cannot reach the node at ${NODE_URL} (network or CORS)`, 0);
+    throw new ApiError('cannot reach the network node (offline, or blocked by CORS)', 0);
   }
 }
 
@@ -331,6 +331,36 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   });
   if (!res.ok) return readError(res, path);
   return res.json() as Promise<T>;
+}
+
+const isRoutable = (ip: string): boolean => !!ip && !/^(127\.|::1$|0\.0\.0\.0$)/.test(ip);
+
+/**
+ * This device's own public IP, detected with zero setup. Order: the node's `/whoami` (the IP as the
+ * network sees you — no third party) if it returns a routable address; otherwise a public IP echo
+ * service so it still resolves straight from the browser with no node redeploy or command. Returns
+ * null if every source fails (offline). Only ever the caller's own IP — nothing about the node.
+ */
+async function detectDeviceIp(): Promise<string | null> {
+  try {
+    const r = await get<{ ip: string }>('/whoami');
+    if (isRoutable(r.ip)) return r.ip;
+  } catch {
+    /* node may not expose /whoami — fall through to the public echo below */
+  }
+  // CORS-enabled public echo services; first success wins.
+  for (const url of ['https://api.ipify.org?format=json', 'https://ipv4.icanhazip.com']) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const text = (await res.text()).trim();
+      const ip = text.startsWith('{') ? (JSON.parse(text) as { ip?: string }).ip : text;
+      if (ip && isRoutable(ip)) return ip;
+    } catch {
+      /* try the next source */
+    }
+  }
+  return null;
 }
 
 /** Live monetary policy — GUI-editable by the admin, applies immediately. */
@@ -490,6 +520,11 @@ export const api = {
   me: () => get<Account>('/accounts/me'),
   /** Set an account's freemium plan (admin) — the manual upgrade path until credits ship. */
   setPlan: (address: string, plan: Plan) => post<Account>('/accounts/plan', { address, plan }),
+  /** The caller's OWN IP as the node sees it (their device), not the node's address. */
+  whoami: () => get<{ ip: string }>('/whoami'),
+  /** Auto-detect this device's public IP with no setup: prefer the node's /whoami, else a public
+   *  echo service — so the dashboard can always show it without any command or node redeploy. */
+  deviceIp: () => detectDeviceIp(),
   /** The signed-in account's OWN earnings (wallet + income), distinct from the node treasury. */
   myEarnings: () => get<MyEarnings>('/accounts/me/earnings'),
   /** The next nonce this account must sign with, and whether its key is bound on-chain. */

@@ -154,7 +154,7 @@ export function App() {
   // Is the node reachable? Polled for EVERYONE (the admin data-poll below is admin-only, so operators
   // would otherwise always read snap.online === false and see a wrong "node offline" in the footer).
   const [nodeOnline, setNodeOnline] = useState(false);
-  // Mobile nav drawer (the sidebar collapses behind a hamburger below 760px).
+  // Mobile nav drawer: collapses behind a hamburger below 760px, toggled by the top-bar button.
   const [menuOpen, setMenuOpen] = useState(false);
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
@@ -266,6 +266,12 @@ export function App() {
     return true;
   });
 
+  // Navigating from the sidebar also closes the mobile drawer so the page is visible.
+  const navigate = (v: View) => {
+    setView(v);
+    setMenuOpen(false);
+  };
+
   const changeRole = (r: Role) => {
     setRolePref(r);
     localStorage.setItem(ROLE_KEY, r);
@@ -368,44 +374,37 @@ export function App() {
     );
   }
 
-  // Navigate + collapse the mobile drawer in one gesture.
-  const go = (v: View) => {
-    setView(v);
-    setMenuOpen(false);
-  };
-
   return (
     <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
       <InstallBanner />
-
-      {/* Mobile top bar — only visible below 760px (CSS). Hosts the brand + hamburger. */}
-      <header className="mobile-bar">
-        <div className="brand">
-          <span className="badge">W</span> Web3.0
-        </div>
+      <header className="topbar">
         <button
           type="button"
           className="hamburger"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={() => setMenuOpen((v) => !v)}
         >
-          <span className="hamburger-box">
-            <span className="hamburger-inner" />
-          </span>
+          <span />
+          <span />
+          <span />
         </button>
+        <div className="brand">
+          <span className="badge">W</span> Web3.0
+        </div>
       </header>
-
-      {/* Tap-away backdrop for the open drawer (mobile only). */}
       {menuOpen && (
-        <button
-          type="button"
-          className="nav-backdrop"
-          aria-label="Close menu"
+        <div
+          className="scrim"
+          role="button"
+          tabIndex={0}
+          aria-label="Close navigation menu"
           onClick={() => setMenuOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') setMenuOpen(false);
+          }}
         />
       )}
-
       <aside className={`side ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <span className="badge">W</span> Web3.0
@@ -437,7 +436,7 @@ export function App() {
             // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
             label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
             view={view}
-            set={go}
+            set={navigate}
             count={
               n.badge === 'agents'
                 ? agentsForView.length

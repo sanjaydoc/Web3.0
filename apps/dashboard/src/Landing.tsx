@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { InstallButton } from './InstallButton.js';
-import { ApiError, NODE_URL, type Role, api, setWeb3Token } from './api.js';
+import { ApiError, type Role, api, setWeb3Token } from './api.js';
 import { generateAccountKey, saveAccountKey } from './txsign.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
@@ -163,7 +163,7 @@ export function Landing({
       const status = e instanceof ApiError ? e.status : -1;
       setErr(
         status === 0
-          ? `Couldn't reach the node at ${NODE_URL} — it may be offline, or this origin isn't allowed (CORS).`
+          ? "Couldn't reach the network node — it may be offline, or this origin isn't allowed (CORS)."
           : status === 401
             ? 'Token not recognized by this node. Check for a typo or extra space.'
             : 'Sign-in failed. Check the browser console for details.',

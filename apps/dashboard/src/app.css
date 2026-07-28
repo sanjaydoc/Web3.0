@@ -143,72 +143,31 @@ body {
   padding: 0.24rem 0.6rem;
 }
 
-/* --- mobile top bar + hamburger (desktop: hidden) ----------------------- */
-.mobile-bar {
+/* --- mobile top bar + drawer (hidden on desktop) ------------------------ */
+.topbar {
   display: none;
-  align-items: center;
-  justify-content: space-between;
-  /* Keep the brand + hamburger BELOW the device status bar / notch. In the Capacitor app the WebView
-     draws edge-to-edge, so without this the top bar hides under the status bar and the menu button is
-     untappable. env() insets are 0 on desktop/web, so this is a no-op there. */
-  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
-    12px calc(16px + env(safe-area-inset-left, 0px));
-  border-bottom: 1.5px solid var(--rule);
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: saturate(1.4) blur(10px);
 }
 .hamburger {
   display: inline-flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  gap: 4px;
   width: 40px;
   height: 40px;
+  padding: 9px;
   border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
   background: var(--paper);
   cursor: pointer;
 }
-.hamburger-box {
-  position: relative;
-  width: 20px;
-  height: 14px;
-}
-.hamburger-inner,
-.hamburger-inner::before,
-.hamburger-inner::after {
-  position: absolute;
-  left: 0;
-  width: 20px;
+.hamburger span {
+  display: block;
   height: 2px;
-  border-radius: 2px;
+  width: 100%;
   background: var(--ink);
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  border-radius: 2px;
 }
-.hamburger-inner {
-  top: 50%;
-  margin-top: -1px;
-}
-.hamburger-inner::before {
-  content: "";
-  top: -6px;
-}
-.hamburger-inner::after {
-  content: "";
-  top: 6px;
-}
-/* Morph to an X while the drawer is open. */
-.menu-open .hamburger-inner {
-  transform: rotate(45deg);
-}
-.menu-open .hamburger-inner::before {
-  top: 0;
-  transform: rotate(90deg);
-}
-.menu-open .hamburger-inner::after {
-  top: 0;
-  opacity: 0;
-}
-.nav-backdrop {
+.scrim {
   display: none;
 }
 
@@ -534,44 +493,88 @@ body {
     gap: 4px;
   }
   /* The mobile top bar takes over; the sidebar becomes a slide-in drawer. */
-  .mobile-bar {
+  .topbar {
     display: flex;
+    align-items: center;
+    gap: 12px;
+    /* Keep the brand + hamburger BELOW the device status bar / notch. In the Capacitor app the
+       WebView draws edge-to-edge; env() insets are 0 on desktop/web, so this is a no-op there. */
+    padding: calc(10px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px))
+      10px calc(16px + env(safe-area-inset-left, 0px));
+    border-bottom: 1.5px solid var(--rule);
+    background: var(--paper);
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 30;
   }
+  .topbar .brand {
+    font-weight: 800;
+    font-size: var(--fs-title);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  /* Sidebar becomes an off-canvas drawer, slid in by the hamburger. */
   .side {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: 50;
-    width: 78vw;
-    max-width: 300px;
+    width: 264px;
+    max-width: 82vw;
     height: 100dvh;
-    /* Drawer opens from top:0 (under the status bar) — keep its brand + nav clear of the insets. */
-    padding: calc(22px + env(safe-area-inset-top, 0px)) 16px
+    z-index: 50;
+    flex-direction: column;
+    align-items: stretch;
+    /* Drawer opens from top:0 (under the status bar) — keep its nav clear of the insets. */
+    padding: calc(22px + env(safe-area-inset-top, 0px)) 0
       calc(22px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
-    border-right: 1.5px solid var(--rule);
-    box-shadow: var(--shadow);
     transform: translateX(-100%);
-    transition: transform 0.24s ease;
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 18px rgba(0, 0, 0, 0.18);
   }
   .side.open {
     transform: translateX(0);
   }
-  .nav-backdrop {
+  .side .brand {
+    display: none;
+  }
+  .scrim {
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 45;
-    border: none;
-    background: rgba(0, 0, 0, 0.4);
-    cursor: pointer;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.42);
   }
   .grid-2 {
     grid-template-columns: 1fr;
+  }
+  /* Tighter side gutters on phones so cards use the full width. min-width:0
+     lets the grid cell shrink; overflow-x:clip is a belt-and-suspenders guard
+     against any stray element forcing a horizontal page scroll. */
+  .main {
+    padding: 22px 16px 56px;
+    min-width: 0;
+    overflow-x: clip;
+  }
+  /* Stack the page title above its tagline so the tagline wraps within the
+     viewport instead of being cut off at the right edge. */
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  /* Let grid/flex children shrink and long mono tokens (ids, hashes) wrap,
+     so a card can never push wider than its column. */
+  .grid-2 > *,
+  .stats > * {
+    min-width: 0;
+  }
+  .card {
+    overflow-wrap: anywhere;
   }
   .feed-row {
     grid-template-columns: 1fr;

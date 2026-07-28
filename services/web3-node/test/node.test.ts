@@ -37,6 +37,13 @@ describe('Web3.0 node (in-process integration)', () => {
     return { status: res.statusCode, json: res.json() as Record<string, unknown> };
   }
 
+  it('echoes the caller own IP at /whoami', async () => {
+    const res = await get('/whoami');
+    expect(res.status).toBe(200);
+    expect(typeof res.json.ip).toBe('string');
+    expect((res.json.ip as string).length).toBeGreaterThan(0);
+  });
+
   it('registers an agent, issues a wallet with a faucet grant, and resolves the name', async () => {
     const alice = makeAgent('alice', { name: 'Alice' });
     const res = await post('/agents', alice.registration);
