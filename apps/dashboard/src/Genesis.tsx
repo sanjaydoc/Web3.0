@@ -5,6 +5,7 @@ import {
   type HostedAgent,
   type LlmMarketOffer,
   NODE_URL,
+  type SkillDef,
   api,
 } from './api.js';
 import { SKILL_TEMPLATES, type SkillTemplate, templateSystemFor } from './skill-templates.js';
@@ -63,6 +64,26 @@ export function Genesis() {
   const current = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
 
   // Pick a skill template: fill id/name/description + the agent's system prompt in one click.
+  // Your OWN registered skills (the node scopes /skills to you) that aren't one of the built-in
+  // templates — so you can start an agent from a custom skill you defined, not just the shelf.
+  const [mySkills, setMySkills] = useState<SkillDef[]>([]);
+  useEffect(() => {
+    const builtinIds = new Set(SKILL_TEMPLATES.map((t) => t.id));
+    api
+      .skills()
+      .then((r) => setMySkills(r.skills.filter((s) => !builtinIds.has(s.id))))
+      .catch(() => setMySkills([]));
+  }, []);
+
+  // Fill the skill fields from one of YOUR registered skills. Its system prompt (if you stashed one
+  // when registering from a template) is applied by the skillId effect below.
+  const pickSkill = (s: SkillDef) => {
+    setSkillId(s.id);
+    setSkillName(s.name);
+    setSkillDesc(s.description);
+    setSystemEdited(false);
+  };
+
   const pickTemplate = (t: SkillTemplate) => {
     setSkillId(t.id);
     setSkillName(t.name);
@@ -411,6 +432,25 @@ while True:
             </div>
           )}
 
+          {mySkills.length > 0 && (
+            <div className="field wide">
+              <span className="field-lbl">Your custom skills</span>
+              <div className="chip-pick">
+                {mySkills.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    className={`chip-toggle ${skillId === s.id ? 'on' : ''}`}
+                    title={s.description}
+                    onClick={() => pickSkill(s)}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+              <span className="hint">skills you registered in the Skills tab</span>
+            </div>
+          )}
           <div className="field wide">
             <span className="field-lbl">Start from a skill template</span>
             <div className="chip-pick">
@@ -426,6 +466,9 @@ while True:
                 </button>
               ))}
             </div>
+            <span className="hint">
+              or just type a skill id/name below — a custom skill works too
+            </span>
           </div>
 
           <div className="field">
