@@ -112,9 +112,15 @@ export function Genesis() {
     }
   }, []);
 
-  // Connectors the operator can assign to the agent: built-in catalogue + any custom ones.
-  const connectorOptions = useMemo(
-    () => [...BUILTIN_CONNECTORS, ...customConns.map((c) => c.name)],
+  // The operator's OWN custom connectors (the node already scopes /connectors to the caller).
+  const customNames = useMemo(() => customConns.map((c) => c.name), [customConns]);
+  // The 3 most-recently-added custom connectors — surfaced as quick-pick pills at the top of the form.
+  const recentConnectors = useMemo(
+    () =>
+      [...customConns]
+        .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+        .slice(0, 3)
+        .map((c) => c.name),
     [customConns],
   );
   const toggleConnector = (nameStr: string) =>
@@ -297,6 +303,29 @@ while True:
 
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="section-title">Configure your agent</div>
+
+        {/* Quick-pick: your 3 most-recently-added connectors, so it's one click to attach a connector
+            you just created — no scrolling. You can still pick more (or none) in the section below. */}
+        {recentConnectors.length > 0 && (
+          <div style={{ margin: '0 0 14px' }}>
+            <div className="hint" style={{ marginBottom: 6 }}>
+              Recent connectors — tap to attach:
+            </div>
+            <div className="chip-pick">
+              {recentConnectors.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  className={`chip-toggle ${connectors.includes(c) ? 'on' : ''}`}
+                  onClick={() => toggleConnector(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="form-grid">
           <div className="field">
             <label htmlFor="g-handle">Web3.0 ID</label>
@@ -437,10 +466,29 @@ while True:
               }}
             />
           </div>
+          {/* Your own custom connectors first (they carry your keys), then the built-in catalogue. */}
+          {customNames.length > 0 && (
+            <div className="field wide">
+              <span className="field-lbl">Custom Connectors</span>
+              <div className="chip-pick">
+                {customNames.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    className={`chip-toggle ${connectors.includes(c) ? 'on' : ''}`}
+                    onClick={() => toggleConnector(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <span className="hint">your own connectors — created in the Connectors tab</span>
+            </div>
+          )}
           <div className="field wide">
             <span className="field-lbl">Connectors this agent uses</span>
             <div className="chip-pick">
-              {connectorOptions.map((c) => (
+              {BUILTIN_CONNECTORS.map((c) => (
                 <button
                   type="button"
                   key={c}

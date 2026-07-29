@@ -512,7 +512,15 @@ export function App() {
             setHosted={setHosted}
           />
         )}
-        {view === 'skills' && <Skills agents={agentsForView} />}
+        {view === 'skills' && (
+          // A non-admin sees only their OWN agents' skills here (plus the catalogue skills they
+          // registered, scoped server-side) — not every other operator's. Admins see the network.
+          <Skills
+            agents={
+              isAdmin ? agentsForView : agentsForView.filter((a) => ownedHostedIds.has(a.web3Id))
+            }
+          />
+        )}
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
         {view === 'traffic' && <Traffic events={snap.events} />}
