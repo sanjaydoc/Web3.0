@@ -473,7 +473,9 @@ export function App() {
         {view === 'overview' && <Overview snap={snap} />}
         {view === 'mynode' && <Operator />}
         {view === 'llmtunnel' && <LlmTunnel />}
-        {view === 'agents' && <Agents agents={agentsForView} wallets={snap.wallets} />}
+        {view === 'agents' && (
+          <Agents agents={agentsForView} wallets={snap.wallets} ownedOnly={!isAdmin} />
+        )}
         {view === 'skills' && <Skills agents={agentsForView} />}
         {view === 'network' && <Network />}
         {view === 'connectors' && <Connectors go={(v) => setView(v as View)} />}
@@ -588,7 +590,11 @@ function Stat({ k, n, unit }: { k: string; n: string; unit?: string }) {
   );
 }
 
-function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] }) {
+function Agents({
+  agents,
+  wallets,
+  ownedOnly,
+}: { agents: AgentCard[]; wallets: Wallet[]; ownedOnly: boolean }) {
   const balanceOf = (id: string) => wallets.find((w) => w.owner === id)?.balance ?? 0;
 
   // Hosted agents (Genesis-created, running IN this node) are the ones we can start/stop. The node
@@ -615,6 +621,9 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
     };
   }, []);
   const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
+  // An agent owner sees only THEIR OWN agents here (the ones this node reports as hosted-by-them);
+  // admins see the whole registry. Stops other owners' agents leaking into a personal Agents view.
+  const visible = ownedOnly ? agents.filter((a) => hostedById.has(a.web3Id)) : agents;
 
   const toggle = async (h: HostedAgent) => {
     setBusy(h.web3Id);
@@ -634,8 +643,12 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
         <h1>Agents</h1>
       </div>
       <div className="card">
-        {agents.length === 0 ? (
-          <div className="empty">No agents registered yet. Run the two-agents demo.</div>
+        {visible.length === 0 ? (
+          <div className="empty">
+            {ownedOnly
+              ? "You haven't created any agents yet. Head to Genesis to launch one."
+              : 'No agents registered yet. Run the two-agents demo.'}
+          </div>
         ) : (
           // Scroll wrapper: the columns overflow a phone's width; scroll inside the card instead of
           // the last columns bleeding past the edge. (Agents view only.)
@@ -652,7 +665,7 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
                 </tr>
               </thead>
               <tbody>
-                {agents.map((a) => {
+                {visible.map((a) => {
                   const h = hostedById.get(a.web3Id);
                   return (
                     <tr key={a.web3Id}>

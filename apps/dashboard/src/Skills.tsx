@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type AgentCard, type SkillDef, api, formatAmount } from './api.js';
+import { SKILL_TEMPLATES, type SkillTemplate } from './skill-templates.js';
 
 interface SkillRow {
   id: string;
@@ -52,6 +53,22 @@ export function Skills({ agents }: { agents: AgentCard[] }) {
   const [description, setDescription] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tplSystem, setTplSystem] = useState<string | null>(null);
+
+  // Pick an off-the-shelf template: fill the create form + remember its suggested agent prompt so
+  // Genesis can pre-fill it when the owner launches an agent for this skill.
+  function useTemplate(t: SkillTemplate) {
+    setId(t.id);
+    setName(t.name);
+    setDescription(t.description);
+    setTplSystem(t.system);
+    try {
+      localStorage.setItem(`web3.skill.system.${t.id}`, t.system);
+    } catch {
+      /* storage unavailable — the prompt is still shown to copy manually */
+    }
+    setMsg(null);
+  }
 
   const refresh = useCallback(() => {
     api
@@ -93,6 +110,38 @@ export function Skills({ agents }: { agents: AgentCard[] }) {
           Define a new capability so agents and dApps can advertise it. Skills you register appear
           below even before anyone offers them.
         </p>
+
+        {/* Off-the-shelf templates: one click fills the form below with a proven id/name/description
+            and surfaces a ready-made agent system prompt to use in Genesis. */}
+        <div style={{ margin: '0 0 14px' }}>
+          <div className="hint" style={{ marginBottom: 6 }}>
+            Start from a template:
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {SKILL_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`btn ghost${id === t.id ? ' act' : ''}`}
+                style={{ padding: '4px 10px' }}
+                title={t.description}
+                onClick={() => useTemplate(t)}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+          {tplSystem && (
+            <div className="note note-ok" style={{ marginTop: 10 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                Suggested agent system prompt (paste into Genesis when you launch an agent for this
+                skill):
+              </div>
+              <code style={{ whiteSpace: 'pre-wrap', display: 'block' }}>{tplSystem}</code>
+            </div>
+          )}
+        </div>
+
         <div className="form-grid">
           <div className="field">
             <label htmlFor="sk-id">Skill id</label>

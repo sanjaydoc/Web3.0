@@ -584,6 +584,9 @@ export const api = {
   }) => post<LlmOffer>('/llm/offer', input),
   removeLlmOffer: (model: string) =>
     send<{ removed: boolean }>('DELETE', `/llm/offer/${encodeURIComponent(model)}`),
+  /** Operator self-test: run a one-off completion against a locally hosted model (direct to Ollama). */
+  testModel: (model: string, prompt: string) =>
+    post<{ answer: string }>('/llm/test', { model, prompt }),
   /** The signed-in operator's inference revenue + per-model traffic (Host LLM tunnel). */
   llmRevenue: () => get<{ host: string; revenue: number; usage: LlmUsageRow[] }>('/llm/revenue'),
   /** The signed-in agent owner's total inference spend. */

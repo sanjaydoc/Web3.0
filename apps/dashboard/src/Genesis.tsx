@@ -7,6 +7,7 @@ import {
   NODE_URL,
   api,
 } from './api.js';
+import { SKILL_TEMPLATES, type SkillTemplate, templateSystemFor } from './skill-templates.js';
 
 const ADMIN_KEY = 'web3.adminToken';
 // A model chosen from the Marketplace "Use this model" button is stashed here for Genesis to pick up.
@@ -43,6 +44,8 @@ export function Genesis() {
   const [system, setSystem] = useState(
     'You are a concise, helpful expert agent on the Web3.0 network.',
   );
+  // Once the owner hand-edits the system prompt we stop auto-filling it from a skill template.
+  const [systemEdited, setSystemEdited] = useState(false);
   const [copied, setCopied] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [admin, setAdmin] = useState(() => localStorage.getItem(ADMIN_KEY) ?? '');
@@ -58,6 +61,23 @@ export function Genesis() {
   const [tunnelModels, setTunnelModels] = useState<LlmMarketOffer[]>([]);
 
   const current = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
+
+  // Pick a skill template: fill id/name/description + the agent's system prompt in one click.
+  const pickTemplate = (t: SkillTemplate) => {
+    setSkillId(t.id);
+    setSkillName(t.name);
+    setSkillDesc(t.description);
+    setSystem(t.system);
+    setSystemEdited(false);
+  };
+
+  // Off-the-shelf loop: when the skill id matches a template (or one the owner registered from the
+  // Skills section), pre-fill the system prompt — unless they've already hand-edited it.
+  useEffect(() => {
+    if (systemEdited) return;
+    const s = templateSystemFor(skillId);
+    if (s) setSystem(s);
+  }, [skillId, systemEdited]);
 
   // Distinct model tags on offer across the network, with how many hosts serve each (the tunnel
   // auto-routes to the best host, so an agent only needs to pick the model tag).
@@ -346,6 +366,23 @@ while True:
             </div>
           )}
 
+          <div className="field wide">
+            <span className="field-lbl">Start from a skill template</span>
+            <div className="chip-pick">
+              {SKILL_TEMPLATES.map((t) => (
+                <button
+                  type="button"
+                  key={t.id}
+                  className={`chip-toggle ${skillId === t.id ? 'on' : ''}`}
+                  title={t.description}
+                  onClick={() => pickTemplate(t)}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="field">
             <label htmlFor="g-skill-id">Skill id</label>
             <input id="g-skill-id" value={skillId} onChange={(e) => setSkillId(e.target.value)} />
@@ -381,7 +418,14 @@ while True:
           </div>
           <div className="field wide">
             <label htmlFor="g-system">System prompt (the agent's persona)</label>
-            <textarea id="g-system" value={system} onChange={(e) => setSystem(e.target.value)} />
+            <textarea
+              id="g-system"
+              value={system}
+              onChange={(e) => {
+                setSystem(e.target.value);
+                setSystemEdited(true);
+              }}
+            />
           </div>
           <div className="field wide">
             <span className="field-lbl">Connectors this agent uses</span>

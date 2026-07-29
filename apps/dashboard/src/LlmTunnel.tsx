@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type LlmOffer,
   type LlmUsageRow,
@@ -40,6 +40,7 @@ export function LlmTunnel() {
   const [detect, setDetect] = useState<RamDetect | null>(null);
   const [local, setLocal] = useState<{ available: boolean; models: LocalModel[] } | null>(null);
   const [scanBusy, setScanBusy] = useState<'ram' | 'models' | null>(null);
+  const [chatModel, setChatModel] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -352,14 +353,23 @@ export function LlmTunnel() {
                         <td>{tokens.toLocaleString()}</td>
                         <td>{formatAmount(earned)}</td>
                         <td>
-                          <button
-                            type="button"
-                            className="btn"
-                            disabled={busy}
-                            onClick={() => remove(o.model)}
-                          >
-                            Remove
-                          </button>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() => setChatModel(o.model)}
+                            >
+                              Test
+                            </button>
+                            <button
+                              type="button"
+                              className="btn"
+                              disabled={busy}
+                              onClick={() => remove(o.model)}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -369,7 +379,116 @@ export function LlmTunnel() {
             </div>
           )}
         </div>
+
+        {chatModel && <ModelChat model={chatModel} onClose={() => setChatModel(null)} />}
       </div>
     </>
+  );
+}
+
+/**
+ * ModelChat — a quick chat panel so the operator can test a model they host, straight against their
+ * own machine's Ollama (no tunnel, no agent, no payment). Confirms the GPU actually serves it.
+ */
+function ModelChat({ model, onClose }: { model: string; onClose: () => void }) {
+  const [msgs, setMsgs] = useState<{ id: number; role: 'you' | 'model'; text: string }[]>([]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const nextId = useRef(0);
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to newest whenever the log grows
+  useEffect(() => {
+    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight });
+  }, [msgs.length]);
+
+  const send = async () => {
+    const q = input.trim();
+    if (!q || busy) return;
+    setMsgs((m) => [...m, { id: nextId.current++, role: 'you', text: q }]);
+    setInput('');
+    setBusy(true);
+    try {
+      const { answer } = await api.testModel(model, q);
+      setMsgs((m) => [...m, { id: nextId.current++, role: 'model', text: answer }]);
+    } catch (e) {
+      setMsgs((m) => [
+        ...m,
+        {
+          id: nextId.current++,
+          role: 'model',
+          text: `⚠️ ${e instanceof Error ? e.message : String(e)}`,
+        },
+      ]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 18 }}>
+      <div
+        className="section-title"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <span>
+          Test · <span className="muted">{model}</span>
+        </span>
+        <button type="button" className="btn ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <div
+        ref={feedRef}
+        style={{
+          maxHeight: 340,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          margin: '10px 0',
+        }}
+      >
+        {msgs.length === 0 && (
+          <div className="muted">Chat with your hosted model to confirm it responds…</div>
+        )}
+        {msgs.map((m) => (
+          <div
+            key={m.id}
+            style={{
+              alignSelf: m.role === 'you' ? 'flex-end' : 'flex-start',
+              maxWidth: '82%',
+              background: m.role === 'you' ? 'var(--accent, #6a5cff)' : 'var(--hair, #eef0f4)',
+              color: m.role === 'you' ? '#fff' : 'inherit',
+              padding: '8px 12px',
+              borderRadius: 12,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {m.text}
+          </div>
+        ))}
+        {busy && (
+          <div className="muted" style={{ alignSelf: 'flex-start' }}>
+            thinking…
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          style={{ flex: 1 }}
+          value={input}
+          placeholder="Ask your model something…"
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') send();
+          }}
+        />
+        <button type="button" className="btn act" disabled={busy} onClick={send}>
+          {busy ? '…' : 'Send'}
+        </button>
+      </div>
+    </div>
   );
 }
