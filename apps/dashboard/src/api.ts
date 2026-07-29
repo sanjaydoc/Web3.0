@@ -378,9 +378,13 @@ async function post<T>(path: string, body: unknown, adminToken?: string): Promis
 }
 
 async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  // Only advertise a JSON body when there IS one — Fastify 400s an empty body sent with
+  // `content-type: application/json` (e.g. DELETE /llm/offer/:model carries no body).
+  const headers =
+    body === undefined ? authHeaders() : authHeaders({ 'content-type': 'application/json' });
   const res = await doFetch(path, {
     method,
-    headers: authHeaders({ 'content-type': 'application/json' }),
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) return readError(res, path);
