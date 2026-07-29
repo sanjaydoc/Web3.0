@@ -55,9 +55,9 @@ One double-click. Bundles a full node **and** this dashboard into a single windo
 
 | Platform | Download |
 |---|---|
-| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/latest) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/latest) |
-| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/latest) |
-| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/latest) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/latest) |
+| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.22/Web3.0.Setup.0.1.22.exe) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.22/Web3.0.0.1.22.msi) |
+| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.22/Web3.0-0.1.22-universal.dmg) |
+| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.22/Web3.0-0.1.22.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.22/web3_0.1.22_amd64.deb) |
 
 The build is unsigned, so the first launch needs one extra click — **Windows:** *More info → Run
 anyway*; **macOS:** right-click → *Open* (or `xattr -cr /Applications/Web3.0.app`); **Linux:**
