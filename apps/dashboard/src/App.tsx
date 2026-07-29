@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Account } from './Account.js';
 import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
@@ -596,6 +596,7 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
   // only on rows the operator owns. Externally-run SDK agents aren't hosted here → no control.
   const [hosted, setHosted] = useState<HostedAgent[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [chatWith, setChatWith] = useState<HostedAgent | null>(null);
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -660,14 +661,27 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
                       </td>
                       <td>
                         {h ? (
-                          <button
-                            type="button"
-                            className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
-                            disabled={busy === a.web3Id}
-                            onClick={() => toggle(h)}
-                          >
-                            {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
-                          </button>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
+                              disabled={busy === a.web3Id}
+                              onClick={() => toggle(h)}
+                            >
+                              {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
+                            </button>
+                            {h.running && (
+                              <button
+                                type="button"
+                                className="btn act"
+                                style={{ padding: '4px 10px' }}
+                                onClick={() => setChatWith(h)}
+                                title="Chat with this agent to test it"
+                              >
+                                Test
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <span className="muted">—</span>
                         )}
@@ -688,7 +702,117 @@ function Agents({ agents, wallets }: { agents: AgentCard[]; wallets: Wallet[] })
           </div>
         )}
       </div>
+      {chatWith && <AgentChat agent={chatWith} onClose={() => setChatWith(null)} />}
     </>
+  );
+}
+
+/** A simple chat panel to test a hosted agent — sends each message to the agent and shows its reply. */
+function AgentChat({ agent, onClose }: { agent: HostedAgent; onClose: () => void }) {
+  const [msgs, setMsgs] = useState<{ id: number; role: 'you' | 'agent'; text: string }[]>([]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const nextId = useRef(0);
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to newest whenever the log grows
+  useEffect(() => {
+    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight });
+  }, [msgs.length]);
+
+  const push = (role: 'you' | 'agent', text: string) =>
+    setMsgs((m) => [...m, { id: nextId.current++, role, text }]);
+
+  const send = async () => {
+    const q = input.trim();
+    if (!q || busy) return;
+    push('you', q);
+    setInput('');
+    setBusy(true);
+    try {
+      const { output } = await api.askHosted(agent.handle, q);
+      const text =
+        typeof output.answer === 'string'
+          ? output.answer
+          : typeof output.error === 'string'
+            ? `⚠️ ${output.error}`
+            : JSON.stringify(output, null, 2);
+      push('agent', text);
+    } catch (e) {
+      push('agent', `⚠️ ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 18 }}>
+      <div
+        className="section-title"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <span>
+          Test · {agent.web3Id}{' '}
+          <span className="muted">
+            ({agent.provider}/{agent.model})
+          </span>
+        </span>
+        <button type="button" className="btn ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <div
+        ref={feedRef}
+        style={{
+          maxHeight: 340,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          margin: '10px 0',
+        }}
+      >
+        {msgs.length === 0 && (
+          <div className="muted">Ask your agent something to test its brain and connectors…</div>
+        )}
+        {msgs.map((m) => (
+          <div
+            key={m.id}
+            style={{
+              alignSelf: m.role === 'you' ? 'flex-end' : 'flex-start',
+              maxWidth: '82%',
+              background: m.role === 'you' ? 'var(--accent, #6a5cff)' : 'var(--hair, #eef0f4)',
+              color: m.role === 'you' ? '#fff' : 'inherit',
+              padding: '8px 12px',
+              borderRadius: 12,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {m.text}
+          </div>
+        ))}
+        {busy && (
+          <div className="muted" style={{ alignSelf: 'flex-start' }}>
+            thinking…
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          style={{ flex: 1 }}
+          value={input}
+          placeholder="Ask your agent something…"
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') send();
+          }}
+        />
+        <button type="button" className="btn act" disabled={busy} onClick={send}>
+          {busy ? '…' : 'Send'}
+        </button>
+      </div>
+    </div>
   );
 }
 

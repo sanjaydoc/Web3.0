@@ -559,6 +559,9 @@ export const api = {
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
   hostedStart: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/start', { handle }, adminToken),
+  /** Chat/test a hosted agent — relay a question to it and get its reply (owner/admin only). */
+  askHosted: (handle: string, question: string) =>
+    post<{ output: Record<string, unknown> }>('/hosted/ask', { handle, question }),
   // Hosting marketplace — hosts sell RAM capacity; agent-owners rent it for their agents.
   hostingMarket: () => get<{ hosts: MarketHost[] }>('/hosting/market'),
   hostingOffer: () => get<{ host: string | null; pricePerEpoch: number }>('/hosting/offer'),
