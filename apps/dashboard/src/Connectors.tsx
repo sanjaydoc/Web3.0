@@ -116,8 +116,25 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
   const [category, setCategory] = useState('');
   const [endpoint, setEndpoint] = useState('');
   const [description, setDescription] = useState('');
+  const [method, setMethod] = useState<'GET' | 'POST'>('GET');
+  const [headersText, setHeadersText] = useState('');
+  const [reqBody, setReqBody] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Parse the headers textarea ("Key: Value" per line) into the {key,value}[] the node expects.
+  function parseHeaders(text: string): { key: string; value: string }[] {
+    return text
+      .split('\n')
+      .map((line) => {
+        const i = line.indexOf(':');
+        if (i < 0) return null;
+        const key = line.slice(0, i).trim();
+        const value = line.slice(i + 1).trim();
+        return key ? { key, value } : null;
+      })
+      .filter((h): h is { key: string; value: string } => h !== null);
+  }
 
   const loadCustom = useCallback(() => {
     api
@@ -157,6 +174,9 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
         category: category.trim() || undefined,
         endpoint: endpoint.trim() || undefined,
         description: description.trim() || undefined,
+        method,
+        headers: parseHeaders(headersText),
+        body: method === 'POST' ? reqBody.trim() || undefined : undefined,
       });
       setMsg({ kind: 'ok', text: `Connector "${c.name}" added.` });
       setId('');
@@ -164,6 +184,9 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
       setCategory('');
       setEndpoint('');
       setDescription('');
+      setMethod('GET');
+      setHeadersText('');
+      setReqBody('');
       loadCustom();
     } catch (err) {
       setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
@@ -281,6 +304,20 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
               onChange={(e) => setEndpoint(e.target.value)}
               placeholder="https://api.example.com"
             />
+            <span className="hint">
+              use <code>{'{{query}}'}</code> to inject the agent's question
+            </span>
+          </div>
+          <div className="field">
+            <label htmlFor="c-method">Method</label>
+            <select
+              id="c-method"
+              value={method}
+              onChange={(e) => setMethod(e.target.value as 'GET' | 'POST')}
+            >
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+            </select>
           </div>
           <div className="field wide">
             <label htmlFor="c-desc">Description</label>
@@ -291,6 +328,35 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
               placeholder="What this connector does"
             />
           </div>
+          <div className="field wide">
+            <label htmlFor="c-headers">Headers — auth goes here (one per line, "Key: Value")</label>
+            <textarea
+              id="c-headers"
+              rows={3}
+              value={headersText}
+              onChange={(e) => setHeadersText(e.target.value)}
+              placeholder={'Authorization: Bearer sk-...\nX-API-Key: ...'}
+            />
+            <span className="hint">
+              kept server-side on the node and redacted from the API — values are never shown again
+              after saving
+            </span>
+          </div>
+          {method === 'POST' && (
+            <div className="field wide">
+              <label htmlFor="c-body">Request body (POST)</label>
+              <textarea
+                id="c-body"
+                rows={3}
+                value={reqBody}
+                onChange={(e) => setReqBody(e.target.value)}
+                placeholder={'{"q": "{{query}}"}'}
+              />
+              <span className="hint">
+                defaults to <code>{'{"query": "…"}'}</code> if left blank
+              </span>
+            </div>
+          )}
         </div>
         <div className="gen-actions">
           <button
@@ -324,7 +390,19 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
                   {c.category}
                 </div>
                 {c.description && <div style={{ marginTop: 6 }}>{c.description}</div>}
-                {c.endpoint && <div className="mono-hash">{c.endpoint}</div>}
+                {c.endpoint && (
+                  <div className="mono-hash">
+                    <span className="chip" style={{ marginRight: 6 }}>
+                      {c.method ?? 'GET'}
+                    </span>
+                    {c.endpoint}
+                  </div>
+                )}
+                {c.headers && c.headers.length > 0 && (
+                  <div className="hint" style={{ marginTop: 4 }}>
+                    auth: {c.headers.map((h) => h.key).join(', ')} 🔒
+                  </div>
+                )}
                 <div className="hint">added by {c.createdBy}</div>
               </div>
             ))}

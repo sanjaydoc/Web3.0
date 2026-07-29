@@ -293,12 +293,21 @@ export interface LlmUsageRow {
   paidTotal: number;
   earnedByHost: number;
 }
+export interface ConnectorHeader {
+  key: string;
+  value: string;
+}
+
 export interface CustomConnector {
   id: string;
   name: string;
   category: string;
   endpoint: string;
   description: string;
+  method: 'GET' | 'POST';
+  /** Header values are redacted ('••••') by the node — secrets never leave the server. */
+  headers: ConnectorHeader[];
+  hasBody: boolean;
   createdBy: string;
   createdAt: string;
 }
@@ -635,6 +644,9 @@ export const api = {
     category?: string;
     endpoint?: string;
     description?: string;
+    method?: 'GET' | 'POST';
+    headers?: ConnectorHeader[];
+    body?: string;
   }) => post<CustomConnector>('/connectors', input),
   node: () => get<NodeOperator>('/node'),
   nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
