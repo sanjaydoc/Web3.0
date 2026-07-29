@@ -1,0 +1,124 @@
+name: desktop (free)
+
+# Builds the desktop installers on the PUBLIC repo's FREE Actions minutes, then publishes them to
+# this repo's Releases. The node's source lives in the PRIVATE web3-core repo — this workflow clones
+# it into the throwaway runner with a PAT, builds, and discards it (nothing private is committed
+# here). Because Actions billing follows the repo that HOSTS the workflow (this public one), the
+# whole build — including the 10x-cost macOS runner — costs nothing against the private repo's quota.
+#
+# One-time setup: add a repo secret RELEASE_PAT = a classic PAT with the `repo` scope (it needs to
+# READ the private web3-core to check it out AND WRITE releases here). Settings → Secrets and
+# variables → Actions → New repository secret.
+#
+# Run it: Actions → "desktop (free)" → Run workflow → pick the web3-core branch/tag and, for a full
+# release, tick all_platforms (adds macOS + Linux; Windows always builds).
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'web3-core branch or tag to build'
+        default: 'claude/web3-project-planning-ece7tu'
+      all_platforms:
+        description: 'Also build macOS + Linux (Windows always builds)'
+        type: boolean
+        default: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out the private node source
+        uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web3-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+      - name: Build installers
+        working-directory: desktop
+        run: npm run dist
+
+      - name: Read version → release tag
+        id: ver
+        shell: bash
+        run: echo "tag=v$(node -p "require('./desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish installers to this repo's Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          files: |
+            desktop/release/*.msi
+            desktop/release/*.exe
+
+  linux:
+    if: ${{ inputs.all_platforms }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web3-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - working-directory: desktop
+        run: npm install
+      - working-directory: desktop
+        run: npm run dist:linux
+      - id: ver
+        shell: bash
+        run: echo "tag=v$(node -p "require('./desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          files: |
+            desktop/release/*.AppImage
+            desktop/release/*.deb
+
+  macos:
+    if: ${{ inputs.all_platforms }}
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web3-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - working-directory: desktop
+        run: npm install
+      - working-directory: desktop
+        run: npm run dist:mac
+      - id: ver
+        shell: bash
+        run: echo "tag=v$(node -p "require('./desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          files: desktop/release/*.dmg
