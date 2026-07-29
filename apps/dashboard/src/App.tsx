@@ -236,6 +236,28 @@ export function App() {
     };
   }, []);
 
+  // The account's own hosted agents (Genesis-created, running in this node). Lifted to App level so
+  // both the Agents view AND the sidebar "Agents" badge count the SAME owner-scoped set — otherwise
+  // the badge (which used the global registry) shows more than the table (scoped to your own).
+  const [hosted, setHosted] = useState<HostedAgent[]>([]);
+  useEffect(() => {
+    if (!authed) return;
+    let active = true;
+    const load = () =>
+      api
+        .hosted()
+        .then((r) => active && setHosted(r.agents))
+        .catch(() => {
+          /* node offline / not permitted — leave the last known list */
+        });
+    load();
+    const t = setInterval(load, 3000);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, [authed]);
+
   // The signed-in account's real role governs access: only an admin account sees admin sections
   // and the Operator/Admin toggle. Operators, developers, and guests are locked to the operator view.
   const isAdmin = account?.role === 'admin';
@@ -248,6 +270,14 @@ export function App() {
   // list (and the nav badge count) for operators. Admins still see it.
   const agentsForView =
     isAdmin || !treasuryId ? snap.agents : snap.agents.filter((a) => a.web3Id !== treasuryId);
+
+  // The "Agents" badge must match the Agents TABLE, which for a non-admin shows only agents this
+  // account hosts (the /hosted set, scoped server-side to createdBy). Counting the whole registry
+  // here would over-count (e.g. an SDK-registered or another owner's agent still in the directory).
+  const ownedHostedIds = new Set(hosted.map((h) => h.web3Id));
+  const agentsBadgeCount = isAdmin
+    ? agentsForView.length
+    : agentsForView.filter((a) => ownedHostedIds.has(a.web3Id)).length;
 
   // A non-admin on the main node: hosting/publishing here is reserved for the admin, so hide those
   // views and make "Run a node" their home — participation happens on their own node.
@@ -449,7 +479,7 @@ export function App() {
             set={navigate}
             count={
               n.badge === 'agents'
-                ? agentsForView.length
+                ? agentsBadgeCount
                 : n.badge === 'events'
                   ? snap.events.length
                   : n.badge === 'entries'
@@ -474,7 +504,13 @@ export function App() {
         {view === 'mynode' && <Operator />}
         {view === 'llmtunnel' && <LlmTunnel />}
         {view === 'agents' && (
-          <Agents agents={agentsForView} wallets={snap.wallets} ownedOnly={!isAdmin} />
+          <Agents
+            agents={agentsForView}
+            wallets={snap.wallets}
+            ownedOnly={!isAdmin}
+            hosted={hosted}
+            setHosted={setHosted}
+          />
         )}
         {view === 'skills' && <Skills agents={agentsForView} />}
         {view === 'network' && <Network />}
@@ -594,32 +630,22 @@ function Agents({
   agents,
   wallets,
   ownedOnly,
-}: { agents: AgentCard[]; wallets: Wallet[]; ownedOnly: boolean }) {
+  hosted,
+  setHosted,
+}: {
+  agents: AgentCard[];
+  wallets: Wallet[];
+  ownedOnly: boolean;
+  hosted: HostedAgent[];
+  setHosted: (a: HostedAgent[]) => void;
+}) {
   const balanceOf = (id: string) => wallets.find((w) => w.owner === id)?.balance ?? 0;
 
-  // Hosted agents (Genesis-created, running IN this node) are the ones we can start/stop. The node
-  // returns only the caller's own hosted agents to a non-admin, so the Start/Stop control appears
-  // only on rows the operator owns. Externally-run SDK agents aren't hosted here → no control.
-  const [hosted, setHosted] = useState<HostedAgent[]>([]);
+  // Hosted agents (Genesis-created, running IN this node) are the ones we can start/stop/delete. The
+  // list is fetched at App level and shared with the sidebar badge; the node returns only the caller's
+  // own hosted agents to a non-admin, so the controls appear only on rows the operator owns.
   const [busy, setBusy] = useState<string | null>(null);
   const [chatWith, setChatWith] = useState<HostedAgent | null>(null);
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const r = await api.hosted();
-        if (active) setHosted(r.agents);
-      } catch {
-        /* node offline / not permitted — leave controls hidden */
-      }
-    };
-    load();
-    const t = setInterval(load, 3000);
-    return () => {
-      active = false;
-      clearInterval(t);
-    };
-  }, []);
   const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
   // An agent owner sees only THEIR OWN agents here (the ones this node reports as hosted-by-them);
   // admins see the whole registry. Stops other owners' agents leaking into a personal Agents view.
@@ -629,6 +655,19 @@ function Agents({
     setBusy(h.web3Id);
     try {
       const r = h.running ? await api.hostedStop(h.handle) : await api.hostedStart(h.handle);
+      setHosted(r.agents);
+    } catch {
+      /* keep last state; the poll will reconcile */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove = async (h: HostedAgent) => {
+    if (!window.confirm(`Delete agent "${h.handle}"? This can't be undone.`)) return;
+    setBusy(h.web3Id);
+    try {
+      const r = await api.hostedDelete(h.handle);
       setHosted(r.agents);
     } catch {
       /* keep last state; the poll will reconcile */
@@ -694,6 +733,17 @@ function Agents({
                                 Test
                               </button>
                             )}
+                            <button
+                              type="button"
+                              className="btn ghost btn-trash"
+                              style={{ padding: '4px 8px' }}
+                              disabled={busy === a.web3Id}
+                              onClick={() => remove(h)}
+                              title="Delete this agent"
+                              aria-label={`Delete ${h.handle}`}
+                            >
+                              🗑
+                            </button>
                           </div>
                         ) : (
                           <span className="muted">—</span>

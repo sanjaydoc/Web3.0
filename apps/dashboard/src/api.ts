@@ -559,6 +559,9 @@ export const api = {
     post<{ agents: HostedAgent[] }>('/hosted/stop', { handle }, adminToken),
   hostedStart: (handle: string, adminToken?: string) =>
     post<{ agents: HostedAgent[] }>('/hosted/start', { handle }, adminToken),
+  /** Permanently delete a hosted agent you own (or any, as admin). */
+  hostedDelete: (handle: string, adminToken?: string) =>
+    post<{ agents: HostedAgent[] }>('/hosted/delete', { handle }, adminToken),
   /** Chat/test a hosted agent — relay a question to it and get its reply (owner/admin only). */
   askHosted: (handle: string, question: string) =>
     post<{ output: Record<string, unknown> }>('/hosted/ask', { handle, question }),
