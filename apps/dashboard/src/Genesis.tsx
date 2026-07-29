@@ -69,6 +69,12 @@ export function Genesis() {
     setSkillDesc(t.description);
     setSystem(t.system);
     setSystemEdited(false);
+    // Auto-attach the connector this skill pairs with, so the skill and its data source line up in
+    // one click. (Still needs wiring with a key in the Connectors tab to actually fetch live data.)
+    if (t.connector) {
+      const conn = t.connector;
+      setConnectors((cur) => (cur.includes(conn) ? cur : [...cur, conn]));
+    }
   };
 
   // Off-the-shelf loop: when the skill id matches a template (or one the owner registered from the
