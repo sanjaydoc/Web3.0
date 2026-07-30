@@ -282,6 +282,10 @@ export function App() {
   // account hosts (the /hosted set, scoped server-side to createdBy). Counting the whole registry
   // here would over-count (e.g. an SDK-registered or another owner's agent still in the directory).
   const ownedHostedIds = new Set(hosted.map((h) => h.web3Id));
+  // The owner's identity set for scoping their activity feed: their account address plus every
+  // agent they own. An event "involves them" if its actor or target is in this set.
+  const ownedIdentity = new Set<string>(ownedHostedIds);
+  if (account?.address) ownedIdentity.add(account.address);
   const agentsBadgeCount = isAdmin
     ? agentsForView.length
     : agentsForView.filter((a) => ownedHostedIds.has(a.web3Id)).length;
@@ -514,6 +518,8 @@ export function App() {
             // network-wide aggregates (those are admin/node data). Numbers come from the same
             // owner-scoped sources the rest of their console uses: `hosted` (server-scoped to
             // createdBy), its `.running` flag, and the already-account-scoped ledger entries.
+            // Recent activity is filtered to events that touch the owner's own identity — their
+            // account address or one of their agents — instead of the whole-network feed.
             scope={
               isAgentOwner
                 ? {
@@ -521,6 +527,7 @@ export function App() {
                     agents: agentsBadgeCount,
                     online: hosted.filter((h) => h.running).length,
                     ledgerEntries: snap.entries.length,
+                    events: snap.events.filter((e) => eventInvolves(e, ownedIdentity)),
                   }
                 : undefined
             }
@@ -617,6 +624,15 @@ interface OverviewScope {
   agents: number;
   online: number;
   ledgerEntries: number;
+  /** Recent-activity events already filtered to the owner's own identity. */
+  events: Web3Event[];
+}
+
+/** An event "involves" the owner when its actor or target is in their identity set. */
+function eventInvolves(e: Web3Event, ids: Set<string>): boolean {
+  return (
+    (e.actor !== undefined && ids.has(e.actor)) || (e.target !== undefined && ids.has(e.target))
+  );
 }
 
 function Overview({ snap, scope }: { snap: Snapshot; scope?: OverviewScope }) {
@@ -665,7 +681,7 @@ function Overview({ snap, scope }: { snap: Snapshot; scope?: OverviewScope }) {
       </div>
       <div className="section-title">Recent activity</div>
       <div className="card">
-        <Feed events={snap.events.slice(0, 12)} />
+        <Feed events={(scope ? scope.events : snap.events).slice(0, 12)} />
       </div>
     </>
   );
