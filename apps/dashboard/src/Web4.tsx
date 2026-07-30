@@ -90,6 +90,24 @@ function OxygenPanel() {
     null,
     2,
   );
+  // The `claude mcp add` one-liner — the least-manual path: paste in a terminal (with cwd = repo)
+  // and Claude Code registers Oxygen for you, no file editing.
+  const cli =
+    platform === 'windows'
+      ? 'claude mcp add oxygen-mcp -e OXYGEN_START_USDC=50000000 -- cmd /c pnpm --filter @web3/oxygen-mcp exec tsx src/index.ts'
+      : 'claude mcp add oxygen-mcp -e OXYGEN_START_USDC=50000000 -- pnpm --filter @web3/oxygen-mcp exec tsx src/index.ts';
+
+  const [copiedCli, setCopiedCli] = useState(false);
+  const connect = async () => {
+    try {
+      await navigator.clipboard.writeText(cli);
+      setCopiedCli(true);
+      window.setTimeout(() => setCopiedCli(false), 1800);
+    } catch {
+      setCopiedCli(false);
+    }
+  };
+
   return (
     <div style={{ marginTop: 20, borderTop: '1px solid var(--hair)', paddingTop: 16 }}>
       <div className="section-title" style={{ fontSize: '1rem' }}>
@@ -100,27 +118,56 @@ function OxygenPanel() {
         <i>“check my wallet”</i> or <i>“fetch &lt;url&gt; and pay if it asks”</i>. Save this as{' '}
         <code>.mcp.json</code> in your project (it points Claude at the local Oxygen MCP server).
       </p>
-      <div className="role-toggle" role="group" aria-label="Platform" style={{ marginBottom: 10 }}>
-        <button
-          type="button"
-          className={platform === 'unix' ? 'active' : ''}
-          onClick={() => setPlatform('unix')}
-        >
-          macOS / Linux
+
+      <div
+        style={{
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          marginBottom: 6,
+        }}
+      >
+        <button type="button" className="btn" onClick={connect}>
+          {copiedCli ? 'Command copied ✓ — paste in your terminal' : '⚡ Connect to Claude Code'}
         </button>
-        <button
-          type="button"
-          className={platform === 'windows' ? 'active' : ''}
-          onClick={() => setPlatform('windows')}
-        >
-          Windows
-        </button>
+        <div className="role-toggle" role="group" aria-label="Platform">
+          <button
+            type="button"
+            className={platform === 'unix' ? 'active' : ''}
+            onClick={() => setPlatform('unix')}
+          >
+            macOS / Linux
+          </button>
+          <button
+            type="button"
+            className={platform === 'windows' ? 'active' : ''}
+            onClick={() => setPlatform('windows')}
+          >
+            Windows
+          </button>
+        </div>
       </div>
-      <CopyBlock text={json} label="Copy .mcp.json" />
-      <p className="muted" style={{ marginTop: 8 }}>
-        Prereq: clone the repo, run <code>pnpm install</code>, and set <code>cwd</code> to that
-        folder. For a funded wallet, add <code>"OXYGEN_WALLET_KEY": "0x…"</code> to <code>env</code>
-        ; left out, it runs in demo mode with a $50 balance. This node is at{' '}
+      <p className="muted" style={{ marginTop: 0 }}>
+        “Connect” copies a <code>claude mcp add</code> command — run it in a terminal from your repo
+        folder and Claude Code registers Oxygen for you (no file editing). A browser can’t install
+        it directly, so this is the one-paste path.
+      </p>
+      <CopyBlock text={cli} label="Copy command" />
+
+      <details style={{ marginTop: 12 }}>
+        <summary className="muted" style={{ cursor: 'pointer' }}>
+          Prefer a config file? Show <code>.mcp.json</code>
+        </summary>
+        <div style={{ marginTop: 10 }}>
+          <CopyBlock text={json} label="Copy .mcp.json" />
+        </div>
+      </details>
+
+      <p className="muted" style={{ marginTop: 10 }}>
+        Prereq: clone the repo, run <code>pnpm install</code>, and run the command from that folder
+        (or set <code>cwd</code>). For a funded wallet, add <code>-e OXYGEN_WALLET_KEY=0x…</code>;
+        left out, it runs in demo mode with a $50 balance. This node is at{' '}
         <span className="mono-hash">{NODE_URL}</span>.
       </p>
     </div>
