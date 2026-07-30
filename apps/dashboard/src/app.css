@@ -2105,9 +2105,12 @@ button.connector:not(:disabled):hover {
 .copy-pre {
   margin: 0;
   padding: 14px 16px;
-  background: var(--paper, #0e0f13);
+  /* Subtle code panel that matches the light theme; the leftover dark fallback rendered as
+     invisible faint text on white. Explicit ink color so the command is readable. */
+  background: var(--paper-2, #fafafa);
+  color: var(--ink, #0d0d0f);
   border: 1px solid var(--hair);
-  border-radius: var(--radius, 10px);
+  border-radius: var(--radius-sm, 10px);
   overflow-x: auto;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: var(--fs-sm, 13px);
@@ -2115,6 +2118,7 @@ button.connector:not(:disabled):hover {
 }
 .copy-pre code {
   white-space: pre;
+  color: inherit;
 }
 
 /* --- toggle switch (Genesis: monetize skill) --------------------------- */
