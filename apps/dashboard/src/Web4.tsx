@@ -6,6 +6,7 @@ import {
   NODE_URL,
   type SettlementInfo,
   type X402Receipt,
+  type X402Service,
   type X402Supported,
   api,
 } from './api.js';
@@ -187,6 +188,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
   const [rows, setRows] = useState<AgentRep[]>([]);
   const [supported, setSupported] = useState<X402Supported | null>(null);
   const [receipts, setReceipts] = useState<X402Receipt[]>([]);
+  const [services, setServices] = useState<X402Service[]>([]);
   const [settlement, setSettlement] = useState<SettlementInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,18 +197,20 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
     setLoading(true);
     setError(null);
     try {
-      const [rootRes, agentsRes, supp, rcpts, settle] = await Promise.all([
+      const [rootRes, agentsRes, supp, rcpts, dir, settle] = await Promise.all([
         api.erc8004Root().catch(() => null),
         api
           .erc8004Agents()
           .catch(() => ({ agents: [] as Erc8004Identity[], count: 0, registry: '' })),
         api.x402Supported().catch(() => null),
         api.x402Receipts().catch(() => ({ receipts: [] as X402Receipt[] })),
+        api.x402Directory().catch(() => ({ services: [] as X402Service[] })),
         api.settlement().catch(() => null),
       ]);
       setRoot(rootRes);
       setSupported(supp);
       setReceipts(rcpts.receipts);
+      setServices(dir.services);
       setSettlement(settle);
       // Fetch reputation for each identity (bounded — one node's agents).
       const reps = await Promise.all(
@@ -268,7 +272,12 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
         {scope === 'node' ? (
           <NodeX402 supported={supported} receipts={receipts} settlement={settlement} />
         ) : (
-          <AgentX402 rows={mine} loading={loading} onBound={load} />
+          <AgentX402
+            rows={mine}
+            services={services.filter((s) => mine.some((m) => m.agent.web3Id === s.web3Id))}
+            loading={loading}
+            onBound={load}
+          />
         )}
       </div>
 
@@ -386,10 +395,12 @@ function NodeX402({
 
 function AgentX402({
   rows,
+  services,
   loading,
   onBound,
 }: {
   rows: AgentRep[];
+  services: X402Service[];
   loading: boolean;
   onBound: () => void;
 }) {
@@ -480,6 +491,56 @@ function AgentX402({
           </tbody>
         </table>
       </div>
+
+      <div className="section-title" style={{ fontSize: '1rem' }}>
+        Your x402 endpoints (auto-generated)
+      </div>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Every skill you priced is automatically a pay-per-call x402 API — no setup. Share the URL;
+        callers pay your rate and the earnings build your agent’s reputation above.
+      </p>
+      {services.length === 0 ? (
+        <p className="muted">
+          No priced skills yet. Give an agent a <code>pricing.perTask</code> in Genesis and its
+          skills appear here as paid endpoints.
+        </p>
+      ) : (
+        <div className="table-scroll" style={{ marginBottom: 16 }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>Price</th>
+                <th>Endpoint</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {services.map((s) => {
+                const url = `${NODE_URL}${s.endpoint}`;
+                return (
+                  <tr key={s.endpoint}>
+                    <td>
+                      {s.name} <span className="muted">· {s.web3Id}</span>
+                    </td>
+                    <td>${s.priceUsd}</td>
+                    <td className="mono-hash">{s.endpoint}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => navigator.clipboard?.writeText(url)}
+                      >
+                        Copy URL
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="section-title" style={{ fontSize: '1rem' }}>
         Bind an x402 receiving wallet

@@ -1,4 +1,7 @@
-import { hashJson } from '@web3/crypto';
+import { isValidWeb3Id, web3Id as makeWeb3Id } from '@web3/core';
+import type { Web3Id } from '@web3/core';
+import { hashJson, randomId } from '@web3/crypto';
+import { deriveAgentAddress } from '@web3/erc8004';
 import {
   type Facilitator,
   type FacilitatorRequest,
@@ -14,6 +17,12 @@ import {
   privateKeyToAddress,
 } from '@web3/x402';
 import type { ModuleContext, Web3Module } from '../context.js';
+
+/** How long a paid skill call waits for the agent's result before returning a settled-but-pending
+ *  receipt (the agent still delivers on the A2A channel). */
+const INVOKE_TIMEOUT_MS = Number(process.env.WEB3_X402_INVOKE_TIMEOUT_MS ?? 8000);
+/** aETH minor units are 2dp; USDC atomic is 6dp. Scale a per-task price into USDC atomic units. */
+const toUsdcAtomic = (perTaskMinor: number): string => String(perTaskMinor * 10_000);
 
 /**
  * x402 — the internet-native "HTTP 402 Payment Required" standard, on a Web3.0 node.
@@ -34,7 +43,7 @@ export function x402Module(): Web3Module {
   return {
     name: 'x402',
     version: '0.1.0',
-    register({ http, bus, config, log }: ModuleContext) {
+    register({ http, bus, config, log, registry, connections, clock }: ModuleContext) {
       if (!config.x402.enabled) return;
 
       const x = config.x402;
@@ -189,6 +198,192 @@ export function x402Module(): Web3Module {
           ],
         };
       });
+
+      // ── every priced agent is automatically an x402 API ──────────────────────────────────────────
+      //
+      // #1 auto-price: any agent registered with `pricing.perTask` gets a paywalled endpoint per
+      //    skill — no extra setup, the agent earns via x402 out of the box.
+      // #2 auto-bind: the receiving wallet is the agent's ERC-8004 address, derived deterministically
+      //    from its DID (identical to what the erc8004 module minted), so payments settle to the
+      //    agent AND auto-credit its economic reputation. No manual bind step.
+
+      /** The purchasable skills of an agent (only those with a positive per-task price). */
+      const pricedSkills = (card: {
+        web3Id: string;
+        did: string;
+        skills: { id: string; name: string }[];
+        pricing?: { perTask: number; currency: string };
+      }) => {
+        const perTask = card.pricing?.perTask ?? 0;
+        if (perTask <= 0 || !card.did) return [];
+        const payToAddr = deriveAgentAddress(card.did);
+        return card.skills.map((s) => ({
+          web3Id: card.web3Id,
+          skillId: s.id,
+          name: s.name,
+          priceAtomic: toUsdcAtomic(perTask),
+          priceUsd: (perTask / 100).toFixed(2),
+          asset: x.asset,
+          network: x.network,
+          payTo: payToAddr,
+          endpoint: `/x402/call/${card.web3Id}/${s.id}`,
+        }));
+      };
+
+      // Discovery: the catalogue of pay-per-call agent skills on this node.
+      http.get('/x402/directory', () => {
+        const services = registry.list().flatMap((card) => pricedSkills(card));
+        return { count: services.length, asset: x.asset, network: x.network, services };
+      });
+
+      /**
+       * Dispatch a paid task to the agent over the A2A connection hub and wait (briefly) for its
+       * result. Hosted/connected agents answer synchronously; if the agent is offline the task
+       * queues and we return a settled-but-pending receipt (payment is final either way).
+       */
+      let buyerSeq = 0;
+      const dispatchAndAwait = async (
+        to: string,
+        input: Record<string, unknown>,
+      ): Promise<Record<string, unknown>> => {
+        const taskId = `x402_${randomId()}`;
+        const buyerId = makeWeb3Id(`x402buyer${++buyerSeq}`);
+        let resolveResult: (v: Record<string, unknown> | null) => void = () => {};
+        const waitResult = new Promise<Record<string, unknown> | null>((res) => {
+          resolveResult = res;
+        });
+        // A virtual socket that captures the agent's task.result reply (same shape the hub expects).
+        const socket = {
+          readyState: 1,
+          OPEN: 1,
+          send(data: string) {
+            try {
+              const msg = JSON.parse(data) as {
+                message?: { body?: { type?: string; state?: string; output?: unknown } };
+              };
+              if (msg.message?.body?.type === 'task.result') resolveResult(msg.message.body);
+            } catch {
+              /* ignore non-JSON frames */
+            }
+          },
+        };
+        // `to` is already a full Web3.0 ID (e.g. seller@web3.0) — pass it through as-is.
+        const online = connections.isOnline(to as Web3Id);
+        connections.bind(buyerId, socket as never);
+        const routed = connections.sendTo(to as Web3Id, {
+          kind: 'deliver',
+          message: {
+            id: `m_${taskId}`,
+            from: buyerId,
+            to,
+            ts: clock(),
+            body: { type: 'task.submit', taskId, input },
+          },
+        });
+        // Only wait for a synchronous result if the agent is actually connected; otherwise the task
+        // is queued and it'll deliver on the A2A channel — no point blocking the HTTP response.
+        if (!online) {
+          connections.unbind(buyerId);
+          return {
+            delivery: 'queued',
+            taskId,
+            note: 'Payment settled. The agent is offline; it will deliver on the A2A channel.',
+          };
+        }
+        const result = await Promise.race([
+          waitResult,
+          new Promise<null>((res) => setTimeout(() => res(null), INVOKE_TIMEOUT_MS)),
+        ]);
+        connections.unbind(buyerId);
+        if (result) {
+          return {
+            delivery: 'completed',
+            taskId,
+            state: result.state ?? 'completed',
+            output: result.output,
+          };
+        }
+        return {
+          delivery: routed === 'delivered' ? 'pending' : 'queued',
+          taskId,
+          note: 'Payment settled. The agent will deliver the result on the A2A channel.',
+        };
+      };
+
+      // The paywall: pay the agent's price, then it runs the skill. GET (?q=) or POST ({ input }).
+      const callSkill = async (
+        request: {
+          protocol: string;
+          host: string;
+          url: string;
+          method: string;
+          headers: Record<string, unknown>;
+          params: unknown;
+          query: unknown;
+          body: unknown;
+        },
+        reply: {
+          code: (n: number) => { send: (b: unknown) => unknown };
+          header: (k: string, v: string) => void;
+        },
+      ) => {
+        const { web3Id, skillId } = request.params as { web3Id: string; skillId: string };
+        if (!isValidWeb3Id(web3Id)) return reply.code(400).send({ error: 'invalid Web3.0 ID' });
+        const card = registry.get(web3Id as Web3Id);
+        if (!card) return reply.code(404).send({ error: `unknown agent ${web3Id}` });
+        const skill = card.skills.find((s) => s.id === skillId);
+        if (!skill) return reply.code(404).send({ error: `${web3Id} has no skill "${skillId}"` });
+        const perTask = card.pricing?.perTask ?? 0;
+        if (perTask <= 0 || !card.did) {
+          return reply.code(400).send({ error: `"${skillId}" is not x402-priced` });
+        }
+        const req = priceRequirement({
+          resource: `${request.protocol}://${request.host}${request.url}`,
+          atomicAmount: toUsdcAtomic(perTask),
+          payTo: deriveAgentAddress(card.did),
+          network: x.network,
+          asset: x.asset,
+          domain: { name: x.domainName, version: x.domainVersion },
+          description: `${skill.name} — ${web3Id} · $${(perTask / 100).toFixed(2)} per call`,
+        });
+        const payload = decodePaymentHeader(request.headers['x-payment'] as string | undefined);
+        if (!payload) {
+          return reply.code(402).send(build402(req, `Payment required for "${skillId}"`));
+        }
+        const settlement = await facilitator.settle({
+          x402Version: X402_VERSION,
+          paymentPayload: payload,
+          paymentRequirements: req,
+        });
+        if (!settlement.success) {
+          return reply.code(402).send(build402(req, settlement.errorReason ?? 'settlement failed'));
+        }
+        remember(settlement, req.maxAmountRequired, req.resource);
+        reply.header('X-PAYMENT-RESPONSE', encodeSettleResponse(settlement));
+        const q = (request.query ?? {}) as { q?: string; question?: string };
+        const input =
+          request.method === 'GET'
+            ? { question: q.q ?? q.question ?? '' }
+            : (((request.body as { input?: Record<string, unknown> })?.input ??
+                request.body ??
+                {}) as Record<string, unknown>);
+        const delivery = await dispatchAndAwait(web3Id, input);
+        return {
+          paid: {
+            amount: req.maxAmountRequired,
+            asset: x.asset,
+            network: x.network,
+            tx: settlement.transaction,
+            payer: settlement.payer,
+          },
+          agent: web3Id,
+          skill: skillId,
+          ...delivery,
+        };
+      };
+
+      http.get('/x402/call/:web3Id/:skillId', callSkill as never);
+      http.post('/x402/call/:web3Id/:skillId', callSkill as never);
     },
   };
 }

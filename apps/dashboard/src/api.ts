@@ -447,6 +447,17 @@ export interface X402Receipt {
   at: string;
   explorerUrl?: string;
 }
+export interface X402Service {
+  web3Id: string;
+  skillId: string;
+  name: string;
+  priceAtomic: string;
+  priceUsd: string;
+  asset: string;
+  network: string;
+  payTo: string;
+  endpoint: string;
+}
 export interface Erc8004Root {
   standard: string;
   registry: string;
@@ -505,6 +516,10 @@ export const api = {
   // x402 — internet-native payments (facilitator + receipts).
   x402Supported: () => get<X402Supported>('/x402/supported'),
   x402Receipts: () => get<{ receipts: X402Receipt[] }>('/x402/receipts'),
+  x402Directory: () =>
+    get<{ count: number; asset: string; network: string; services: X402Service[] }>(
+      '/x402/directory',
+    ),
   // ERC-8004 — agent identity, reputation & validation.
   erc8004Root: () => get<Erc8004Root>('/.well-known/erc8004.json'),
   erc8004Agents: () =>
