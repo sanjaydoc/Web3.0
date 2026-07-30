@@ -132,6 +132,22 @@ const AGENT_OWNER_NAV = new Set<View>([
   'guardrails',
 ]);
 
+/**
+ * How the agent-owner sidebar is laid out: a few top-level items, then two titled groups, then
+ * Marketplace on its own. A group with no title renders its items flush (no header). Only ids that
+ * survive `visibleNav` (main-node locking etc.) are shown, so this is purely presentation order — it
+ * never widens access beyond AGENT_OWNER_NAV.
+ */
+const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
+  { items: ['account', 'overview', 'ledger'] },
+  {
+    title: 'Launch agents',
+    items: ['agentweb4', 'connectors', 'skills', 'telegram', 'genesis', 'agents'],
+  },
+  { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
+  { items: ['marketplace'] },
+];
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -323,6 +339,27 @@ export function App() {
     setMenuOpen(false);
   };
 
+  // One sidebar entry — shared by the flat (admin/operator) and grouped (agent-owner) layouts.
+  const renderNavItem = (n: (typeof NAV)[number]) => (
+    <NavItem
+      key={n.id}
+      id={n.id}
+      // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
+      label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
+      view={view}
+      set={navigate}
+      count={
+        n.badge === 'agents'
+          ? agentsBadgeCount
+          : n.badge === 'events'
+            ? snap.events.length
+            : n.badge === 'entries'
+              ? snap.entries.length
+              : undefined
+      }
+    />
+  );
+
   const changeRole = (r: Role) => {
     setRolePref(r);
     localStorage.setItem(ROLE_KEY, r);
@@ -480,25 +517,22 @@ export function App() {
             </button>
           </div>
         )}
-        {visibleNav.map((n) => (
-          <NavItem
-            key={n.id}
-            id={n.id}
-            // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
-            label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
-            view={view}
-            set={navigate}
-            count={
-              n.badge === 'agents'
-                ? agentsBadgeCount
-                : n.badge === 'events'
-                  ? snap.events.length
-                  : n.badge === 'entries'
-                    ? snap.entries.length
-                    : undefined
-            }
-          />
-        ))}
+        {isAgentOwner
+          ? // Grouped layout: top-level items, then titled groups, then Marketplace. Each group only
+            // shows the ids that survived visibleNav, so main-node locking still applies.
+            AGENT_OWNER_GROUPS.map((group, gi) => {
+              const items = group.items
+                .map((id) => visibleNav.find((n) => n.id === id))
+                .filter((n): n is (typeof NAV)[number] => n !== undefined);
+              if (items.length === 0) return null;
+              return (
+                <div className="nav-group" key={group.title ?? `top-${gi}`}>
+                  {group.title && <div className="nav-group-title">{group.title}</div>}
+                  {items.map((n) => renderNavItem(n))}
+                </div>
+              );
+            })
+          : visibleNav.map((n) => renderNavItem(n))}
         <div className="foot">
           <span className={`pill-live ${nodeOnline ? '' : 'pill-off'}`}>
             <span className="dot" /> {nodeOnline ? 'node online' : 'node offline'}

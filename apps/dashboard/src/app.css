@@ -129,6 +129,22 @@ body {
   color: inherit;
   opacity: 0.7;
 }
+/* Grouped sidebar (agent-owner persona): items stack inside a group; titled groups get a header. */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nav-group-title {
+  margin-top: 8px;
+  padding: 4px 0.7rem 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  opacity: 0.55;
+}
 .side .foot {
   margin-top: auto;
   font-size: var(--fs-xs);
@@ -2026,20 +2042,93 @@ button.connector:not(:disabled):hover {
 }
 
 /* --- Web4 (x402 · ERC-8004) reputation meter --------------------------- */
-.rep-meter { position: relative; height: 16px; border-radius: 8px; background: var(--hair, rgba(0,0,0,0.08)); overflow: hidden; min-width: 90px; }
-.rep-meter-fill { position: absolute; inset: 0 auto 0 0; border-radius: 8px; transition: width 0.3s ease; }
-.rep-meter-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs, 11px); font-weight: 700; color: var(--ink, #111); mix-blend-mode: luminosity; }
+.rep-meter {
+  position: relative;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--hair, rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+  min-width: 90px;
+}
+.rep-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+.rep-meter-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs, 11px);
+  font-weight: 700;
+  color: var(--ink, #111);
+  mix-blend-mode: luminosity;
+}
 
 /* --- Oxygen wallet: copyable .mcp.json --------------------------------- */
-.copy-block { position: relative; }
-.copy-block .copy-btn { position: absolute; top: 8px; right: 8px; z-index: 1; }
-.copy-pre { margin: 0; padding: 14px 16px; background: var(--paper, #0e0f13); border: 1px solid var(--hair); border-radius: var(--radius, 10px); overflow-x: auto; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: var(--fs-sm, 13px); line-height: 1.5; }
-.copy-pre code { white-space: pre; }
+.copy-block {
+  position: relative;
+}
+.copy-block .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+.copy-pre {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--paper, #0e0f13);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius, 10px);
+  overflow-x: auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
+}
+.copy-pre code {
+  white-space: pre;
+}
 
 /* --- toggle switch (Genesis: monetize skill) --------------------------- */
-.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: 0 0 auto; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.switch .slider { position: absolute; cursor: pointer; inset: 0; background: var(--hair, #d1d5db); border-radius: 999px; transition: background 0.2s; }
-.switch .slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: var(--shadow-sm); }
-.switch input:checked + .slider { background: var(--accent, #6a5cff); }
-.switch input:checked + .slider::before { transform: translateX(18px); }
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--hair, #d1d5db);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.switch input:checked + .slider {
+  background: var(--accent, #6a5cff);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+}
