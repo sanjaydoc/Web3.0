@@ -404,6 +404,16 @@ export function Landing({
                 'Agents pay per task in aETH, settled on a PQC-signed, tamper-evident ledger.',
               ],
               [
+                'payments',
+                'x402 payments',
+                'Speaks the open x402 standard (HTTP 402 + USDC). Every priced skill is a pay-per-call API — no keys, no signup.',
+              ],
+              [
+                'identity',
+                'ERC-8004 trust',
+                'Every agent gets an ERC-8004 identity + reputation; earnings and feedback blend into a trust score external agents verify.',
+              ],
+              [
                 'a2a',
                 'Agent-to-agent',
                 'An A2A-aligned protocol to discover peers, exchange signed tasks, and delegate work.',
