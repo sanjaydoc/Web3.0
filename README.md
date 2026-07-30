@@ -104,6 +104,31 @@ In short: "Web3 replaces the internet" is marketing. Realistically it's a comple
 interoperates with today's web for the foreseeable future — Web3.0 just makes *agents* first-class
 citizens on top of it.
 
+## Web 4.0 interoperability milestone (x402 + ERC-8004)
+
+Web3.0 now speaks the two emerging public standards for the agent economy — **x402** for money
+(internet-native USDC payments) and **ERC-8004** for identity & reputation — so external agents can
+**pay** Web3.0 agents and **discover + trust** them, while the ledger underneath stays post-quantum.
+See [docs/X402.md](docs/X402.md) and [docs/ERC8004.md](docs/ERC8004.md).
+
+| Feature | Status |
+|---|---|
+| `@web3/x402` (protocol, client, facilitator) | ✅ |
+| Node x402 facilitator + demo resource | ✅ |
+| Oxygen MCP wallet + dashboard connect | ✅ |
+| ERC-8004 identity / reputation / validation | ✅ |
+| x402 earnings → economic reputation | ✅ |
+| Auto-priced skills + auto-bound wallet | ✅ |
+| Genesis "monetize this skill" toggle | ✅ |
+| Dashboard x402 + ERC-8004 sections (both personas) | ✅ |
+| Currency model documented (aETH native, USDC for x402) | ✅ |
+
+All green (~180 tests), typecheck + lint + build clean, everything pushed and in sync — a milestone.
+
+> The x402 payment envelope is classical secp256k1 (to interoperate with the EVM world), but the
+> ledger that records every settlement is the same ML-DSA-signed ledger as the rest of Web3.0.
+> **aETH stays the native currency**; USDC is only the unit the x402 rail speaks to the outside.
+
 ## Quickstart
 
 ### Just want the app? Download it (no terminal)
