@@ -148,6 +148,31 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
   { items: ['marketplace'] },
 ];
 
+/**
+ * How the ADMIN sidebar is laid out: the full console, grouped so it isn't one long flat list.
+ * Top-level items first, then collapsible Agents / Node / Network groups. Any NAV id not listed here
+ * still renders (appended by the fallback below), so nothing is ever hidden from the admin.
+ */
+const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
+  { items: ['overview', 'account', 'ledger'] },
+  {
+    title: 'Agents',
+    items: [
+      'genesis',
+      'agents',
+      'marketplace',
+      'skills',
+      'connectors',
+      'telegram',
+      'agentweb4',
+      'developers',
+      'hosteddapps',
+    ],
+  },
+  { title: 'Node', items: ['mynode', 'download', 'llmtunnel', 'nodeweb4'] },
+  { title: 'Network', items: ['network', 'traffic', 'guardrails'] },
+];
+
 interface Snapshot {
   stats?: Stats;
   agents: AgentCard[];
@@ -351,10 +376,10 @@ export function App() {
       return next;
     });
 
+  // The grouped sidebar layout for this persona (agent-owner or admin); operators stay flat.
+  const navGroups = isAgentOwner ? AGENT_OWNER_GROUPS : isAdmin ? ADMIN_GROUPS : null;
   // The titled group that holds the current view (so we can keep it open while it's active).
-  const activeGroupTitle = isAgentOwner
-    ? AGENT_OWNER_GROUPS.find((g) => g.title && g.items.includes(view))?.title
-    : undefined;
+  const activeGroupTitle = navGroups?.find((g) => g.title && g.items.includes(view))?.title;
   // Auto-open the group of whatever view is active, so the current page's nav item is always visible.
   useEffect(() => {
     if (!activeGroupTitle) return;
@@ -541,15 +566,16 @@ export function App() {
             </button>
           </div>
         )}
-        {isAgentOwner
-          ? // Grouped layout: top-level items render flush; titled groups (Launch agents, Settings)
-            // are collapsible. Each group only shows ids that survived visibleNav (main-node locking).
-            AGENT_OWNER_GROUPS.map((group, gi) => {
+        {navGroups ? (
+          // Grouped layout (agent-owner + admin): top-level items render flush; titled groups are
+          // collapsible. Each group only shows ids that survived visibleNav. A trailing fallback
+          // renders any visible item not placed in a group, so nothing is ever hidden.
+          <>
+            {navGroups.map((group, gi) => {
               const items = group.items
                 .map((id) => visibleNav.find((n) => n.id === id))
                 .filter((n): n is (typeof NAV)[number] => n !== undefined);
               if (items.length === 0) return null;
-              // Untitled groups (Account/Overview/Payments, and Marketplace) always render flush.
               if (!group.title) {
                 return (
                   <div className="nav-group" key={`top-${gi}`}>
@@ -574,8 +600,18 @@ export function App() {
                   {open && items.map((n) => renderNavItem(n))}
                 </div>
               );
-            })
-          : visibleNav.map((n) => renderNavItem(n))}
+            })}
+            {(() => {
+              const grouped = new Set(navGroups.flatMap((g) => g.items));
+              const rest = visibleNav.filter((n) => !grouped.has(n.id));
+              return rest.length ? (
+                <div className="nav-group">{rest.map((n) => renderNavItem(n))}</div>
+              ) : null;
+            })()}
+          </>
+        ) : (
+          visibleNav.map((n) => renderNavItem(n))
+        )}
         <div className="foot">
           <span className={`pill-live ${nodeOnline ? '' : 'pill-off'}`}>
             <span className="dot" /> {nodeOnline ? 'node online' : 'node offline'}
