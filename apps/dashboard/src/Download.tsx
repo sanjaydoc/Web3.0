@@ -11,8 +11,8 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 // public repo's releases.
 // DESKTOP_VERSION = the release tag (shown to users + the /releases/download/v… path). DESKTOP_FILE =
 // the installer file version (electron-builder names files from desktop/package.json); can differ.
-const DESKTOP_VERSION = '0.1.31';
-const DESKTOP_FILE = '0.1.31';
+const DESKTOP_VERSION = '0.1.32';
+const DESKTOP_FILE = '0.1.32';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_FILE}.exe`;
@@ -459,7 +459,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
         </p>
         <p className="hint" style={{ margin: 0 }}>
           Your payments are signed on this device with your account key (ML-DSA) and sealed by an
-          authority. Want to become an authority yourself and produce blocks? Stake aETH from{' '}
+          authority. Want to become an authority yourself and produce blocks? Stake USDC from{' '}
           <b>My node</b> — the network seats you automatically.
         </p>
       </div>
