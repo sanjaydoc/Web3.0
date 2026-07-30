@@ -419,6 +419,8 @@ export interface Economics {
   inferenceCommissionBps: number;
   /** Platform fee on x402 skill calls (0 = non-custodial; not surfaced in the Revenue UI). */
   x402FeeBps: number;
+  /** Network ceiling on operator inference price, USDC minor per Mtok. 0 = no cap. */
+  maxInferencePriceMTok: number;
 }
 
 /** Node persistence settings (config-file backed; restart to apply). */

@@ -182,6 +182,9 @@ function RevenueCard() {
   const [eco, setEco] = useState<Economics | null>(null);
   const [hosting, setHosting] = useState('');
   const [inference, setInference] = useState('');
+  // Max inference price a node operator may advertise, shown/edited in USDC per Mtok (stored as
+  // minor units). Empty/0 = no cap.
+  const [priceCap, setPriceCap] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -192,6 +195,7 @@ function RevenueCard() {
         setEco(e);
         setHosting(String(e.hostingCommissionBps / 100));
         setInference(String(e.inferenceCommissionBps / 100));
+        setPriceCap(String(e.maxInferencePriceMTok / 100));
       })
       .catch(() => undefined);
   }, []);
@@ -203,6 +207,7 @@ function RevenueCard() {
       const next = await api.updateEconomics({
         hostingCommissionBps: Math.round(Number.parseFloat(hosting || '0') * 100),
         inferenceCommissionBps: Math.round(Number.parseFloat(inference || '0') * 100),
+        maxInferencePriceMTok: Math.round(Number.parseFloat(priceCap || '0') * 100),
       });
       setEco(next);
       setMsg({
@@ -249,6 +254,19 @@ function RevenueCard() {
           <span className="hint">
             platform keeps {inference || '0'}% · operator keeps{' '}
             {100 - (Number.parseFloat(inference) || 0)}%
+          </span>
+        </div>
+        <div className="field">
+          <label htmlFor="rev-pricecap">Max inference price (USDC / Mtok)</label>
+          <input
+            id="rev-pricecap"
+            value={priceCap}
+            onChange={(ev) => setPriceCap(ev.target.value)}
+            inputMode="decimal"
+          />
+          <span className="hint">
+            price ceiling for node operators — an offer above this is rejected.{' '}
+            {Number.parseFloat(priceCap) > 0 ? `cap ${priceCap} USDC/Mtok` : '0 = no cap'}
           </span>
         </div>
       </div>

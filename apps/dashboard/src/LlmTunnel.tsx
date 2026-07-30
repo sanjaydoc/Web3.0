@@ -41,13 +41,20 @@ export function LlmTunnel() {
   const [local, setLocal] = useState<{ available: boolean; models: LocalModel[] } | null>(null);
   const [scanBusy, setScanBusy] = useState<'ram' | 'models' | null>(null);
   const [chatModel, setChatModel] = useState<string | null>(null);
+  // Network inference price ceiling (admin monetary policy), USDC minor per Mtok. 0/null = no cap.
+  const [priceCap, setPriceCap] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [offersRes, rev] = await Promise.all([api.llmOffers(), api.llmRevenue()]);
+      const [offersRes, rev, eco] = await Promise.all([
+        api.llmOffers(),
+        api.llmRevenue(),
+        api.economics().catch(() => null),
+      ]);
       setOffers(offersRes.offers);
       setRevenue(rev.revenue);
       setUsage(rev.usage);
+      if (eco) setPriceCap(eco.maxInferencePriceMTok);
     } catch {
       /* offline / not signed in — keep last */
     }
@@ -191,6 +198,63 @@ export function LlmTunnel() {
             <button type="button" className="btn" disabled={scanBusy !== null} onClick={scanLocal}>
               {scanBusy === 'models' ? 'Scanning…' : 'Detect installed Ollama models'}
             </button>
+          </div>
+
+          {/* Pricing reference — the price field is in USDC MINOR units per million tokens
+              (100 minor = 1.00 USDC). This chart maps what you enter to the real per-Mtok rate,
+              and shows the network ceiling an offer can't exceed. */}
+          <div className="card" style={{ margin: '4px 0 14px', padding: '12px 14px' }}>
+            <div className="section-title" style={{ marginBottom: 6 }}>
+              Pricing guide · USDC minor per Mtok
+            </div>
+            <div className="hscroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>You enter</th>
+                    <th>Shows as</th>
+                    <th>Per 1M tokens</th>
+                    <th>Feel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { minor: 0, feel: 'Free — reputation / adoption play' },
+                    { minor: 10, feel: 'Budget small model' },
+                    { minor: 50, feel: 'Typical small model' },
+                    { minor: 100, feel: 'Premium small / mid model' },
+                    { minor: 500, feel: 'Large / high-demand model' },
+                  ].map((r) => {
+                    const overCap = priceCap !== null && priceCap > 0 && r.minor > priceCap;
+                    return (
+                      <tr key={r.minor} style={overCap ? { opacity: 0.45 } : undefined}>
+                        <td>
+                          <strong>{r.minor}</strong>
+                        </td>
+                        <td>{r.minor === 0 ? 'free' : `${formatAmount(r.minor)} USDC`}</td>
+                        <td>{r.minor === 0 ? '$0.00' : `$${(r.minor / 100).toFixed(2)}`}</td>
+                        <td className="muted">
+                          {r.feel}
+                          {overCap ? ' · over cap' : ''}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="hint" style={{ marginTop: 8 }}>
+              {priceCap !== null && priceCap > 0 ? (
+                <>
+                  Network cap: <b>{priceCap}</b> ({formatAmount(priceCap)} USDC/Mtok). Offers above
+                  this are rejected — set by the network admin in Revenue.
+                </>
+              ) : (
+                <>No network price cap is set — you may price freely.</>
+              )}{' '}
+              You keep the operator share; the platform commission comes off the top per the current
+              Revenue split.
+            </p>
           </div>
 
           {detect && (
