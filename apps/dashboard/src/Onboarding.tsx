@@ -642,6 +642,40 @@ function QuickStartFlow({
   );
 }
 
+// Persona marks — line icons matching the console (currentColor). Replaces the emoji.
+const AgentMark = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+    <path
+      d="M12 5v3M3.5 12.5v3M20.5 12.5v3"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="4" r="1.2" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="9.6" cy="13.2" r="1.15" fill="currentColor" />
+    <circle cx="14.4" cy="13.2" r="1.15" fill="currentColor" />
+  </svg>
+);
+const NodeMark = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="4" y="4" width="16" height="7" rx="1.6" stroke="currentColor" strokeWidth="1.7" />
+    <rect x="4" y="13" width="16" height="7" rx="1.6" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="7.6" cy="7.5" r="1" fill="currentColor" />
+    <circle cx="7.6" cy="16.5" r="1" fill="currentColor" />
+  </svg>
+);
+const BoltMark = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M13 2 4.5 13.5H10l-1 8.5L19.5 10H13l0-8Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /** Step 0 — the fork. Pick the account's persona: own an agent (pay a host to run it) or run a node
  *  (contribute RAM, host other people's agents, earn). The two are mutually exclusive at signup. */
 function PersonaStep({
@@ -663,7 +697,9 @@ function PersonaStep({
           onClick={onExpress}
           style={{ width: '100%', marginBottom: 14, borderColor: 'var(--accent, currentColor)' }}
         >
-          <span className="onboard-persona-emoji">⚡</span>
+          <span className="onboard-persona-emoji">
+            <BoltMark />
+          </span>
           <b>Launch a paid agent in 2 minutes</b>
           <span className="muted">
             The fast path: we create everything and fire a test payment so you watch it earn.
@@ -676,14 +712,18 @@ function PersonaStep({
       </p>
       <div className="onboard-personas">
         <button type="button" className="onboard-persona" onClick={() => onPick('agent-owner')}>
-          <span className="onboard-persona-emoji">🤖</span>
+          <span className="onboard-persona-emoji">
+            <AgentMark />
+          </span>
           <b>Own an agent</b>
           <span className="muted">
             Create AI agents and pay a host to keep them online. No node to run.
           </span>
         </button>
         <button type="button" className="onboard-persona" onClick={() => onPick('operator')}>
-          <span className="onboard-persona-emoji">🖥️</span>
+          <span className="onboard-persona-emoji">
+            <NodeMark />
+          </span>
           <b>Run a node &amp; earn</b>
           <span className="muted">
             Contribute your device's RAM to host other people's agents and earn USDC.

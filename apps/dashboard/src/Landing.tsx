@@ -121,6 +121,30 @@ const AndroidMark = () => (
     />
   </svg>
 );
+// Persona marks for the signup role picker — line icons, currentColor, matching the other marks.
+const AgentMark = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+    <path
+      d="M12 5v3M3.5 12.5v3M20.5 12.5v3"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="4" r="1.2" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="9.6" cy="13.2" r="1.15" fill="currentColor" />
+    <circle cx="14.4" cy="13.2" r="1.15" fill="currentColor" />
+  </svg>
+);
+const NodeMark = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="4" y="4" width="16" height="7" rx="1.6" stroke="currentColor" strokeWidth="1.7" />
+    <rect x="4" y="13" width="16" height="7" rx="1.6" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="7.6" cy="7.5" r="1" fill="currentColor" />
+    <circle cx="7.6" cy="16.5" r="1" fill="currentColor" />
+  </svg>
+);
+
 // The Android APK is published to a rolling `android` pre-release (always the latest build), so it
 // uses its own URL rather than the versioned desktop base.
 const ANDROID_APK =
@@ -321,15 +345,27 @@ export function Landing({
                         type="button"
                         className={role === 'agent-owner' ? 'on' : ''}
                         onClick={() => setRole('agent-owner')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 7,
+                        }}
                       >
-                        🤖 Own an agent
+                        <AgentMark /> Own an agent
                       </button>
                       <button
                         type="button"
                         className={role === 'operator' ? 'on' : ''}
                         onClick={() => setRole('operator')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 7,
+                        }}
                       >
-                        🖥️ Run a node
+                        <NodeMark /> Run a node
                       </button>
                     </div>
                     <em>
