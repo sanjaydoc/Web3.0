@@ -1,45 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  type Lease,
-  type LlmMarketOffer,
-  type LlmUsageRow,
-  type MarketHost,
-  api,
-  formatAmount,
-} from './api.js';
-import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
+import { type LlmMarketOffer, type LlmUsageRow, api, formatAmount } from './api.js';
 
 /**
- * Marketplace — the agent-owner side of the compute marketplace. Browse hosts selling RAM capacity,
- * rent one to run an agent (creating a lease billed each epoch), and manage your active rentals. The
- * host earns the fee minus the platform commission; you pay from your wallet.
+ * Marketplace — the agent-owner side of the compute marketplace. Browse the hosted models node
+ * operators sell inference for, pick one as an agent's brain, and watch a per-agent usage meter of
+ * the tokens consumed and what they've cost. Inference runs on the operator's machine over the relay.
  */
 export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
-  const [hosts, setHosts] = useState<MarketHost[]>([]);
-  const [leases, setLeases] = useState<Lease[]>([]);
   const [models, setModels] = useState<LlmMarketOffer[]>([]);
   // Accrued inference cost (the usage-meter figure — populates even at 0 / with no balance).
   const [inferenceSpend, setInferenceSpend] = useState(0);
   // Per-agent hosted-brain usage rows (tokens consumed + accrued cost).
   const [usage, setUsage] = useState<LlmUsageRow[]>([]);
-  const [agentId, setAgentId] = useState('');
-  const [me, setMe] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [m, l, acct, brains, spend, use] = await Promise.all([
-        api.hostingMarket(),
-        api.hostingLeases(),
-        api.me(),
+      const [brains, spend, use] = await Promise.all([
         api.llmMarket(),
         api.llmSpend().catch(() => ({ spend: 0, accrued: 0 })),
         api.llmUsage().catch(() => ({ usage: [] as LlmUsageRow[] })),
       ]);
-      setHosts(m.hosts);
-      setLeases(l.leases);
-      setMe(acct.address);
       setModels(brains.offers);
       // Show accrued cost — what usage has cost, whether or not it settled — so the meter isn't
       // stuck at 0 just because free models or empty wallets mean nothing was debited.
@@ -56,58 +36,6 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
     return () => clearInterval(t);
   }, [load]);
 
-  const rent = async (h: MarketHost) => {
-    const id = agentId.trim();
-    if (!id) {
-      setMsg({ kind: 'err', text: 'Enter the agent you want hosted (e.g. myagent@web3.0).' });
-      return;
-    }
-    setBusy(h.host);
-    setMsg(null);
-    try {
-      // Sign a lease mandate with the owner's ML-DSA key so every recurring debit is owner-authorized
-      // and capped at the offered price. Falls back to an unsigned rental if the key isn't on this
-      // device (e.g. signed in with only a token).
-      const key = me ? loadAccountKey(me) : null;
-      const mandate = key
-        ? signLeaseMandate(key, {
-            owner: me,
-            host: h.host,
-            agentId: id,
-            maxPerEpoch: h.pricePerEpoch,
-            maxEpochs: 0,
-            expiry: '',
-            nonce: mandateNonce(),
-          })
-        : undefined;
-      await api.rentHost(id, mandate);
-      setAgentId('');
-      setMsg({
-        kind: 'ok',
-        text: mandate
-          ? `Rented ${h.host} for ${id} — signed authorization; billed each epoch.`
-          : `Rented ${h.host} for ${id} (no local key — unsigned). Billed each epoch.`,
-      });
-      await load();
-    } catch (e) {
-      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const end = async (id: string) => {
-    setBusy(id);
-    try {
-      await api.endLease(id);
-      await load();
-    } catch {
-      /* keep */
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const rate = async (host: string, model: string, score: number) => {
     try {
       await api.rateLlm(host, model, score);
@@ -123,67 +51,10 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
     go?.('genesis');
   };
 
-  const mine = leases.filter((l) => l.active);
-
   return (
     <>
       <div className="page-head">
         <h1>Marketplace</h1>
-      </div>
-
-      <div className="card" style={{ marginBottom: 18 }}>
-        <div className="section-title">Rent hosting for an agent</div>
-        <div className="field" style={{ maxWidth: 360 }}>
-          <label htmlFor="mkt-agent">Agent to host</label>
-          <input
-            id="mkt-agent"
-            value={agentId}
-            placeholder="myagent@web3.0"
-            onChange={(e) => setAgentId(e.target.value)}
-          />
-        </div>
-        {msg && (
-          <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
-        )}
-        {hosts.length === 0 ? (
-          <div className="empty">No hosts are offering capacity yet.</div>
-        ) : (
-          <div className="hscroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Host</th>
-                  <th>Price / epoch</th>
-                  <th>Free capacity</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {hosts.map((h) => (
-                  <tr key={h.host}>
-                    <td>
-                      <strong>{h.host}</strong>
-                    </td>
-                    <td>{formatAmount(h.pricePerEpoch)}</td>
-                    <td>
-                      {h.free} / {h.capacity || '∞'}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn act"
-                        disabled={busy === h.host || h.free === 0}
-                        onClick={() => rent(h)}
-                      >
-                        {busy === h.host ? '…' : 'Rent'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
@@ -314,51 +185,6 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
               </tbody>
             </table>
           </div>
-        )}
-
-        {mine.length > 0 && (
-          <>
-            <div className="section-title" style={{ marginTop: 18 }}>
-              RAM hosting leases
-            </div>
-            <div className="hscroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Agent</th>
-                    <th>Host</th>
-                    <th>Price / epoch</th>
-                    <th>Epochs</th>
-                    <th>Paid</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {mine.map((l) => (
-                    <tr key={l.id}>
-                      <td>
-                        <strong>{l.agentId}</strong>
-                      </td>
-                      <td>{l.host}</td>
-                      <td>{formatAmount(l.pricePerEpoch)}</td>
-                      <td>{l.epochsBilled}</td>
-                      <td>{formatAmount(l.paidTotal)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          disabled={busy === l.id}
-                          onClick={() => end(l.id)}
-                        >
-                          {busy === l.id ? '…' : 'End'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
         )}
       </div>
     </>
