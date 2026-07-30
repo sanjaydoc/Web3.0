@@ -2040,3 +2040,28 @@ button.connector:not(:disabled):hover {
   color: var(--ink, #111);
   mix-blend-mode: luminosity;
 }
+
+/* --- Oxygen wallet: copyable .mcp.json --------------------------------- */
+.copy-block {
+  position: relative;
+}
+.copy-block .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+.copy-pre {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--paper, #0e0f13);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius, 10px);
+  overflow-x: auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
+}
+.copy-pre code {
+  white-space: pre;
+}

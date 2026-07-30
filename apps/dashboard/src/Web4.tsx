@@ -3,6 +3,7 @@ import {
   type Erc8004Identity,
   type Erc8004Reputation,
   type Erc8004Root,
+  NODE_URL,
   type SettlementInfo,
   type X402Receipt,
   type X402Supported,
@@ -42,6 +43,88 @@ function Meter({ score }: { score: number }) {
 interface AgentRep {
   agent: Erc8004Identity;
   rep?: Erc8004Reputation;
+}
+
+/** A code block with a one-click copy button. */
+function CopyBlock({ text, label = 'Copy' }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className="copy-block">
+      <button type="button" className="btn btn-sm copy-btn" onClick={copy}>
+        {copied ? 'Copied ✓' : label}
+      </button>
+      <pre className="copy-pre">
+        <code>{text}</code>
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * OxygenPanel — connect the Oxygen MCP wallet to Claude Code. Emits a ready-to-save `.mcp.json`
+ * (platform-aware, since the launch command differs on Windows) with a copy button.
+ */
+function OxygenPanel() {
+  const [platform, setPlatform] = useState<'unix' | 'windows'>(() =>
+    typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'unix',
+  );
+  const cwd = platform === 'windows' ? 'C:\\path\\to\\Web3.0' : '/path/to/Web3.0';
+  const server =
+    platform === 'windows'
+      ? {
+          command: 'cmd',
+          args: ['/c', 'pnpm', '--filter', '@web3/oxygen-mcp', 'exec', 'tsx', 'src/index.ts'],
+        }
+      : { command: 'pnpm', args: ['--filter', '@web3/oxygen-mcp', 'exec', 'tsx', 'src/index.ts'] };
+  const json = JSON.stringify(
+    { mcpServers: { 'oxygen-mcp': { ...server, cwd, env: { OXYGEN_START_USDC: '50000000' } } } },
+    null,
+    2,
+  );
+  return (
+    <div style={{ marginTop: 20, borderTop: '1px solid var(--hair)', paddingTop: 16 }}>
+      <div className="section-title" style={{ fontSize: '1rem' }}>
+        Your Oxygen wallet · Claude Code
+      </div>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Oxygen is Web3.0’s x402 wallet for Claude Code. Connect it, then just ask Claude to{' '}
+        <i>“check my wallet”</i> or <i>“fetch &lt;url&gt; and pay if it asks”</i>. Save this as{' '}
+        <code>.mcp.json</code> in your project (it points Claude at the local Oxygen MCP server).
+      </p>
+      <div className="role-toggle" role="group" aria-label="Platform" style={{ marginBottom: 10 }}>
+        <button
+          type="button"
+          className={platform === 'unix' ? 'active' : ''}
+          onClick={() => setPlatform('unix')}
+        >
+          macOS / Linux
+        </button>
+        <button
+          type="button"
+          className={platform === 'windows' ? 'active' : ''}
+          onClick={() => setPlatform('windows')}
+        >
+          Windows
+        </button>
+      </div>
+      <CopyBlock text={json} label="Copy .mcp.json" />
+      <p className="muted" style={{ marginTop: 8 }}>
+        Prereq: clone the repo, run <code>pnpm install</code>, and set <code>cwd</code> to that
+        folder. For a funded wallet, add <code>"OXYGEN_WALLET_KEY": "0x…"</code> to <code>env</code>
+        ; left out, it runs in demo mode with a $50 balance. This node is at{' '}
+        <span className="mono-hash">{NODE_URL}</span>.
+      </p>
+    </div>
+  );
 }
 
 /**
@@ -247,6 +330,7 @@ function NodeX402({
           </tbody>
         </table>
       </div>
+      <OxygenPanel />
     </div>
   );
 }
@@ -384,6 +468,8 @@ function AgentX402({
           {msg}
         </div>
       )}
+
+      <OxygenPanel />
     </div>
   );
 }
