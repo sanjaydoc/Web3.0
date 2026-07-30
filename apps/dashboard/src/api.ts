@@ -408,10 +408,17 @@ async function detectDeviceIp(): Promise<string | null> {
   return null;
 }
 
-/** Live monetary policy — GUI-editable by the admin, applies immediately. USDC-only: the payment
- *  fee is the sole knob (token issuance — block rewards, minted pool, burns, staking — was retired). */
+/** Live monetary policy — GUI-editable by the admin, applies immediately. All values are basis
+ *  points (100 = 1%). USDC-only: no token issuance, just platform take-rates. */
 export interface Economics {
+  /** Internal-ledger payment fee, split treasury/serving-node. */
   feeBps: number;
+  /** Platform commission on RAM-hosting fees (host keeps the rest). */
+  hostingCommissionBps: number;
+  /** Platform commission on LLM-tunnel inference fees (host keeps the rest). */
+  inferenceCommissionBps: number;
+  /** Platform fee on x402 skill calls (0 = non-custodial; not surfaced in the Revenue UI). */
+  x402FeeBps: number;
 }
 
 /** Node persistence settings (config-file backed; restart to apply). */

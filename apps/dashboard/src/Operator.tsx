@@ -172,6 +172,102 @@ function EconomicsCard() {
   );
 }
 
+/**
+ * Revenue — the platform's take-rates on the two demand-funded, internal-ledger flows. Admin-editable
+ * and live (persisted; applies to the next charge, no restart). Shown as percentages; stored as bps.
+ * (x402 skill calls settle peer-to-peer straight to the agent — non-custodial, 0% — so they're not
+ * here.)
+ */
+function RevenueCard() {
+  const [eco, setEco] = useState<Economics | null>(null);
+  const [hosting, setHosting] = useState('');
+  const [inference, setInference] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    api
+      .economics()
+      .then((e) => {
+        setEco(e);
+        setHosting(String(e.hostingCommissionBps / 100));
+        setInference(String(e.inferenceCommissionBps / 100));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const next = await api.updateEconomics({
+        hostingCommissionBps: Math.round(Number.parseFloat(hosting || '0') * 100),
+        inferenceCommissionBps: Math.round(Number.parseFloat(inference || '0') * 100),
+      });
+      setEco(next);
+      setMsg({
+        kind: 'ok',
+        text: 'Saved — applies to the next charge, network-wide on this node.',
+      });
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!eco) return null;
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Revenue</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        Your platform commission on demand-funded fees, in USDC. The rest goes to the node operator
+        who contributed the RAM. Change it anytime — it applies to the next charge, no restart.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="rev-hosting">RAM hosting commission (%)</label>
+          <input
+            id="rev-hosting"
+            value={hosting}
+            onChange={(ev) => setHosting(ev.target.value)}
+            inputMode="decimal"
+          />
+          <span className="hint">
+            platform keeps {hosting || '0'}% · operator keeps{' '}
+            {100 - (Number.parseFloat(hosting) || 0)}%
+          </span>
+        </div>
+        <div className="field">
+          <label htmlFor="rev-inference">LLM inference commission (%)</label>
+          <input
+            id="rev-inference"
+            value={inference}
+            onChange={(ev) => setInference(ev.target.value)}
+            inputMode="decimal"
+          />
+          <span className="hint">
+            platform keeps {inference || '0'}% · operator keeps{' '}
+            {100 - (Number.parseFloat(inference) || 0)}%
+          </span>
+        </div>
+      </div>
+      <p className="hint" style={{ marginTop: 4 }}>
+        x402 skill-call payments settle peer-to-peer straight to the agent (non-custodial) — the
+        platform takes 0% on those.
+      </p>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy} onClick={save}>
+          {busy ? 'Saving…' : 'Save revenue settings'}
+        </button>
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
+
 /** Persistence settings (admin) — saves to the node's config file; restart to apply. */
 function StorageCard() {
   const [info, setInfo] = useState<StorageInfo | null>(null);
@@ -970,6 +1066,8 @@ export function Operator() {
           {ownsNode && <HostingCard />}
 
           {ownsNode && <AuthorityCard role={node.role} />}
+
+          {isAdmin && <RevenueCard />}
 
           {isAdmin && <EconomicsCard />}
 
