@@ -507,7 +507,25 @@ export function App() {
         {mainNodeLocked && (
           <MainNodeNotice go={() => setView('download')} onDownload={view === 'download'} />
         )}
-        {view === 'overview' && <Overview snap={snap} />}
+        {view === 'overview' && (
+          <Overview
+            snap={snap}
+            // An agent-owner's Overview is scoped to THEIR agents + THEIR ledger, never the
+            // network-wide aggregates (those are admin/node data). Numbers come from the same
+            // owner-scoped sources the rest of their console uses: `hosted` (server-scoped to
+            // createdBy), its `.running` flag, and the already-account-scoped ledger entries.
+            scope={
+              isAgentOwner
+                ? {
+                    totalAgents: hosted.length,
+                    agents: agentsBadgeCount,
+                    online: hosted.filter((h) => h.running).length,
+                    ledgerEntries: snap.entries.length,
+                  }
+                : undefined
+            }
+          />
+        )}
         {view === 'mynode' && <Operator />}
         {view === 'llmtunnel' && <LlmTunnel />}
         {view === 'agents' && (
@@ -593,7 +611,15 @@ function NavItem(props: {
   );
 }
 
-function Overview({ snap }: { snap: Snapshot }) {
+/** Owner-scoped Overview figures — an agent-owner's own agents + ledger, not the network totals. */
+interface OverviewScope {
+  totalAgents: number;
+  agents: number;
+  online: number;
+  ledgerEntries: number;
+}
+
+function Overview({ snap, scope }: { snap: Snapshot; scope?: OverviewScope }) {
   const s = snap.stats;
   return (
     <>
@@ -604,24 +630,38 @@ function Overview({ snap }: { snap: Snapshot }) {
         </span>
       </div>
       <div className="stats">
-        <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
-        <Stat k="Total agents" n={s?.totalAgents !== undefined ? String(s.totalAgents) : '—'} />
-        <Stat k="Agents" n={s ? String(s.agents) : '—'} />
-        <Stat k="Agents online" n={s ? String(s.online) : '—'} />
-        <Stat
-          k="Value in network"
-          n={
-            s
-              ? (s.totalValue / 100).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })
-              : '—'
-          }
-          unit={s ? 'USDC' : undefined}
-        />
-        <Stat k="Ledger entries" n={s ? String(s.ledgerEntries) : '—'} />
-        <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />
+        {scope ? (
+          // Agent-owner: only their own numbers. No node/network aggregates (Nodes online, Value in
+          // network) — those are admin-panel data and don't belong on a builder's dashboard.
+          <>
+            <Stat k="Total agents" n={String(scope.totalAgents)} />
+            <Stat k="Agents" n={String(scope.agents)} />
+            <Stat k="Agents online" n={String(scope.online)} />
+            <Stat k="Ledger entries" n={String(scope.ledgerEntries)} />
+            <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />
+          </>
+        ) : (
+          <>
+            <Stat k="Nodes online" n={s?.nodes !== undefined ? String(s.nodes) : '—'} />
+            <Stat k="Total agents" n={s?.totalAgents !== undefined ? String(s.totalAgents) : '—'} />
+            <Stat k="Agents" n={s ? String(s.agents) : '—'} />
+            <Stat k="Agents online" n={s ? String(s.online) : '—'} />
+            <Stat
+              k="Value in network"
+              n={
+                s
+                  ? (s.totalValue / 100).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : '—'
+              }
+              unit={s ? 'USDC' : undefined}
+            />
+            <Stat k="Ledger entries" n={s ? String(s.ledgerEntries) : '—'} />
+            <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />
+          </>
+        )}
       </div>
       <div className="section-title">Recent activity</div>
       <div className="card">
