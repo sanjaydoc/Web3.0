@@ -15,6 +15,7 @@ import { Onboarding } from './Onboarding.js';
 import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
+import { Web4 } from './Web4.js';
 import {
   type Account as Acct,
   type AgentCard,
@@ -47,6 +48,8 @@ type View =
   | 'developers'
   | 'account'
   | 'marketplace'
+  | 'agentweb4'
+  | 'nodeweb4'
   | 'download';
 
 type Role = 'operator' | 'admin';
@@ -68,6 +71,8 @@ const NAV: {
   { id: 'account', label: 'Account', operator: true },
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
+  { id: 'nodeweb4', label: 'x402 · ERC-8004', operator: true },
+  { id: 'agentweb4', label: 'Payments & Trust', operator: true },
   { id: 'llmtunnel', label: 'Host LLM tunnel', operator: true },
   { id: 'network', label: 'Network' },
   { id: 'connectors', label: 'Connectors' },
@@ -108,6 +113,7 @@ const OPERATOR_NAV = new Set<View>([
   'download',
   'mynode',
   'llmtunnel',
+  'nodeweb4',
   'ledger',
 ]);
 const AGENT_OWNER_NAV = new Set<View>([
@@ -120,6 +126,7 @@ const AGENT_OWNER_NAV = new Set<View>([
   'skills',
   'connectors',
   'ledger',
+  'agentweb4',
   'telegram',
   'agents',
   'guardrails',
@@ -533,6 +540,8 @@ export function App() {
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}
+        {view === 'nodeweb4' && <Web4 scope="node" />}
+        {view === 'agentweb4' && <Web4 scope="agent" me={account?.address ?? null} />}
         {view === 'download' && (
           <Download onGetStarted={adminOnly ? undefined : () => setForceOnboard(true)} />
         )}

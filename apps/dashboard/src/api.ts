@@ -499,9 +499,102 @@ export interface NodeLocation {
   updatedAt: string;
 }
 
+// ── x402 (internet-native payments) + ERC-8004 (identity & reputation) ─────────────────────────
+
+export interface X402Supported {
+  kinds: { x402Version: number; scheme: string; network: string }[];
+}
+export interface X402Receipt {
+  success: boolean;
+  transaction: string;
+  network: string;
+  payer?: string;
+  amount: string;
+  resource?: string;
+  at: string;
+  explorerUrl?: string;
+}
+export interface X402Service {
+  web3Id: string;
+  skillId: string;
+  name: string;
+  priceAtomic: string;
+  priceUsd: string;
+  asset: string;
+  network: string;
+  payTo: string;
+  endpoint: string;
+}
+export interface Erc8004Root {
+  standard: string;
+  registry: string;
+  agentCount: number;
+}
+export interface Erc8004Identity {
+  agentId: number;
+  owner: string;
+  agentAddress: string;
+  agentDomain: string;
+  web3Id?: string;
+  did?: string;
+  tokenURI: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface Erc8004Feedback {
+  index: number;
+  client: string;
+  score: number;
+  tag1?: string;
+  tag2?: string;
+  ts: string;
+  response?: string;
+  revoked?: boolean;
+}
+export interface Erc8004Reputation {
+  summary: {
+    agentId: number;
+    count: number;
+    averageScore: number;
+    byTag: Record<string, { count: number; average: number }>;
+  };
+  earnings: {
+    agentId: number;
+    totalEarnedAtomic: string;
+    paymentCount: number;
+    uniquePayers: number;
+    lastPaidAt?: string;
+    economicScore: number;
+  };
+  combined: {
+    agentId: number;
+    feedbackScore: number;
+    feedbackCount: number;
+    economicScore: number;
+    paymentCount: number;
+    score: number;
+  };
+  feedback: Erc8004Feedback[];
+}
+
 export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
+  // x402 — internet-native payments (facilitator + receipts + priced-skill directory).
+  x402Supported: () => get<X402Supported>('/x402/supported'),
+  x402Receipts: () => get<{ receipts: X402Receipt[] }>('/x402/receipts'),
+  x402Directory: () =>
+    get<{ count: number; asset: string; network: string; services: X402Service[] }>(
+      '/x402/directory',
+    ),
+  // ERC-8004 — agent identity, reputation & validation.
+  erc8004Root: () => get<Erc8004Root>('/.well-known/erc8004.json'),
+  erc8004Agents: () =>
+    get<{ registry: string; count: number; agents: Erc8004Identity[] }>('/erc8004/agents'),
+  erc8004Reputation: (agentId: number) =>
+    get<Erc8004Reputation>(`/erc8004/agents/${agentId}/reputation`),
+  erc8004Bind: (agentId: number, agentAddress: string) =>
+    post<Erc8004Identity>(`/erc8004/agents/${agentId}/bind`, { agentAddress }),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
   stakeInfo: () => get<StakeInfo>('/operator/stake'),
   unstake: () =>
