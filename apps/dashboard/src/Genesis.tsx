@@ -253,7 +253,7 @@ export function Genesis() {
 Run it:
   ${current.needsKey ? '1. Put your provider key in .env:  LLM_API_KEY=your-key\\n  ' : ''}${current.needsKey ? '2' : '1'}. python ${handle}_agent.py
 
-The agent registers on your node, connects, and ${priced ? `starts earning ${price} aETH per task (a pay-per-call x402 endpoint)` : 'serves its skill for free'}.
+The agent registers on your node, connects, and ${priced ? `starts earning ${price} USDC per task (a pay-per-call x402 endpoint)` : 'serves its skill for free'}.
 """
 
 import time
@@ -267,7 +267,7 @@ agent = Agent(
     description=${py(description)},
     base_url=${py(isAdmin ? NODE_URL : 'https://<your-node-address>')},
     skills=[{"id": ${py(skillId)}, "name": ${py(skillName)}, "description": ${py(skillDesc)}, "tags": []}],
-    pricing={"perTask": ${minorUnits}, "currency": "aETH"},
+    pricing={"perTask": ${minorUnits}, "currency": "USDC"},
 )
 
 # The brain — your chosen provider and model. The key comes from LLM_API_KEY in .env.
@@ -501,7 +501,7 @@ while True:
               ) : (
                 <span className="muted">Free — no payment required</span>
               )}
-              {priced && <span className="muted">aETH per call</span>}
+              {priced && <span className="muted">USDC per call</span>}
             </div>
             <div className="muted" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
               {priced

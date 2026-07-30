@@ -396,7 +396,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
       <div className="page-head">
         <h1>Run a node</h1>
         <span className="muted">
-          run a Web3.0 node on your device to join the network and earn aETH for the compute you
+          run a Web3.0 node on your device to join the network and earn USDC for the compute you
           contribute
         </span>
       </div>

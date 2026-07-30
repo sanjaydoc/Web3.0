@@ -94,7 +94,7 @@ export function signTransfer(
     from: input.from,
     to: input.to,
     amount: input.amount,
-    currency: input.currency ?? 'aETH',
+    currency: input.currency ?? 'USDC',
     nonce: input.nonce,
     ts: new Date().toISOString(),
     memo: input.memo,

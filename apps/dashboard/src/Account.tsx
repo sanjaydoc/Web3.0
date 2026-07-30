@@ -33,7 +33,7 @@ import {
 } from './txsign.js';
 
 /**
- * PaymentsSection — trustless "Send aETH". If the account has a signing key here AND it's bound
+ * PaymentsSection — trustless "Send USDC". If the account has a signing key here AND it's bound
  * on-chain, it shows a send form: the transfer is signed on this device with the account's ML-DSA
  * key and submitted to the network (POST /tx), where an authority verifies ownership + balance and
  * seals it. Otherwise it offers to enable payments (generate a key + bind its public half).
@@ -87,7 +87,7 @@ function PaymentsSection({
         memo: memo.trim() || undefined,
       });
       await api.submitTx(tx);
-      setNote({ kind: 'ok', text: `Sent ${(minor / 100).toFixed(2)} aETH to ${to.trim()}.` });
+      setNote({ kind: 'ok', text: `Sent ${(minor / 100).toFixed(2)} USDC to ${to.trim()}.` });
       setTo('');
       setAmount('');
       setMemo('');
@@ -109,7 +109,7 @@ function PaymentsSection({
   return (
     <>
       <div className="section-title" style={{ marginTop: 18 }}>
-        Send aETH
+        Send USDC
       </div>
       {ready ? (
         <>
@@ -124,7 +124,7 @@ function PaymentsSection({
               />
             </div>
             <div className="field">
-              <label htmlFor="p-amt">Amount (aETH)</label>
+              <label htmlFor="p-amt">Amount (USDC)</label>
               <input
                 id="p-amt"
                 value={amount}

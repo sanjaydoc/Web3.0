@@ -577,7 +577,7 @@ function uptime(sec: number): string {
 /**
  * HostingCard — the host side of the compute marketplace. Set the per-epoch price you charge to run
  * one agent, see your net hosting revenue, and view who's renting your capacity. Selling your
- * contributed RAM earns aETH here (minus the platform commission).
+ * contributed RAM earns USDC here (minus the platform commission).
  */
 function HostingCard() {
   const [price, setPrice] = useState('');
@@ -614,7 +614,7 @@ function HostingCard() {
   const save = async () => {
     const v = Math.round(Number(price));
     if (!Number.isFinite(v) || v < 0) {
-      setMsg({ kind: 'err', text: 'Enter a price in aETH minor units (0 to stop offering).' });
+      setMsg({ kind: 'err', text: 'Enter a price in USDC minor units (0 to stop offering).' });
       return;
     }
     setBusy(true);
@@ -649,7 +649,7 @@ function HostingCard() {
         <dd>{hosted.length}</dd>
       </dl>
       <div className="field" style={{ maxWidth: 300, marginTop: 10 }}>
-        <label htmlFor="host-price">New price / epoch (aETH minor units)</label>
+        <label htmlFor="host-price">New price / epoch (USDC minor units)</label>
         <input
           id="host-price"
           type="number"
@@ -904,7 +904,7 @@ export function Operator() {
                   <dd>{mine?.txCount ?? 0}</dd>
                 </dl>
                 <p className="hint">
-                  Send and receive aETH from the <b>Account</b> page. The node treasury belongs to
+                  Send and receive USDC from the <b>Account</b> page. The node treasury belongs to
                   the node owner.
                 </p>
               </div>

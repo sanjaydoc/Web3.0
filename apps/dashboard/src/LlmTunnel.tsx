@@ -275,7 +275,7 @@ export function LlmTunnel() {
               </span>
             </div>
             <div className="field">
-              <label htmlFor="llm-price">Price / Mtok (aETH minor)</label>
+              <label htmlFor="llm-price">Price / Mtok (USDC minor)</label>
               <input
                 id="llm-price"
                 type="number"

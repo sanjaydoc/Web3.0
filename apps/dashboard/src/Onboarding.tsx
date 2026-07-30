@@ -374,7 +374,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
       `Address:            ${addr}`,
       `API token:          ${token}`,
       '',
-      'Signing keypair (ML-DSA, base64url) — lets you send aETH from another device:',
+      'Signing keypair (ML-DSA, base64url) — lets you send USDC from another device:',
       `  public key:       ${key?.publicKey ?? '(not found on this device)'}`,
       `  secret key:       ${key?.secretKey ?? '(not found on this device)'}`,
       '',
@@ -479,7 +479,7 @@ function PersonaStep({
           <span className="onboard-persona-emoji">🖥️</span>
           <b>Run a node &amp; earn</b>
           <span className="muted">
-            Contribute your device's RAM to host other people's agents and earn aETH.
+            Contribute your device's RAM to host other people's agents and earn USDC.
           </span>
         </button>
       </div>

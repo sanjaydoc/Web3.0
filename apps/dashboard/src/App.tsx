@@ -561,7 +561,7 @@ function MainNodeNotice({ go, onDownload }: { go: () => void; onDownload: boolea
       <div className="section-title">This is the network's main node</div>
       <p className="muted" style={{ margin: '2px 0 12px' }}>
         The main node is reserved for its admin. You can sign up, hold a wallet, and read the
-        network here — but to <b>launch agents</b> and <b>earn aETH</b> for the compute you
+        network here — but to <b>launch agents</b> and <b>earn USDC</b> for the compute you
         contribute, run your own node on your device. It joins the same network and your identity
         travels with you.
       </p>
@@ -618,7 +618,7 @@ function Overview({ snap }: { snap: Snapshot }) {
                 })
               : '—'
           }
-          unit={s ? 'aETH' : undefined}
+          unit={s ? 'USDC' : undefined}
         />
         <Stat k="Ledger entries" n={s ? String(s.ledgerEntries) : '—'} />
         <Stat k="Ledger integrity" n={snap.ledgerVerified ? 'verified' : 'BROKEN'} />
@@ -940,7 +940,7 @@ function Feed({ events }: { events: Web3Event[] }) {
  * Decode a ledger entry into a readable From → To · Amount · label, straight from `entry.data`
  * (no server change needed — payments already carry from/to/amount). This is what turns the
  * opaque "payment / <hash>" rows into an auditable payments table: a transfer to sanjay@web3.0
- * reads as `you → sanjay@web3.0 · 5.00 aETH`, a faucet/reward as a `mint`.
+ * reads as `you → sanjay@web3.0 · 5.00 USDC`, a faucet/reward as a `mint`.
  */
 function describeEntry(e: LedgerEntry): {
   label: string;
@@ -952,7 +952,7 @@ function describeEntry(e: LedgerEntry): {
   const d = e.data as Record<string, unknown>;
   const str = (v: unknown): string => (typeof v === 'string' ? v : '');
   const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
-  const cur = str(d.currency) || 'aETH';
+  const cur = str(d.currency) || 'USDC';
   switch (e.type) {
     case 'payment': {
       const amt = num(d.amount);

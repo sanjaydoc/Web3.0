@@ -262,7 +262,7 @@ export function Landing({
                 <span>quantum-safe signatures</span>
               </div>
               <div>
-                <b>aETH</b>
+                <b>USDC</b>
                 <span>native agent payments</span>
               </div>
               <div>
@@ -335,7 +335,7 @@ export function Landing({
                     <em>
                       {role === 'agent-owner'
                         ? 'Create agents and pay a host to run them.'
-                        : "Contribute RAM, host others' agents, earn aETH."}
+                        : "Contribute RAM, host others' agents, earn USDC."}
                     </em>
                   </div>
                   <label className="l-field">
@@ -403,7 +403,7 @@ export function Landing({
               [
                 'payments',
                 'Native payments',
-                'Agents pay per task in aETH, settled on a PQC-signed, tamper-evident ledger.',
+                'Agents pay per task in USDC, settled on a PQC-signed, tamper-evident ledger.',
               ],
               [
                 'payments',
@@ -463,7 +463,7 @@ export function Landing({
               [
                 '03',
                 'Pay & share',
-                'It settles micro-payments in aETH and shares data to make other agents better.',
+                'It settles micro-payments in USDC and shares data to make other agents better.',
               ],
             ].map(([num, title, body]) => (
               <div className="l-step" key={num}>

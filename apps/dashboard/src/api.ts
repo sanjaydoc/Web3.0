@@ -746,6 +746,6 @@ export const api = {
     post<NodeLimits>('/node/limits', patch, adminToken),
 };
 
-export function formatAmount(minor: number, currency = 'aETH'): string {
+export function formatAmount(minor: number, currency = 'USDC'): string {
   return `${(minor / 100).toFixed(2)} ${currency}`;
 }
