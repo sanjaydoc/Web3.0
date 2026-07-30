@@ -275,6 +275,16 @@ export interface LlmUsageRow {
   accruedCost: number;
   earnedByHost: number;
 }
+/** Host-side served-usage row — what THIS node served for others (the operator's earnings view). */
+export interface HostServedRow {
+  host: string;
+  model: string;
+  requester: string;
+  /** Tokens this host has served for (requester, model). */
+  servedTokens: number;
+  /** Host's accrued net share at the offered price (0 for a free model); not yet-settled money. */
+  accruedEarnings: number;
+}
 export interface ConnectorHeader {
   key: string;
   value: string;
@@ -666,7 +676,7 @@ export const api = {
   testModel: (model: string, prompt: string) =>
     post<{ answer: string }>('/llm/test', { model, prompt }),
   /** The signed-in operator's inference revenue + per-model traffic (Host LLM tunnel). */
-  llmRevenue: () => get<{ host: string; revenue: number; usage: LlmUsageRow[] }>('/llm/revenue'),
+  llmRevenue: () => get<{ host: string; revenue: number; usage: HostServedRow[] }>('/llm/revenue'),
   /** The signed-in agent owner's total inference spend. */
   llmSpend: () => get<{ owner: string; spend: number; accrued: number }>('/llm/spend'),
   llmUsage: () => get<{ owner: string; usage: LlmUsageRow[] }>('/llm/usage'),

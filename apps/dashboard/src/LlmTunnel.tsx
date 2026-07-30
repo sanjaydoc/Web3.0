@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  type HostServedRow,
   type LlmOffer,
-  type LlmUsageRow,
   type LocalModel,
   NODE_URL,
   type RamDetect,
@@ -30,7 +30,7 @@ const IS_NATIVE_HOST =
 export function LlmTunnel() {
   const [offers, setOffers] = useState<LlmOffer[]>([]);
   const [revenue, setRevenue] = useState(0);
-  const [usage, setUsage] = useState<LlmUsageRow[]>([]);
+  const [usage, setUsage] = useState<HostServedRow[]>([]);
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
   const [ram, setRam] = useState('');
@@ -184,7 +184,7 @@ export function LlmTunnel() {
             model client (Ollama) — pull the tag first, then publish it here.
           </p>
           <dl className="kv">
-            <dt>Inference revenue</dt>
+            <dt>Inference revenue (accrued)</dt>
             <dd>{formatAmount(revenue)}</dd>
             <dt>Models hosted</dt>
             <dd>{offers.length}</dd>
@@ -384,6 +384,12 @@ export function LlmTunnel() {
 
         <div className="card">
           <div className="section-title">Your hosted models</div>
+          <p className="muted" style={{ margin: '2px 0 12px' }}>
+            Tokens your machine has served over the tunnel and what you've earned — a usage meter
+            that fills in as agents (on this or any other node) run on your models. Earnings accrue
+            at your offered price the moment you serve (0.00 for a free model); the agent owner's
+            node settles the charge, and your wallet balance reflects what has actually paid out.
+          </p>
           {offers.length === 0 ? (
             <div className="empty">
               You're not hosting any models yet. Pull a light one with{' '}
@@ -398,15 +404,15 @@ export function LlmTunnel() {
                     <th>Price / Mtok</th>
                     <th>RAM</th>
                     <th>Tokens served</th>
-                    <th>Earned</th>
+                    <th>Earned (accrued)</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
                   {offers.map((o) => {
                     const traffic = usage.filter((u) => u.model === o.model);
-                    const tokens = traffic.reduce((s, u) => s + u.billedTokens, 0);
-                    const earned = traffic.reduce((s, u) => s + u.earnedByHost, 0);
+                    const tokens = traffic.reduce((s, u) => s + u.servedTokens, 0);
+                    const earned = traffic.reduce((s, u) => s + u.accruedEarnings, 0);
                     return (
                       <tr key={o.model}>
                         <td>
