@@ -9,14 +9,17 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 // it. The node joins the ONE shared chain (replicates, relays, forwards signed txs); every install
 // is a first-class participant. Published by the `desktop` workflow on every version tag, to the
 // public repo's releases.
-const DESKTOP_VERSION = '0.1.28';
+// DESKTOP_VERSION = the release tag (shown to users + the /releases/download/v… path). DESKTOP_FILE =
+// the installer file version (electron-builder names files from desktop/package.json); can differ.
+const DESKTOP_VERSION = '0.1.30';
+const DESKTOP_FILE = '0.1.29';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
-const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_VERSION}.exe`;
-const DESKTOP_MSI = `${DL}/Web3.0.${DESKTOP_VERSION}.msi`;
-const DESKTOP_DMG = `${DL}/Web3.0-${DESKTOP_VERSION}-universal.dmg`;
-const DESKTOP_APPIMAGE = `${DL}/Web3.0-${DESKTOP_VERSION}.AppImage`;
-const DESKTOP_DEB = `${DL}/web3_${DESKTOP_VERSION}_amd64.deb`;
+const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_FILE}.exe`;
+const DESKTOP_MSI = `${DL}/Web3.0.${DESKTOP_FILE}.msi`;
+const DESKTOP_DMG = `${DL}/Web3.0-${DESKTOP_FILE}-universal.dmg`;
+const DESKTOP_APPIMAGE = `${DL}/Web3.0-${DESKTOP_FILE}.AppImage`;
+const DESKTOP_DEB = `${DL}/web3_${DESKTOP_FILE}_amd64.deb`;
 
 // The Android app — a REAL peer node on the phone (nodejs-mobile) that joins the same shared chain.
 // Published by the `android` workflow to a rolling `android` pre-release, so this link always points

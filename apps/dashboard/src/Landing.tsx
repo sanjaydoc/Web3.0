@@ -87,8 +87,10 @@ const ICONS: Record<string, ReactNode> = {
   ),
 };
 
-// Desktop installers — the latest release on the public repo. Bump `DL_VER` on each release.
-const DL_VER = '0.1.28';
+// Desktop installers — the latest release on the public repo. `DL_VER` = the release tag; `DL_FILE`
+// = the installer file version (electron-builder names files from desktop/package.json). Bump both.
+const DL_VER = '0.1.30';
+const DL_FILE = '0.1.29';
 const DL_BASE = `https://github.com/sanjaydoc/Web3.0/releases/download/v${DL_VER}`;
 const RELEASES = 'https://github.com/sanjaydoc/Web3.0/releases/latest';
 
@@ -124,9 +126,9 @@ const AndroidMark = () => (
 const ANDROID_APK =
   'https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk';
 const DOWNLOADS = [
-  { os: 'Windows', file: `${DL_BASE}/Web3.0.Setup.${DL_VER}.exe`, icon: <WinMark /> },
-  { os: 'macOS', file: `${DL_BASE}/Web3.0-${DL_VER}-universal.dmg`, icon: <AppleMark /> },
-  { os: 'Linux', file: `${DL_BASE}/Web3.0-${DL_VER}.AppImage`, icon: <LinuxMark /> },
+  { os: 'Windows', file: `${DL_BASE}/Web3.0.Setup.${DL_FILE}.exe`, icon: <WinMark /> },
+  { os: 'macOS', file: `${DL_BASE}/Web3.0-${DL_FILE}-universal.dmg`, icon: <AppleMark /> },
+  { os: 'Linux', file: `${DL_BASE}/Web3.0-${DL_FILE}.AppImage`, icon: <LinuxMark /> },
   { os: 'Android', file: ANDROID_APK, icon: <AndroidMark /> },
 ];
 
