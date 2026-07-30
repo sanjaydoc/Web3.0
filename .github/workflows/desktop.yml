@@ -15,8 +15,8 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
-    # The release is published cross-repo with PUBLIC_RELEASE_TOKEN (a PAT), so GITHUB_TOKEN's
-    # contents scope isn't strictly needed here — kept at write as a harmless safety net.
+    # Built here in the public repo, so installers publish to THIS repo's own Releases with the
+    # built-in GITHUB_TOKEN (contents: write) — no PAT needed.
     permissions:
       contents: write
     steps:
@@ -53,12 +53,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          # Publish to the PUBLIC repo so anyone can download — private-repo release assets sit
-          # behind a login wall. Cross-repo publishing needs a PAT with Contents:write on
-          # sanjaydoc/Web3.0, stored in THIS repo as the PUBLIC_RELEASE_TOKEN secret (GITHUB_TOKEN
-          # can't write to another repo).
+          # Public repo → anyone can download. Publishing to this same repo's Releases needs only
+          # the built-in GITHUB_TOKEN (contents: write above) — no PAT.
           repository: sanjaydoc/Web3.0
-          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
           files: |
             desktop/release/*.msi
@@ -98,7 +96,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           repository: sanjaydoc/Web3.0
-          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
           files: |
             desktop/release/*.AppImage
@@ -141,6 +139,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           repository: sanjaydoc/Web3.0
-          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
           files: desktop/release/*.dmg
