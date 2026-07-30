@@ -1,6 +1,6 @@
-# Conway Terminal — an x402 wallet for Claude Code (MCP)
+# Oxygen MCP — an x402 wallet for Claude Code (MCP)
 
-Give Claude Code (or any MCP client) a wallet that pays for the internet. Conway Terminal is an
+Give Claude Code (or any MCP client) a wallet that pays for the internet. Oxygen MCP is an
 [MCP](https://modelcontextprotocol.io) server exposing two tools:
 
 | Tool | What it does |
@@ -18,7 +18,7 @@ CDP facilitator.
     └ 402 Payment Required · $0.05 USDC
 ● Bash x402-fetch https://getpredictiondata.xyz/v1/markets/top
     └ 200 · { markets: [...] } · paid $0.05 via x402
-● mcp: conway-terminal wallet_info
+● mcp: oxygen-mcp wallet_info
     └ balance: $49.95 USDC
 ```
 
@@ -29,18 +29,20 @@ Add to your project's `.mcp.json` (or `claude mcp add`):
 ```json
 {
   "mcpServers": {
-    "conway-terminal": {
+    "oxygen-mcp": {
       "command": "pnpm",
-      "args": ["--filter", "@web3/conway-terminal", "exec", "tsx", "src/index.ts"],
+      "args": ["--filter", "@web3/oxygen-mcp", "exec", "tsx", "src/index.ts"],
       "cwd": "/absolute/path/to/Web3.0",
       "env": {
-        "CONWAY_WALLET_KEY": "0x<your-funded-secp256k1-key>",
-        "CONWAY_START_USDC": "50000000"
+        "OXYGEN_WALLET_KEY": "0x<your-funded-secp256k1-key>",
+        "OXYGEN_START_USDC": "50000000"
       }
     }
   }
 }
 ```
+
+On Windows, set `"command": "cmd"` and prepend `"/c", "pnpm"` to `args`.
 
 Then ask Claude: *"check my wallet"* → `wallet_info`, or *"fetch the top prediction markets from
 `<url>` and pay if needed"* → `x402_fetch`.
@@ -49,15 +51,15 @@ Then ask Claude: *"check my wallet"* → `wallet_info`, or *"fetch the top predi
 
 | Env var | Meaning | Default |
 |---------|---------|---------|
-| `CONWAY_WALLET_KEY` | secp256k1 private key (0x-hex) the wallet signs with. | ephemeral (regenerated each start) |
-| `CONWAY_START_USDC` | Starting balance in atomic USDC (6dp), for local/ledger mode. | `50000000` (= $50.00) |
-| `CONWAY_RPC_URL` | EVM RPC — when set, balance is read **on-chain** via `balanceOf` instead of tracked locally. | unset |
-| `CONWAY_ASSET` | USDC contract address for on-chain balance reads. | unset |
+| `OXYGEN_WALLET_KEY` | secp256k1 private key (0x-hex) the wallet signs with. | ephemeral (regenerated each start) |
+| `OXYGEN_START_USDC` | Starting balance in atomic USDC (6dp), for local/ledger mode. | `50000000` (= $50.00) |
+| `OXYGEN_RPC_URL` | EVM RPC — when set, balance is read **on-chain** via `balanceOf` instead of tracked locally. | unset |
+| `OXYGEN_ASSET` | USDC contract address for on-chain balance reads. | unset |
 
-**Local mode** (no RPC): balance is `CONWAY_START_USDC` minus what you've spent — self-contained,
+**Local mode** (no RPC): balance is `OXYGEN_START_USDC` minus what you've spent — self-contained,
 great for demos against a Web3.0 node's `settle=ledger` facilitator.
 
-**Live mode** (`CONWAY_RPC_URL` + `CONWAY_ASSET` set, e.g. Base Sepolia USDC): balance is the real
+**Live mode** (`OXYGEN_RPC_URL` + `OXYGEN_ASSET` set, e.g. Base Sepolia USDC): balance is the real
 on-chain USDC balance, and payments settle for real when the target's facilitator is on that chain.
 
 > The wallet holds a real key. In local/demo mode it never touches a chain. To pay real (testnet)

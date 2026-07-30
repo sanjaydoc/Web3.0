@@ -1,5 +1,5 @@
 /**
- * The Conway wallet: an x402 payer with a USDC balance view. Balance is tracked locally against a
+ * The Oxygen wallet: an x402 payer with a USDC balance view. Balance is tracked locally against a
  * starting float (self-contained demo / ledger mode) unless a real chain RPC is configured, in which
  * case it reads the on-chain USDC balance via `eth_call balanceOf`. Spend is always tracked so the
  * "Spent $X total" line is honest either way.
@@ -32,7 +32,7 @@ export function formatUsdc(atomic: string | bigint): string {
   return `$${whole.toString()}.${frac}`;
 }
 
-export class ConwayWallet {
+export class OxygenWallet {
   readonly signer: X402Wallet;
   readonly address: string;
   private spentAtomic = 0n;

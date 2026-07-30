@@ -1,12 +1,12 @@
 /**
- * x402 demo — reproduces the "Claude Code + Conway Terminal (MCP)" flow end to end:
+ * x402 demo — reproduces the "Claude Code + Oxygen MCP" flow end to end:
  *
  *   ● curl  https://…/markets/top            → 402 Payment Required · $0.05 USDC
  *   ● x402-fetch https://…/markets/top       → 200 · { markets: [...] } · paid $0.05 via x402
- *   ● conway-terminal wallet_info            → balance: $49.95 USDC
+ *   ● oxygen-mcp wallet_info                 → balance: $49.95 USDC
  *
  * It boots a real Web3.0 node (acting as an x402 resource server AND a permissionless facilitator),
- * spawns the Conway Terminal MCP server as the paying wallet, and drives it over MCP stdio — no
+ * spawns the Oxygen MCP server as the paying wallet, and drives it over MCP stdio — no
  * external services, no keys required.
  *
  *   pnpm --filter @web3/node demo:x402
@@ -51,18 +51,14 @@ async function main(): Promise<void> {
   const base = await kernel.listen();
   const url = `${base}${RESOURCE}`;
 
-  console.log(bold('\n  CLAUDE CODE + CONWAY TERMINAL (MCP)\n'));
+  console.log(bold('\n  CLAUDE CODE + OXYGEN MCP\n'));
 
-  // Spawn the Conway Terminal MCP server as our wallet (funded locally with $50).
-  const child = spawn(
-    'pnpm',
-    ['--filter', '@web3/conway-terminal', 'exec', 'tsx', 'src/index.ts'],
-    {
-      cwd: REPO_ROOT,
-      env: { ...process.env, CONWAY_WALLET_KEY: randomPrivateKey(), CONWAY_START_USDC: '50000000' },
-      stdio: ['pipe', 'pipe', 'ignore'],
-    },
-  );
+  // Spawn the Oxygen MCP server as our wallet (funded locally with $50).
+  const child = spawn('pnpm', ['--filter', '@web3/oxygen-mcp', 'exec', 'tsx', 'src/index.ts'], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, OXYGEN_WALLET_KEY: randomPrivateKey(), OXYGEN_START_USDC: '50000000' },
+    stdio: ['pipe', 'pipe', 'ignore'],
+  });
 
   let buf = '';
   const waiters = new Map<number, (v: unknown) => void>();
@@ -118,7 +114,7 @@ async function main(): Promise<void> {
     console.log();
 
     // 3) wallet_info via MCP.
-    bullet(`${bold('mcp:')} conway-terminal wallet_info`);
+    bullet(`${bold('mcp:')} oxygen-mcp wallet_info`);
     const info = await callText('wallet_info');
     sub(green(`balance: ${info.balance} USDC`));
     console.log();

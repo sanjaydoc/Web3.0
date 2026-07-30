@@ -160,7 +160,7 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
-  services/conway-terminal:
+  services/oxygen-mcp:
     dependencies:
       '@web3/x402':
         specifier: workspace:*

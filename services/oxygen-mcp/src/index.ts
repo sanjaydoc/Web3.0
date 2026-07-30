@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Conway Terminal — an MCP (Model Context Protocol) server exposing an x402 wallet over stdio.
+ * Oxygen MCP — an MCP (Model Context Protocol) server exposing an x402 wallet over stdio.
  *
  * With this connected, Claude Code (or any MCP client) can:
  *   • `wallet_info`  — see its USDC address, balance, and total spent
@@ -12,29 +12,27 @@
  * dependency-free (no MCP SDK) to match the rest of Web3.0's lean style.
  *
  * Env:
- *   CONWAY_WALLET_KEY   secp256k1 private key (0x-hex). Ephemeral if unset.
- *   CONWAY_START_USDC   starting balance, atomic USDC (6dp). Default 50000000 (= $50.00).
- *   CONWAY_RPC_URL      EVM RPC — when set, balance is read on-chain instead of tracked locally.
- *   CONWAY_ASSET        USDC contract for on-chain balance reads.
+ *   OXYGEN_WALLET_KEY   secp256k1 private key (0x-hex). Ephemeral if unset.
+ *   OXYGEN_START_USDC   starting balance, atomic USDC (6dp). Default 50000000 (= $50.00).
+ *   OXYGEN_RPC_URL      EVM RPC — when set, balance is read on-chain instead of tracked locally.
+ *   OXYGEN_ASSET        USDC contract for on-chain balance reads.
  */
 
 import { x402Fetch } from '@web3/x402';
-import { ConwayWallet, formatUsdc } from './wallet.js';
+import { OxygenWallet, formatUsdc } from './wallet.js';
 
 const PROTOCOL_VERSION = '2024-11-05';
-const SERVER_INFO = { name: 'conway-terminal', version: '0.1.0' };
+const SERVER_INFO = { name: 'oxygen-mcp', version: '0.1.0' };
 
-const wallet = new ConwayWallet({
-  privateKey: process.env.CONWAY_WALLET_KEY,
-  startingAtomic: process.env.CONWAY_START_USDC,
-  rpcUrl: process.env.CONWAY_RPC_URL,
-  asset: process.env.CONWAY_ASSET,
+const wallet = new OxygenWallet({
+  privateKey: process.env.OXYGEN_WALLET_KEY,
+  startingAtomic: process.env.OXYGEN_START_USDC,
+  rpcUrl: process.env.OXYGEN_RPC_URL,
+  asset: process.env.OXYGEN_ASSET,
 });
 
 // Startup banner goes to stderr — stdout is reserved for the JSON-RPC stream.
-process.stderr.write(
-  `conway-terminal · wallet ${wallet.address} · fund it to pay for x402 resources\n`,
-);
+process.stderr.write(`oxygen-mcp · wallet ${wallet.address} · fund it to pay for x402 resources\n`);
 
 const TOOLS = [
   {
