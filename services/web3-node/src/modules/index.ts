@@ -3,6 +3,7 @@ import type { Web3Module } from '../context.js';
 import { accountsModule } from './accounts.js';
 import { connectorsModule } from './connectors.js';
 import { consensusModule } from './consensus.js';
+import { erc8004Module } from './erc8004.js';
 import { guardrailsModule } from './guardrails.js';
 import { hostedModule } from './hosted.js';
 import { hostingModule } from './hosting.js';
@@ -27,6 +28,7 @@ export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
   messaging: messagingModule,
   payments: paymentsModule,
   x402: x402Module,
+  erc8004: erc8004Module,
   guardrails: guardrailsModule,
   observability: observabilityModule,
   consensus: consensusModule,

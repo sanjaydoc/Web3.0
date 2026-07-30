@@ -1,0 +1,20 @@
+{
+  "name": "@web3/erc8004",
+  "version": "0.1.0",
+  "description": "ERC-8004 Trustless Agents for Web3.0 — identity (agent NFTs), portable reputation, and validation registries, so external agents can discover and trust Web3.0 agents. Ledger-backed, with a seam to real on-chain registries.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

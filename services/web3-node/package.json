@@ -17,6 +17,7 @@
     "@web3/consensus": "workspace:*",
     "@web3/core": "workspace:*",
     "@web3/crypto": "workspace:*",
+    "@web3/erc8004": "workspace:*",
     "@web3/ledger": "workspace:*",
     "@web3/x402": "workspace:*",
     "@fastify/cors": "^10.0.1",

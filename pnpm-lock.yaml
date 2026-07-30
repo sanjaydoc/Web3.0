@@ -115,6 +115,19 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/web3-erc8004:
+    dependencies:
+      '@noble/hashes':
+        specifier: ^2.2.0
+        version: 2.2.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/web3-ledger:
     dependencies:
       '@web3/core':
@@ -177,6 +190,9 @@ importers:
       '@web3/crypto':
         specifier: workspace:*
         version: link:../../packages/web3-crypto
+      '@web3/erc8004':
+        specifier: workspace:*
+        version: link:../../packages/web3-erc8004
       '@web3/ledger':
         specifier: workspace:*
         version: link:../../packages/web3-ledger

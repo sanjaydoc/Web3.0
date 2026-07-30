@@ -8,6 +8,7 @@ export const ALL_MODULES = [
   'messaging',
   'payments',
   'x402',
+  'erc8004',
   'guardrails',
   'observability',
   'consensus',

@@ -29,6 +29,9 @@ export type EventKind =
   | 'hosting.leased'
   | 'hosting.billed'
   | 'x402.settled'
+  | 'erc8004.registered'
+  | 'erc8004.feedback'
+  | 'erc8004.validation'
   | 'guardrail.decision'
   | 'auth.rejected'
   | 'data.shared';
