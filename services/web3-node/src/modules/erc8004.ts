@@ -1,11 +1,13 @@
 import type { EventKind, Web3Id } from '@web3/core';
 import {
+  EarningsRegistry,
   type Erc8004Event,
   IdentityRegistry,
   ReputationRegistry,
   ValidationRegistry,
   buildRegistrationFile,
   caip10,
+  combineReputation,
 } from '@web3/erc8004';
 import type { ModuleContext, Web3Module } from '../context.js';
 
@@ -34,7 +36,7 @@ export function erc8004Module(): Web3Module {
 
       const emit = (e: Erc8004Event) => {
         const kind: EventKind =
-          e.kind === 'reputation.feedback'
+          e.kind === 'reputation.feedback' || e.kind === 'reputation.earning'
             ? 'erc8004.feedback'
             : e.kind === 'validation.requested' || e.kind === 'validation.responded'
               ? 'erc8004.validation'
@@ -49,6 +51,33 @@ export function erc8004Module(): Web3Module {
       const identity = new IdentityRegistry(clock, emit);
       const reputation = new ReputationRegistry(identity, clock, emit);
       const validation = new ValidationRegistry(identity, clock, emit);
+      const earnings = new EarningsRegistry(identity, emit);
+
+      // Economic reputation: every x402 settlement where a *bound* agent is the payee becomes an
+      // earnings signal. Agents opt in by binding their x402 receiving address (POST …/bind); then a
+      // payment to that address resolves to their identity and lifts their economic score. "An agent
+      // that reliably earns from many payers is one others chose to pay."
+      bus.subscribe((event) => {
+        if (event.kind !== 'x402.settled') return;
+        const d = event.data as
+          | { payTo?: string; payer?: string; amount?: string; asset?: string; tx?: string }
+          | undefined;
+        if (!d?.payTo) return;
+        const agent = identity.resolveByAddress(d.payTo);
+        if (!agent) return; // payee isn't a bound Web3.0 agent — nothing to credit
+        earnings.record({
+          agentId: agent.agentId,
+          amountAtomic: d.amount ?? '0',
+          asset: d.asset ?? 'USDC',
+          payer: d.payer ?? '0x',
+          tx: d.tx,
+          ts: clock(),
+        });
+      });
+
+      // The blended reputation for an agent (feedback + economic).
+      const combined = (agentId: number) =>
+        combineReputation(reputation.summary(agentId), earnings.summary(agentId));
 
       // Mint an ERC-8004 identity for an agent from its Web3.0 card (idempotent by domain).
       const mintFor = (web3Id: Web3Id, did?: string) => {
@@ -69,15 +98,29 @@ export function erc8004Module(): Web3Module {
         const reg = identity.getAgent(agentId);
         if (!reg) return undefined;
         const card = reg.web3Id ? registry.get(reg.web3Id as Web3Id) : undefined;
-        return buildRegistrationFile(reg, {
+        const file = buildRegistrationFile(reg, {
           agentRegistry: registryCaip10,
           name: card?.name ?? reg.agentDomain,
           description: card?.description ?? 'Web3.0 agent',
           version: card?.version ?? '0.1.0',
           skills: card?.skills,
           signPublicKey: card?.signPublicKey,
-          trustModels: ['feedback', 'inference-validation', 'tee-attestation'],
+          // `payment-history` advertises that this agent's reputation includes on-chain-style earnings.
+          trustModels: ['feedback', 'payment-history', 'inference-validation', 'tee-attestation'],
         });
+        // Attach a live reputation snapshot (feedback + x402 earnings) so a counterparty can trust the
+        // agent from its card alone.
+        const c = combined(agentId);
+        const earn = earnings.summary(agentId);
+        file.reputation = {
+          score: c.score,
+          feedbackScore: c.feedbackScore,
+          feedbackCount: c.feedbackCount,
+          economicScore: c.economicScore,
+          paymentCount: c.paymentCount,
+          totalEarnedAtomic: earn.totalEarnedAtomic,
+        };
+        return file;
       };
 
       // ── discovery ────────────────────────────────────────────────────────────────────────────
@@ -157,7 +200,18 @@ export function erc8004Module(): Web3Module {
 
       http.get('/erc8004/agents/:agentId/reputation', (request) => {
         const agentId = Number((request.params as { agentId: string }).agentId);
-        return { summary: reputation.summary(agentId), feedback: reputation.listFeedback(agentId) };
+        return {
+          summary: reputation.summary(agentId),
+          earnings: earnings.summary(agentId),
+          combined: combined(agentId),
+          feedback: reputation.listFeedback(agentId),
+        };
+      });
+
+      // Economic reputation on its own — the x402 earnings that feed the combined score.
+      http.get('/erc8004/agents/:agentId/earnings', (request) => {
+        const agentId = Number((request.params as { agentId: string }).agentId);
+        return { summary: earnings.summary(agentId), earnings: earnings.list(agentId) };
       });
 
       http.post('/erc8004/agents/:agentId/feedback/:index/respond', (request, reply) => {
@@ -243,6 +297,8 @@ function erc8004Summary(e: Erc8004Event): string {
       return `ERC-8004 identity #${e.agentId} transferred`;
     case 'reputation.feedback':
       return `ERC-8004 feedback on #${e.agentId} · score ${e.score}`;
+    case 'reputation.earning':
+      return `ERC-8004 earning for #${e.agentId} · +${e.amountAtomic}`;
     case 'validation.requested':
       return `ERC-8004 validation requested for #${e.agentId}`;
     case 'validation.responded':

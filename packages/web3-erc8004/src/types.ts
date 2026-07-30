@@ -94,6 +94,47 @@ export interface ValidationRecord {
   };
 }
 
+/** One payment an agent received — an economic-reputation signal drawn from x402 settlements. */
+export interface EarningRecord {
+  agentId: number;
+  /** Amount received, in the asset's atomic units, as a decimal string. */
+  amountAtomic: string;
+  asset: string;
+  /** Who paid (their address). */
+  payer: string;
+  /** The settlement transaction reference. */
+  tx?: string;
+  ts: string;
+}
+
+/** Aggregate earnings for an agent — "proof of demand" that feeds economic reputation. */
+export interface EarningsSummary {
+  agentId: number;
+  /** Total received across all recorded payments, atomic units, as a decimal string. */
+  totalEarnedAtomic: string;
+  paymentCount: number;
+  /** Number of distinct payers — repeat/diverse demand is a stronger signal than volume alone. */
+  uniquePayers: number;
+  lastPaidAt?: string;
+  /**
+   * A bounded 0–100 economic-reputation score derived from payment count + payer diversity (not the
+   * raw amount, which varies by asset/decimals). Monotonic: more payments from more distinct payers
+   * → higher score. A heuristic "this agent has real, recurring demand" signal.
+   */
+  economicScore: number;
+}
+
+/** A combined reputation view: feedback + economic, and a blended score. */
+export interface CombinedReputation {
+  agentId: number;
+  feedbackScore: number;
+  feedbackCount: number;
+  economicScore: number;
+  paymentCount: number;
+  /** Blend of feedback and economic scores (0–100). */
+  score: number;
+}
+
 /** The ERC-8004 registration file (A2A Agent Card + on-chain registration pointers + trust models). */
 export interface RegistrationFile {
   /** A2A-aligned fields. */
@@ -109,6 +150,15 @@ export interface RegistrationFile {
   trustModels: TrustModel[];
   /** Web3.0 bridge: post-quantum identity material. */
   web3?: { web3Id?: string; did?: string; signPublicKey?: string };
+  /** Live reputation snapshot — feedback + economic (x402 earnings) + blended score. */
+  reputation?: {
+    score: number;
+    feedbackScore: number;
+    feedbackCount: number;
+    economicScore: number;
+    paymentCount: number;
+    totalEarnedAtomic: string;
+  };
 }
 
 /** Events the registries emit (mirrored to the Web3.0 event bus + ledger). */
@@ -116,5 +166,6 @@ export type Erc8004Event =
   | { kind: 'identity.registered'; agentId: number; agentAddress: string; agentDomain: string }
   | { kind: 'identity.transferred'; agentId: number; from: string; to: string }
   | { kind: 'reputation.feedback'; agentId: number; client: string; score: number }
+  | { kind: 'reputation.earning'; agentId: number; payer: string; amountAtomic: string }
   | { kind: 'validation.requested'; agentId: number; validator: string; dataHash: string }
   | { kind: 'validation.responded'; agentId: number; dataHash: string; value: number };

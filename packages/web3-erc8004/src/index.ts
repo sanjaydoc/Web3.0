@@ -14,6 +14,7 @@
 export * from './types.js';
 export { IdentityRegistry, type NewAgentParams } from './identity.js';
 export { ReputationRegistry, type GiveFeedbackParams } from './reputation.js';
+export { EarningsRegistry, economicScore, combineReputation } from './earnings.js';
 export { ValidationRegistry } from './validation.js';
 export { buildRegistrationFile, type BuildRegistrationOptions } from './registration-file.js';
 export { deriveAgentAddress, normAddr, caip10 } from './util.js';
