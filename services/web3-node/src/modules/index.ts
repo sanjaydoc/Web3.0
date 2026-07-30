@@ -15,6 +15,7 @@ import { registryModule } from './registry.js';
 import { skillsModule } from './skills.js';
 import { telegramModule } from './telegram.js';
 import { txModule } from './tx.js';
+import { x402Module } from './x402.js';
 
 /** The built-in module catalogue. The kernel instantiates only the ones listed in config. */
 export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
@@ -25,6 +26,7 @@ export const MODULE_FACTORIES: Record<ModuleName, () => Web3Module> = {
   registry: registryModule,
   messaging: messagingModule,
   payments: paymentsModule,
+  x402: x402Module,
   guardrails: guardrailsModule,
   observability: observabilityModule,
   consensus: consensusModule,

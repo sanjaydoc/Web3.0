@@ -28,6 +28,7 @@ export type EventKind =
   | 'payment.settled'
   | 'hosting.leased'
   | 'hosting.billed'
+  | 'x402.settled'
   | 'guardrail.decision'
   | 'auth.rejected'
   | 'data.shared';

@@ -1,0 +1,20 @@
+{
+  "name": "@web3/conway-terminal",
+  "version": "0.1.0",
+  "description": "Conway Terminal — an MCP server that gives Claude Code (or any MCP client) an x402 wallet: check a USDC balance and pay for x402-priced APIs with a signed transaction, no API keys, no signup.",
+  "type": "module",
+  "bin": {
+    "conway-terminal": "src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@web3/x402": "workspace:*",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

@@ -7,6 +7,7 @@ export const ALL_MODULES = [
   'registry',
   'messaging',
   'payments',
+  'x402',
   'guardrails',
   'observability',
   'consensus',
@@ -78,6 +79,35 @@ export interface ConsensusConfig {
   slotMs: number;
 }
 
+/**
+ * x402 — the internet-native "HTTP 402 Payment Required" standard, so external agents (and the
+ * official `x402-fetch` client / OpenX402 facilitators) can pay the node's resources in USDC, and
+ * the node can itself act as a permissionless facilitator. `settle` picks how facilitated payments
+ * finalise: `ledger` mirrors them onto the local PQC ledger (default, fully offline); `upstream`
+ * forwards verify/settle to a real facilitator (OpenX402 / CDP) for live on-chain settlement.
+ */
+export interface X402Config {
+  /** Mount the node's x402 facilitator endpoints + the priced demo resource. */
+  enabled: boolean;
+  /** Network label advertised in 402 responses and `/x402/supported` (e.g. `base-sepolia`). */
+  network: string;
+  /** ERC-20 asset (USDC) advertised for payment. */
+  asset: string;
+  /** EVM address that receives payment for the node's own priced resources. */
+  payTo: string;
+  /** EIP-712 domain for the asset. USDC uses name `USDC`, version `2`. */
+  domainName: string;
+  domainVersion: string;
+  /** Price of the built-in demo resource in the asset's atomic units (USDC 6dp). 50000 = $0.05. */
+  demoPriceAtomic: string;
+  /** Settlement backend: `ledger` (mirror on the PQC ledger) or `upstream` (remote facilitator). */
+  settle: 'ledger' | 'upstream';
+  /** Upstream facilitator base URL when `settle=upstream` (e.g. https://facilitator.openx402.ai). */
+  facilitatorUrl?: string;
+  /** Optional block-explorer base (…/tx/) used to build receipt links on real chains. */
+  explorerBaseUrl?: string;
+}
+
 /** Operator incentives — how running a node earns aETH. All default to 0 (off). */
 export interface FeesConfig {
   /** Protocol fee on each payment, in basis points, skimmed from the payee to the node treasury. */
@@ -138,6 +168,7 @@ export interface Web3Config {
   guardrails: GuardrailConfig;
   auth: AuthConfig;
   settlement: SettlementConfig;
+  x402: X402Config;
   consensus: ConsensusConfig;
   fees: FeesConfig;
   /**
@@ -252,6 +283,22 @@ export const DEFAULT_CONFIG: Web3Config = {
     network: process.env.WEB3_SETTLEMENT_NETWORK ?? 'web3-ledger',
     decimals: Number(process.env.WEB3_SETTLEMENT_DECIMALS ?? 2),
     explorerBaseUrl: process.env.WEB3_SETTLEMENT_EXPLORER,
+  },
+  x402: {
+    enabled: envBool('WEB3_X402_ENABLED', true),
+    network: process.env.WEB3_X402_NETWORK ?? 'base-sepolia',
+    // Base Sepolia testnet USDC by default.
+    asset: process.env.WEB3_X402_ASSET ?? '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    // Operators set their real receiving address; the placeholder (…0402) keeps demos self-contained.
+    payTo:
+      process.env.WEB3_X402_PAYTO ??
+      (process.env.WEB3_X402_KEY ? '' : '0x0000000000000000000000000000000000000402'),
+    domainName: process.env.WEB3_X402_DOMAIN_NAME ?? 'USDC',
+    domainVersion: process.env.WEB3_X402_DOMAIN_VERSION ?? '2',
+    demoPriceAtomic: process.env.WEB3_X402_DEMO_PRICE ?? '50000', // $0.05 USDC
+    settle: (process.env.WEB3_X402_SETTLE as 'ledger' | 'upstream') || 'ledger',
+    facilitatorUrl: process.env.WEB3_X402_FACILITATOR_URL,
+    explorerBaseUrl: process.env.WEB3_X402_EXPLORER,
   },
   consensus: {
     mode: (process.env.WEB3_CONSENSUS as ConsensusMode) || networkFile.mode || 'off',

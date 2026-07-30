@@ -1,0 +1,25 @@
+{
+  "name": "@web3/x402",
+  "version": "0.1.0",
+  "description": "Internet-native payments for Web3.0 agents — the x402 \"HTTP 402 Payment Required\" standard, with EIP-3009 exact-scheme signing, a paying fetch client, server helpers, and a pluggable facilitator (local ledger or OpenX402).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./server": "./src/server.ts",
+    "./facilitator": "./src/facilitator.ts",
+    "./evm": "./src/evm.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

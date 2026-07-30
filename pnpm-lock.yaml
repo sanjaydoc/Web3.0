@@ -131,6 +131,35 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/web3-x402:
+    dependencies:
+      '@noble/curves':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@noble/hashes':
+        specifier: ^2.2.0
+        version: 2.2.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  services/conway-terminal:
+    dependencies:
+      '@web3/x402':
+        specifier: workspace:*
+        version: link:../../packages/web3-x402
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   services/web3-node:
     dependencies:
       '@fastify/cors':
@@ -151,6 +180,9 @@ importers:
       '@web3/ledger':
         specifier: workspace:*
         version: link:../../packages/web3-ledger
+      '@web3/x402':
+        specifier: workspace:*
+        version: link:../../packages/web3-x402
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
