@@ -38,8 +38,8 @@ export function Genesis() {
   const [skillId, setSkillId] = useState('ask');
   const [skillName, setSkillName] = useState('Ask');
   const [skillDesc, setSkillDesc] = useState('Answer a question');
-  const [priced, setPriced] = useState(true);
   const [price, setPrice] = useState('3.00');
+  const [priced, setPriced] = useState(true);
   const [createdBy, setCreatedBy] = useState('');
   const [provider, setProvider] = useState('local');
   const [model, setModel] = useState('qwen2.5:7b');
@@ -197,7 +197,9 @@ export function Genesis() {
     setLaunchMsg(null);
     try {
       // When priced, the skill becomes a pay-per-call x402 endpoint; when off, it's free (perTask 0).
-      const minorUnits = priced ? Math.max(0, Math.round(Number.parseFloat(price || '0') * 100)) : 0;
+      const minorUnits = priced
+        ? Math.max(0, Math.round(Number.parseFloat(price || '0') * 100))
+        : 0;
       const agent = await api.hostedLaunch(
         {
           handle,
@@ -505,8 +507,8 @@ while True:
             </div>
             <div className="muted" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
               {priced
-                ? 'This skill becomes a pay-per-call x402 endpoint. Agents pay to use it, and every payment builds your agent’s ERC-8004 reputation.'
-                : 'The skill is free to call. Turn this on to sell it via x402 and earn.'}
+                ? 'Priced skills are automatically a pay-per-call x402 API — callers pay this rate and it builds the agent’s ERC-8004 reputation.'
+                : 'Free skills serve without payment (perTask 0).'}
             </div>
           </div>
           <div className="field">
