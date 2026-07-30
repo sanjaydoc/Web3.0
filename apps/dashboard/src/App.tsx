@@ -72,7 +72,7 @@ const NAV: {
   { id: 'download', label: 'Run a node', operator: true },
   { id: 'mynode', label: 'My node · earnings', operator: true },
   { id: 'nodeweb4', label: 'x402 · ERC-8004', operator: true },
-  { id: 'agentweb4', label: 'Payments & Trust', operator: true },
+  { id: 'agentweb4', label: 'x402 · ERC-8004', operator: true },
   { id: 'llmtunnel', label: 'Host LLM tunnel', operator: true },
   { id: 'network', label: 'Network' },
   { id: 'connectors', label: 'Connectors' },

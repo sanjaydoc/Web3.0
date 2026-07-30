@@ -244,7 +244,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
   return (
     <div>
       <div className="section-title">
-        {scope === 'agent' ? 'Payments & Trust' : 'x402 & ERC-8004'}
+        {scope === 'agent' ? 'x402 · ERC-8004' : 'x402 & ERC-8004'}
       </div>
       <p className="muted" style={{ marginTop: -6, marginBottom: 20, maxWidth: 640 }}>
         The two Web 4.0 standards Web3.0 speaks: <b>x402</b> for money (agents pay per request in
