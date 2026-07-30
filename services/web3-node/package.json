@@ -10,6 +10,7 @@
     "reset-store": "tsx src/reset-store.ts",
     "demo:consensus": "tsx src/demo-consensus.ts",
     "demo:x402": "tsx src/demo-x402.ts",
+    "demo:web4": "tsx src/demo-web4.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
