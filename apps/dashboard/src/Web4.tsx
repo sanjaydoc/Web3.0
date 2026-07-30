@@ -175,7 +175,9 @@ function OxygenPanel() {
   // Oxygen's x402_fetch, no MCP client needed). The URL is a quoted argument, so the command is the
   // same on Windows and Unix. Run `pnpm install` once first; add KEY=0x… to pay from your own wallet.
   const payExampleUrl = `${NODE_URL}/x402/call/AGENT@web3.0/SKILL?q=hello`;
-  const payCmd = `pnpm --filter @web3/oxygen-mcp exec tsx pay.ts "${payExampleUrl}"`;
+  // Complete, copy-paste-runnable block (same on Windows cmd and macOS/Linux): install once, then
+  // pay. `pnpm install` is included because skipping it is the #1 "Cannot find package" pitfall.
+  const payCmd = `pnpm install\npnpm --filter @web3/oxygen-mcp exec tsx pay.ts "${payExampleUrl}"`;
 
   const [copiedCli, setCopiedCli] = useState(false);
   const connect = async () => {
