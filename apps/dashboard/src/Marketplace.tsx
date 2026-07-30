@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Lease, type LlmMarketOffer, type MarketHost, api, formatAmount } from './api.js';
+import {
+  type Lease,
+  type LlmMarketOffer,
+  type LlmUsageRow,
+  type MarketHost,
+  api,
+  formatAmount,
+} from './api.js';
 import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 
 /**
@@ -11,7 +18,10 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
   const [hosts, setHosts] = useState<MarketHost[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [models, setModels] = useState<LlmMarketOffer[]>([]);
+  // Accrued inference cost (the usage-meter figure — populates even at 0 / with no balance).
   const [inferenceSpend, setInferenceSpend] = useState(0);
+  // Per-agent hosted-brain usage rows (tokens consumed + accrued cost).
+  const [usage, setUsage] = useState<LlmUsageRow[]>([]);
   const [agentId, setAgentId] = useState('');
   const [me, setMe] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -19,18 +29,22 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
 
   const load = useCallback(async () => {
     try {
-      const [m, l, acct, brains, spend] = await Promise.all([
+      const [m, l, acct, brains, spend, use] = await Promise.all([
         api.hostingMarket(),
         api.hostingLeases(),
         api.me(),
         api.llmMarket(),
-        api.llmSpend().catch(() => ({ spend: 0 })),
+        api.llmSpend().catch(() => ({ spend: 0, accrued: 0 })),
+        api.llmUsage().catch(() => ({ usage: [] as LlmUsageRow[] })),
       ]);
       setHosts(m.hosts);
       setLeases(l.leases);
       setMe(acct.address);
       setModels(brains.offers);
-      setInferenceSpend(spend.spend);
+      // Show accrued cost — what usage has cost, whether or not it settled — so the meter isn't
+      // stuck at 0 just because free models or empty wallets mean nothing was debited.
+      setInferenceSpend(spend.accrued ?? 0);
+      setUsage(use.usage);
     } catch {
       /* node offline — keep last */
     }
@@ -185,7 +199,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
           work, and rate the models you use to help everyone.
         </p>
         <dl className="kv">
-          <dt>Your inference spend</dt>
+          <dt>Your inference cost</dt>
           <dd>{formatAmount(inferenceSpend)}</dd>
         </dl>
         {models.length === 0 ? (
@@ -262,47 +276,89 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
       </div>
 
       <div className="card">
-        <div className="section-title">Your rentals</div>
-        {mine.length === 0 ? (
-          <div className="empty">You're not renting any hosting yet.</div>
+        <div className="section-title">Your rentals · agents on hosted brains</div>
+        <p className="muted" style={{ margin: '2px 0 12px' }}>
+          Every agent of yours running on a node operator's hosted model, the tokens it has
+          consumed, and what that has cost — like a usage meter. It fills in as your agents run
+          (0.00 for a free model); a paid model accrues cost each time an agent answers.
+        </p>
+        {usage.length === 0 ? (
+          <div className="empty">
+            No hosted-brain usage yet — run one of your agents (its model is served over the tunnel)
+            and its usage appears here.
+          </div>
         ) : (
           <div className="hscroll">
             <table>
               <thead>
                 <tr>
                   <th>Agent</th>
+                  <th>Model</th>
                   <th>Host</th>
-                  <th>Price / epoch</th>
-                  <th>Epochs</th>
-                  <th>Paid</th>
-                  <th />
+                  <th>Tokens</th>
+                  <th>Cost</th>
                 </tr>
               </thead>
               <tbody>
-                {mine.map((l) => (
-                  <tr key={l.id}>
+                {usage.map((u) => (
+                  <tr key={`${u.agentId ?? '—'}:${u.host}:${u.model}`}>
                     <td>
-                      <strong>{l.agentId}</strong>
+                      <strong>{u.agentId ?? '—'}</strong>
                     </td>
-                    <td>{l.host}</td>
-                    <td>{formatAmount(l.pricePerEpoch)}</td>
-                    <td>{l.epochsBilled}</td>
-                    <td>{formatAmount(l.paidTotal)}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        disabled={busy === l.id}
-                        onClick={() => end(l.id)}
-                      >
-                        {busy === l.id ? '…' : 'End'}
-                      </button>
-                    </td>
+                    <td>{u.model}</td>
+                    <td className="mono-hash">{u.host}</td>
+                    <td>{(u.billedTokens + u.unbilledTokens).toLocaleString('en-US')}</td>
+                    <td>{u.accruedCost > 0 ? formatAmount(u.accruedCost) : 'free'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+
+        {mine.length > 0 && (
+          <>
+            <div className="section-title" style={{ marginTop: 18 }}>
+              RAM hosting leases
+            </div>
+            <div className="hscroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Host</th>
+                    <th>Price / epoch</th>
+                    <th>Epochs</th>
+                    <th>Paid</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {mine.map((l) => (
+                    <tr key={l.id}>
+                      <td>
+                        <strong>{l.agentId}</strong>
+                      </td>
+                      <td>{l.host}</td>
+                      <td>{formatAmount(l.pricePerEpoch)}</td>
+                      <td>{l.epochsBilled}</td>
+                      <td>{formatAmount(l.paidTotal)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          disabled={busy === l.id}
+                          onClick={() => end(l.id)}
+                        >
+                          {busy === l.id ? '…' : 'End'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </>

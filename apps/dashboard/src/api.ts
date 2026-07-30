@@ -266,9 +266,13 @@ export interface LlmUsageRow {
   owner: string;
   host: string;
   model: string;
+  /** The owner's agent that consumed this inference (present on owner-side usage rows). */
+  agentId?: string;
   unbilledTokens: number;
   billedTokens: number;
   paidTotal: number;
+  /** Cost accrued at the serving price, whether or not it settled (the usage-meter figure). */
+  accruedCost: number;
   earnedByHost: number;
 }
 export interface ConnectorHeader {
@@ -664,7 +668,8 @@ export const api = {
   /** The signed-in operator's inference revenue + per-model traffic (Host LLM tunnel). */
   llmRevenue: () => get<{ host: string; revenue: number; usage: LlmUsageRow[] }>('/llm/revenue'),
   /** The signed-in agent owner's total inference spend. */
-  llmSpend: () => get<{ owner: string; spend: number }>('/llm/spend'),
+  llmSpend: () => get<{ owner: string; spend: number; accrued: number }>('/llm/spend'),
+  llmUsage: () => get<{ owner: string; usage: LlmUsageRow[] }>('/llm/usage'),
   /** Rate a hosted model 1–5 (agent owner → marketplace reputation). */
   rateLlm: (host: string, model: string, score: number) =>
     post<RepSummary>('/llm/rate', { host, model, score }),
