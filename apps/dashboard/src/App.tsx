@@ -130,6 +130,10 @@ const AGENT_OWNER_NAV = new Set<View>([
   'telegram',
   'agents',
   'guardrails',
+  // Owners can also spin up their own node when they're ready — the "Run a node" page hands them the
+  // installers + setup. (Just the download/get-started front door; the operator earnings console —
+  // mynode/llmtunnel — belongs to an operator account they'd run alongside it.)
+  'download',
 ]);
 
 /**
@@ -146,6 +150,7 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
   },
   { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
   { items: ['marketplace'] },
+  { title: 'Run a node', items: ['download'] },
 ];
 
 /**
