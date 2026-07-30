@@ -189,6 +189,9 @@ export function App() {
   const [nodeOnline, setNodeOnline] = useState(false);
   // Mobile nav drawer: collapses behind a hamburger below 760px, toggled by the top-bar button.
   const [menuOpen, setMenuOpen] = useState(false);
+  // Which collapsible sidebar groups (agent-owner nav) are expanded, by title. Starts collapsed;
+  // the group holding the current view auto-opens (see effect), so the menu stays short by default.
+  const [openNavGroups, setOpenNavGroups] = useState<Set<string>>(() => new Set());
   // Admin-only view preference (which mode an admin is previewing). Non-admins ignore it.
   const [rolePref, setRolePref] = useState<Role>(() =>
     localStorage.getItem(ROLE_KEY) === 'operator' ? 'operator' : 'admin',
@@ -338,6 +341,27 @@ export function App() {
     setView(v);
     setMenuOpen(false);
   };
+
+  // Expand/collapse a titled sidebar group (agent-owner nav).
+  const toggleNavGroup = (title: string) =>
+    setOpenNavGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+
+  // The titled group that holds the current view (so we can keep it open while it's active).
+  const activeGroupTitle = isAgentOwner
+    ? AGENT_OWNER_GROUPS.find((g) => g.title && g.items.includes(view))?.title
+    : undefined;
+  // Auto-open the group of whatever view is active, so the current page's nav item is always visible.
+  useEffect(() => {
+    if (!activeGroupTitle) return;
+    setOpenNavGroups((prev) =>
+      prev.has(activeGroupTitle) ? prev : new Set(prev).add(activeGroupTitle),
+    );
+  }, [activeGroupTitle]);
 
   // One sidebar entry — shared by the flat (admin/operator) and grouped (agent-owner) layouts.
   const renderNavItem = (n: (typeof NAV)[number]) => (
@@ -518,17 +542,36 @@ export function App() {
           </div>
         )}
         {isAgentOwner
-          ? // Grouped layout: top-level items, then titled groups, then Marketplace. Each group only
-            // shows the ids that survived visibleNav, so main-node locking still applies.
+          ? // Grouped layout: top-level items render flush; titled groups (Launch agents, Settings)
+            // are collapsible. Each group only shows ids that survived visibleNav (main-node locking).
             AGENT_OWNER_GROUPS.map((group, gi) => {
               const items = group.items
                 .map((id) => visibleNav.find((n) => n.id === id))
                 .filter((n): n is (typeof NAV)[number] => n !== undefined);
               if (items.length === 0) return null;
+              // Untitled groups (Account/Overview/Payments, and Marketplace) always render flush.
+              if (!group.title) {
+                return (
+                  <div className="nav-group" key={`top-${gi}`}>
+                    {items.map((n) => renderNavItem(n))}
+                  </div>
+                );
+              }
+              const open = openNavGroups.has(group.title);
               return (
-                <div className="nav-group" key={group.title ?? `top-${gi}`}>
-                  {group.title && <div className="nav-group-title">{group.title}</div>}
-                  {items.map((n) => renderNavItem(n))}
+                <div className="nav-group" key={group.title}>
+                  <button
+                    type="button"
+                    className={`nav-group-toggle ${open ? 'open' : ''}`}
+                    aria-expanded={open}
+                    onClick={() => group.title && toggleNavGroup(group.title)}
+                  >
+                    <span>{group.title}</span>
+                    <span className="nav-caret" aria-hidden="true">
+                      {open ? '▾' : '▸'}
+                    </span>
+                  </button>
+                  {open && items.map((n) => renderNavItem(n))}
                 </div>
               );
             })

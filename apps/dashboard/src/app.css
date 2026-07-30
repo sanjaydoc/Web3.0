@@ -140,15 +140,34 @@ body {
   flex-direction: column;
   gap: 6px;
 }
-.nav-group-title {
+/* Collapsible group header (Launch agents · Settings). Clickable, with a caret that flips open. */
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
   margin-top: 8px;
-  padding: 4px 0.7rem 0;
+  padding: 6px 0.7rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   font-size: var(--fs-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-2);
-  opacity: 0.55;
+  opacity: 0.6;
+  text-align: left;
+}
+.nav-group-toggle:hover {
+  background: var(--paper-2);
+  opacity: 0.9;
+}
+.nav-group-toggle .nav-caret {
+  font-size: 0.7em;
+  opacity: 0.8;
 }
 .side .foot {
   margin-top: auto;
