@@ -7,8 +7,8 @@ android {
         applicationId "com.web3.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 29
+        versionName "0.1.29"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // nodejs-mobile ships prebuilt native libs for arm64-v8a, armeabi-v7a and x86_64, which
         // tripled the APK to ~160MB. Ship arm64-v8a only — every modern 64-bit phone — so the APK is

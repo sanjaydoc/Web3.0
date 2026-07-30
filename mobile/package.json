@@ -1,6 +1,6 @@
 {
   "name": "web3-mobile",
-  "version": "0.1.0",
+  "version": "0.1.29",
   "description": "Web3.0 mobile — a Capacitor Android app that runs a REAL peer node (nodejs-mobile) and shows the dashboard.",
   "private": true,
   "author": "DR SANJAY ANBU",
