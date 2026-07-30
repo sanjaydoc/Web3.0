@@ -115,7 +115,6 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
     <>
       <div className="page-head">
         <h1>Marketplace</h1>
-        <span className="muted">rent RAM to run your agents</span>
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
