@@ -46,6 +46,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* When the nav has more items than the viewport is tall (e.g. the grouped agent-owner menu on a
+     short window), scroll inside the sidebar so the last items (Marketplace) stay reachable instead
+     of spilling below the fold. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .side .brand,
 .mobile-bar .brand {
