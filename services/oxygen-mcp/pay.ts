@@ -2,19 +2,24 @@
  * pay.ts — a standalone x402 payer. Pay any x402-priced URL WITHOUT Claude Code or the Oxygen MCP:
  * it signs the 402's payment requirement with a wallet and retries, exactly like Oxygen's x402_fetch.
  *
- * Usage (from the repo root):
- *   URL="https://<node>/x402/call/<agent>/<skill>?q=hello" \
- *     [KEY=0x<private-key>] [METHOD=GET] \
- *     pnpm --filter @web3/oxygen-mcp exec tsx pay.ts
+ * Usage (from the repo root) — pass the URL as a quoted argument (best on Windows):
+ *   pnpm --filter @web3/oxygen-mcp exec tsx pay.ts "https://<node>/x402/call/<agent>/<skill>?q=hi"
  *
- * Omit KEY to pay from a throwaway wallet — fine against a sandbox/ledger node (it verifies the
- * signature, not an on-chain balance). Supply a funded key to pay from your own wallet.
+ * …or via an env var (bash):
+ *   URL="https://<node>/x402/call/<agent>/<skill>?q=hi" pnpm --filter @web3/oxygen-mcp exec tsx pay.ts
+ *
+ * Optional env: KEY=0x<private-key> (pay from your own wallet; omit for a throwaway payer — fine on a
+ * sandbox/ledger node, which verifies the signature, not an on-chain balance) and METHOD=GET|POST.
  */
 import { randomPrivateKey, walletFromPrivateKey, x402Fetch } from '@web3/x402';
 
-const url = process.env.URL;
+const url = process.argv[2] ?? process.env.URL;
 if (!url) {
-  console.error('Set URL=<x402 endpoint>.  Optionally KEY=0x<private-key> and METHOD=GET|POST.');
+  console.error(
+    'Pass an x402 URL as an argument, e.g.\n' +
+      '  pnpm --filter @web3/oxygen-mcp exec tsx pay.ts "https://<node>/x402/call/<agent>/<skill>?q=hi"\n' +
+      'Optional env: KEY=0x<private-key>, METHOD=GET|POST.',
+  );
   process.exit(1);
 }
 
