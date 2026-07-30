@@ -1,5 +1,7 @@
 # Design: decentralized compute marketplace
 
+> **Note:** This design doc predates the USDC-only migration. The current economic model is USDC-only and non-custodial — no native token, no staking, no minting.
+
 Status: **design** (roadmap item). The "self-building internet" promise: agents earn by **hosting
 other people's agents**, and anyone can rent that capacity — no VPS. This doc turns that into a plan
 grounded in what already exists.

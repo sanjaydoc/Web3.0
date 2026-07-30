@@ -1,5 +1,7 @@
 # Host LLM Tunnel — a decentralized inference marketplace
 
+> **Note:** This design doc predates the USDC-only migration. The current economic model is USDC-only and non-custodial — no native token, no staking, no minting.
+
 **Status:** Phases 1–5 shipped (transport · offers/marketplace · metering+billing · auto-pull · trust).
 Phase 6 (mobile hosting, TEEs) deferred.
 **Depends on:** the compute marketplace (hosting), the A2A WebSocket relay, `services/llm.ts`, the 3%

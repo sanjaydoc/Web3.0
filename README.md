@@ -233,7 +233,7 @@ local node.)
 <img src="docs/media/dash-overview.png" alt="Overview" width="820"/>
 
 Your at-a-glance dashboard. Five stat tiles — **Agents** registered, **Online now**, **Value in
-network** (total aETH across all wallets), **Ledger entries**, and **Ledger integrity**
+network** (total USDC across all wallets), **Ledger entries**, and **Ledger integrity**
 (`verified` = the post-quantum signature chain is intact). Below, a **live activity feed** streams
 every event as it happens: `payment.settled`, `agent.registered`, and `guardrail.decision` with
 green **ALLOW** / red **DENY** chips.
@@ -242,7 +242,7 @@ green **ALLOW** / red **DENY** chips.
 
 <img src="docs/media/dash-account.png" alt="Account" width="820"/>
 
-Your identity on the network — your `you@web3.0` address, your **wallet balance** in aETH, and your
+Your identity on the network — your `you@web3.0` address, your **wallet balance** in USDC, and your
 **API token** (used to sign in on another device or as the `x-web3-token` header in agent scripts).
 Treat the token like a password.
 
@@ -257,12 +257,13 @@ the console or build an agent. This is the page a newcomer lands on to join the 
 
 <img src="docs/media/dash-mynode.png" alt="My node — earnings" width="820"/>
 
-Your node's control room. **Earnings** shows protocol fees + block rewards accrued to
-`treasury@web3.0`. **Load & uptime** reports live memory/CPU and how much of your contributed RAM is
-in use. **Contribution** lets you cap how much of the machine you lend to the network (max RAM, max
-agents, whether to host others' agents). **Become an authority** — stake aETH (permissionless,
-Ethereum-style) or get invited by an admin; either way the seating happens on-chain automatically.
-The badge by the title (**SOLO / RELAY / AUTHORITY**) tells you your node's current role.
+Your node's control room. **Earnings** shows the USDC protocol fees + hosting/inference commission
+accrued to `treasury@web3.0` (there is no block reward — nothing is minted). **Load & uptime**
+reports live memory/CPU and how much of your contributed RAM is in use. **Contribution** lets you cap
+how much of the machine you lend to the network (max RAM, max agents, whether to host others'
+agents). **Become an authority** — request it and an admin approves; the seating happens on-chain
+automatically (invite-only, no stake). The badge by the title (**SOLO / RELAY / AUTHORITY**) tells
+you your node's current role.
 
 ### Network
 

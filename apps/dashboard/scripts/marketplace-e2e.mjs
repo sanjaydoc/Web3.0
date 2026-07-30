@@ -126,7 +126,7 @@ const main = async () => {
   );
 
   // Host publishes a per-epoch price -> becomes the marketplace host.
-  const price = 500; // 5.00 aETH / epoch
+  const price = 500; // 5.00 USDC / epoch
   await call('/hosting/offer', {
     method: 'POST',
     token: host.token,

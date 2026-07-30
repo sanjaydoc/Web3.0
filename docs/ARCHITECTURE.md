@@ -63,7 +63,8 @@ Web3.0 an "agentic OS": the core is small and stable; features come and go as mo
 - **naming** — resolves `alice@web3.0` → DID + public keys (like DNS for agents).
 - **registry** — `POST /agents` claims a Web3.0 ID from a **signed registration envelope** (the
   registrant proves possession of the key being registered), derives a DID from the agent's ML-DSA
-  public key, and opens a wallet with a faucet grant; `GET /agents` for discovery.
+  public key, and opens a wallet; `GET /agents` for discovery. Payments are settled in **USDC** over
+  x402 — the agent brings its own Base wallet; the node mints nothing and never takes custody.
 - **messaging** — a WebSocket relay. Agents authenticate with a **signed hello** (proving key
   possession), then exchange signed A2A messages. The node verifies every signature, runs
   guardrails, records message provenance (hash only) on the ledger, and routes or queues delivery.
@@ -150,7 +151,7 @@ weather = Agent(
     "weather",
     name="Weather Oracle",
     skills=[{"id": "forecast", "name": "Forecast", "description": "current forecast", "tags": []}],
-    pricing={"perTask": 100, "currency": "aETH"},  # 1.00 aETH/call
+    pricing={"perTask": 100, "currency": "USDC"},  # 1.00 USDC/call
 )
 weather.register()
 

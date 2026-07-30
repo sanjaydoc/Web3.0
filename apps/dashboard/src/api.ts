@@ -137,42 +137,20 @@ export interface MyEarnings {
 
 export type NodeRole = 'solo' | 'relay' | 'authority';
 
-/** Live Proof-of-Contribution status for a node: what it's contributing and earning per epoch. */
-export interface ContributionInfo {
-  /** Whether the earning engine is on (reward pool > 0). */
-  enabled: boolean;
-  /** aETH minted per epoch and split across live contributing nodes. */
-  pool: number;
-  /** Epoch length in blocks. */
-  epochBlocks: number;
-  /** Nodes seen contributing within the freshness window. */
-  liveContributors: number;
-  /** This node's weighted contribution score. */
-  myScore: number;
-  /** Sum of all live nodes' scores (this node's share = myScore / totalScore). */
-  totalScore: number;
-  /** Projected payout to this node at the next epoch (after the per-node cap). */
-  projectedPerEpoch: number;
-  /** This node's contribution-reward wallet (derived from its node key). */
-  walletId: string;
-  /** aETH earned by this node from contribution rewards, awaiting collection. */
-  walletBalance: number;
-  walletFormatted: string;
-}
-
 export interface NodeOperator {
   role: NodeRole;
   nodePublicKey?: string;
   treasuryId: string;
   uptimeSec: number;
   earnings: {
+    /** Platform treasury balance (accumulated fee revenue). */
     balance: number;
+    /** Fee revenue routed to the treasury. */
     fees: number;
-    rewards: number;
+    /** This node's own fee-share wallet balance — its collectable earnings. */
     contribution: number;
     formatted: string;
   };
-  contribution?: ContributionInfo;
   /** Node auth posture — including whether this is the admin-only main node. */
   auth?: { accounts: number; hasAdmin: boolean; openMode: boolean; adminOnly: boolean };
   traffic: { agents: number; online: number; ledgerEntries: number };
@@ -430,24 +408,10 @@ async function detectDeviceIp(): Promise<string | null> {
   return null;
 }
 
-/** Live monetary policy — GUI-editable by the admin, applies immediately. */
+/** Live monetary policy — GUI-editable by the admin, applies immediately. USDC-only: the payment
+ *  fee is the sole knob (token issuance — block rewards, minted pool, burns, staking — was retired). */
 export interface Economics {
   feeBps: number;
-  blockReward: number;
-  burnBps: number;
-  authorityStake: number;
-  /** Proof-of-Contribution: aETH minted per epoch and split across live contributing nodes. */
-  nodeRewardPool: number;
-  /** Epoch length in blocks. */
-  epochBlocks: number;
-  /** Contribution-score weights. */
-  uptimeWeight: number;
-  hostWeight: number;
-  relayWeight: number;
-  /** Max share of one epoch's pool a single node may take, in basis points (0 = uncapped). */
-  rewardCapBps: number;
-  blockRewardFormatted?: string;
-  authorityStakeFormatted?: string;
 }
 
 /** Node persistence settings (config-file backed; restart to apply). */
@@ -456,27 +420,6 @@ export interface StorageInfo {
   mongodbDb: string;
   mongodbUriHint: string | null;
   configPath: string | null;
-  note: string;
-}
-
-/** Staking state for permissionless authority admission (Ethereum-deposit-contract style). */
-export interface StakeInfo {
-  threshold: number;
-  thresholdFormatted: string;
-  escrow: string;
-  nodePublicKey: string;
-  staked: number;
-  stakedFormatted: string;
-  eligible: boolean;
-  isAuthority: boolean;
-  walletBalance: number;
-}
-
-export interface StakeResult {
-  staked: number;
-  stakedFormatted: string;
-  threshold: number;
-  eligible: boolean;
   note: string;
 }
 
@@ -499,10 +442,33 @@ export interface NodeLocation {
   updatedAt: string;
 }
 
-// ── x402 (internet-native payments) + ERC-8004 (identity & reputation) ─────────────────────────
-
 export interface X402Supported {
   kinds: { x402Version: number; scheme: string; network: string }[];
+}
+
+/** This node's x402 rail: settle mode, asset/network, and a testnet faucet link (when on a testnet). */
+export interface X402Info {
+  network: string;
+  asset: string;
+  settle: 'ledger' | 'upstream';
+  live: boolean;
+  mode: 'sandbox' | 'live';
+  facilitatorUrl: string | null;
+  faucetUrl: string | null;
+}
+
+/** Result of a sandbox self-test payment fired at your own agent (the onboarding "instant proof"). */
+export interface X402SelfTest {
+  ok: boolean;
+  agent: string;
+  skill: string;
+  amount: string;
+  priceUsd: string;
+  asset: string;
+  network: string;
+  tx: string;
+  payer: string;
+  note: string;
 }
 export interface X402Receipt {
   success: boolean;
@@ -580,8 +546,12 @@ export interface Erc8004Reputation {
 export const api = {
   info: () => get<NodeInfo>('/'),
   stats: () => get<Stats>('/stats'),
-  // x402 — internet-native payments (facilitator + receipts + priced-skill directory).
+  // x402 — internet-native payments (facilitator + receipts).
   x402Supported: () => get<X402Supported>('/x402/supported'),
+  x402Info: () => get<X402Info>('/x402/info'),
+  /** Fire a sandbox demo payment at your own agent's skill — the onboarding "your agent earned $X". */
+  x402SelfTest: (web3Id: string, skillId: string) =>
+    post<X402SelfTest>(`/x402/selftest/${web3Id}/${skillId}`, {}),
   x402Receipts: () => get<{ receipts: X402Receipt[] }>('/x402/receipts'),
   x402Directory: () =>
     get<{ count: number; asset: string; network: string; services: X402Service[] }>(
@@ -596,16 +566,8 @@ export const api = {
   erc8004Bind: (agentId: number, agentAddress: string) =>
     post<Erc8004Identity>(`/erc8004/agents/${agentId}/bind`, { agentAddress }),
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
-  stakeInfo: () => get<StakeInfo>('/operator/stake'),
-  unstake: () =>
-    post<{ amount: number; availableAt: string; removalQueued: boolean; cooldownMs: number }>(
-      '/operator/unstake',
-      {},
-    ),
   economics: () => get<Economics>('/operator/economics'),
   updateEconomics: (patch: Partial<Economics>) => post<Economics>('/operator/economics', patch),
-  /** Live Proof-of-Contribution status for this node (score, live peers, reward wallet). */
-  contribution: () => get<ContributionInfo>('/operator/contribution'),
   storageInfo: () => get<StorageInfo>('/operator/storage'),
   saveStorage: (input: { mongodbUri?: string; mongodbDb?: string }) =>
     post<{ saved: boolean; restartRequired: boolean; configPath: string }>(
@@ -620,8 +582,6 @@ export const api = {
       fromContribution?: number;
       walletBalance: number;
     }>('/operator/collect', {}),
-  stake: (input: { amount?: number; nodePublicKey?: string }) =>
-    post<StakeResult>('/operator/stake', input),
   requestAuthority: () => post<AuthorityRequest>('/operator/authority/request', {}),
   myAuthorityRequest: () => get<{ request: AuthorityRequest | null }>('/operator/authority/mine'),
   authorityRequests: () => get<{ requests: AuthorityRequest[] }>('/operator/authority/requests'),

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getWeb3Token, setWeb3Token } from './api.js';
+import { NODE_URL, type X402SelfTest, api, getWeb3Token, setWeb3Token } from './api.js';
 import { generateAccountKey, loadAccountKey, saveAccountKey } from './txsign.js';
 
 /**
@@ -452,20 +452,227 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
 
 type Persona = 'operator' | 'agent-owner';
 
+/**
+ * QuickStartFlow — the "launch a paid agent in 2 minutes" express lane (Phase E). One field → it
+ * creates an agent-owner identity, launches a pre-filled paid agent (the `ask` skill at $0.05/call),
+ * fires ONE sandbox x402 payment at it so you watch the money land, then hands you the agent's public
+ * pay-per-call endpoint. The slower, step-by-step manual onboarding stays available underneath.
+ *
+ * Only offered where the node can actually host (`canHost`) — a fresh owner on the reserved main node
+ * can't launch there, so they take the normal path and run their own node.
+ */
+function QuickStartFlow({
+  onAuthChanged,
+  onDone,
+  onBack,
+}: {
+  onAuthChanged: () => Promise<void>;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const [name, setName] = useState('assistant');
+  const [phase, setPhase] = useState<'form' | 'launching' | 'done'>('form');
+  const [addr, setAddr] = useState('');
+  const [agentId, setAgentId] = useState('');
+  const [proof, setProof] = useState<X402SelfTest | null>(null);
+  const [faucetUrl, setFaucetUrl] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const endpoint = agentId ? `${NODE_URL}/x402/call/${agentId}/ask` : '';
+
+  async function launch() {
+    const handle =
+      name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') || 'assistant';
+    setErr('');
+    setPhase('launching');
+    try {
+      // 1. Identity + wallet (agent-owner), signed in.
+      const key = generateAccountKey();
+      const acct = await api.signup(handle, 'agent-owner', key.publicKey);
+      saveAccountKey(acct.address, key);
+      setWeb3Token(acct.token);
+      setAddr(acct.address);
+      await onAuthChanged();
+      // 2. Launch a pre-filled paid agent — the `ask` skill at $0.05/call (price is minor units = cents).
+      const agent = await api.hostedLaunch({
+        handle: `${handle}bot`,
+        name: 'Assistant',
+        description: 'A helpful paid agent — answers questions, per call, over x402.',
+        skillId: 'ask',
+        skillName: 'Ask',
+        skillDesc: 'Answer a question',
+        price: 5,
+        provider: 'tunnel',
+        model: '',
+        system:
+          "You are a helpful assistant. Answer directly and concisely. If you're unsure, say so.",
+        createdBy: acct.address,
+      });
+      setAgentId(agent.web3Id);
+      // 3. Instant proof — fire one sandbox payment so they see it earn; grab the faucet link too.
+      const [pf, info] = await Promise.all([
+        api.x402SelfTest(agent.web3Id, 'ask').catch(() => null),
+        api.x402Info().catch(() => null),
+      ]);
+      setProof(pf);
+      setFaucetUrl(info?.faucetUrl ?? null);
+      setPhase('done');
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setPhase('form');
+    }
+  }
+
+  async function copyEndpoint() {
+    try {
+      await navigator.clipboard.writeText(endpoint);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked — the field is selectable */
+    }
+  }
+
+  if (phase === 'done') {
+    return (
+      <div className="onboard">
+        <div className="onboard-inner">
+          <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
+            <span className="badge">W</span> Web3.0
+          </div>
+          <h1 className="onboard-title">🎉 Your agent is live</h1>
+          {proof ? (
+            <p className="muted onboard-sub">
+              <b>{agentId}</b> just earned its first <b>${proof.priceUsd}</b> — a real x402 payment
+              settled on the ledger (sandbox).
+            </p>
+          ) : (
+            <p className="muted onboard-sub">
+              <b>{agentId}</b> is live and priced. It earns each time someone calls it.
+            </p>
+          )}
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="section-title">Its pay-per-call endpoint</div>
+            <p className="muted" style={{ margin: '2px 0 8px' }}>
+              Anyone can pay this in USDC via x402 — no signup, no API keys.
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                readOnly
+                value={endpoint}
+                style={{ flex: 1, fontFamily: 'var(--mono, monospace)' }}
+              />
+              <button type="button" className="btn" onClick={copyEndpoint}>
+                {copied ? 'Copied ✓' : 'Copy'}
+              </button>
+            </div>
+            {faucetUrl && (
+              <p className="hint" style={{ marginTop: 10 }}>
+                To take <b>real</b> payments on testnet, fund a wallet with{' '}
+                <a href={faucetUrl} target="_blank" rel="noreferrer noopener">
+                  test USDC ↗
+                </a>
+                .
+              </p>
+            )}
+          </div>
+
+          <TokenStep address={addr} onDone={onDone} />
+
+          <div className="onboard-actions">
+            <button type="button" className="btn act" onClick={onDone}>
+              Go to my dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="onboard">
+      <div className="onboard-inner">
+        <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
+          <span className="badge">W</span> Web3.0
+        </div>
+        <h1 className="onboard-title">Launch a paid agent</h1>
+        <p className="muted onboard-sub">
+          One tap. We create your identity, launch a working agent priced at $0.05 per call, and
+          fire a test payment so you see it earn — then hand you its public endpoint.
+        </p>
+
+        <div className="card">
+          <label htmlFor="qs-name" className="field-lbl">
+            Name your agent
+          </label>
+          <input
+            id="qs-name"
+            // biome-ignore lint/a11y/noAutofocus: single-field express flow
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="assistant"
+            disabled={phase === 'launching'}
+          />
+          <div className="gen-actions" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn act"
+              onClick={launch}
+              disabled={phase === 'launching' || !name.trim()}
+            >
+              {phase === 'launching' ? 'Launching…' : 'Launch my paid agent 🚀'}
+            </button>
+          </div>
+          {err && <div className="note note-err">{err}</div>}
+        </div>
+
+        <div className="onboard-actions">
+          <button type="button" className="btn ghost" onClick={onBack}>
+            ← More options
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Step 0 — the fork. Pick the account's persona: own an agent (pay a host to run it) or run a node
  *  (contribute RAM, host other people's agents, earn). The two are mutually exclusive at signup. */
 function PersonaStep({
   onPick,
+  onExpress,
   onSignInInstead,
 }: {
   onPick: (p: Persona) => void;
+  /** Start the "launch a paid agent in 2 minutes" express lane. Omitted where the node can't host. */
+  onExpress?: () => void;
   onSignInInstead: () => void;
 }) {
   return (
     <>
+      {onExpress && (
+        <button
+          type="button"
+          className="onboard-persona"
+          onClick={onExpress}
+          style={{ width: '100%', marginBottom: 14, borderColor: 'var(--accent, currentColor)' }}
+        >
+          <span className="onboard-persona-emoji">⚡</span>
+          <b>Launch a paid agent in 2 minutes</b>
+          <span className="muted">
+            The fast path: we create everything and fire a test payment so you watch it earn.
+          </span>
+        </button>
+      )}
       <p className="muted" style={{ margin: '0 0 14px' }}>
-        How do you want to use the network? You can make the other kind of account later — an
-        account is one or the other.
+        Or set it up step by step. How do you want to use the network? You can make the other kind
+        of account later — an account is one or the other.
       </p>
       <div className="onboard-personas">
         <button type="button" className="onboard-persona" onClick={() => onPick('agent-owner')}>
@@ -516,6 +723,9 @@ export function Onboarding({
   // null = still on the fork step (persona not yet chosen). A returning signed-in user gets their
   // persona from their account role at mount, so they skip the fork.
   const [persona, setPersona] = useState<Persona | null>(null);
+  // The express "launch a paid agent in 2 minutes" lane (Phase E). Only offered where the node can
+  // host; the manual persona flow below is always available.
+  const [express, setExpress] = useState(false);
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
   const [addr, setAddr] = useState('');
@@ -573,7 +783,18 @@ export function Onboarding({
 
   const state = (i: number): StepState => (i < step ? 'done' : i === step ? 'active' : 'todo');
 
-  // Fork not yet chosen — show the persona picker.
+  // The express "launch a paid agent in 2 minutes" lane.
+  if (express) {
+    return (
+      <QuickStartFlow
+        onAuthChanged={onAuthChanged}
+        onDone={onDone}
+        onBack={() => setExpress(false)}
+      />
+    );
+  }
+
+  // Fork not yet chosen — show the persona picker (with the express lane on top where we can host).
   if (persona === null) {
     return (
       <div className="onboard">
@@ -583,7 +804,11 @@ export function Onboarding({
           </div>
           <h1 className="onboard-title">Welcome to Web3.0</h1>
           <p className="muted onboard-sub">Choose how you'll join the network.</p>
-          <PersonaStep onPick={setPersona} onSignInInstead={onSignInInstead} />
+          <PersonaStep
+            onPick={setPersona}
+            onExpress={canHost ? () => setExpress(true) : undefined}
+            onSignInInstead={onSignInInstead}
+          />
         </div>
       </div>
     );

@@ -110,11 +110,6 @@ function NodeControl({ online }: { online: boolean }) {
 function EconomicsCard() {
   const [eco, setEco] = useState<Economics | null>(null);
   const [feeBps, setFeeBps] = useState('');
-  const [burnBps, setBurnBps] = useState('');
-  const [rewardAeth, setRewardAeth] = useState('');
-  const [poolAeth, setPoolAeth] = useState('');
-  const [epochBlocks, setEpochBlocks] = useState('');
-  const [capBps, setCapBps] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -124,11 +119,6 @@ function EconomicsCard() {
       .then((e) => {
         setEco(e);
         setFeeBps(String(e.feeBps));
-        setBurnBps(String(e.burnBps));
-        setRewardAeth((e.blockReward / 100).toString());
-        setPoolAeth((e.nodeRewardPool / 100).toString());
-        setEpochBlocks(String(e.epochBlocks));
-        setCapBps(String(e.rewardCapBps));
       })
       .catch(() => undefined);
   }, []);
@@ -139,16 +129,11 @@ function EconomicsCard() {
     try {
       const next = await api.updateEconomics({
         feeBps: Math.round(Number.parseFloat(feeBps || '0')),
-        burnBps: Math.round(Number.parseFloat(burnBps || '0')),
-        blockReward: Math.round(Number.parseFloat(rewardAeth || '0') * 100),
-        nodeRewardPool: Math.round(Number.parseFloat(poolAeth || '0') * 100),
-        epochBlocks: Math.round(Number.parseFloat(epochBlocks || '0')),
-        rewardCapBps: Math.round(Number.parseFloat(capBps || '0')),
       });
       setEco(next);
       setMsg({
         kind: 'ok',
-        text: 'Saved — the new policy applies immediately, network-wide on this node.',
+        text: 'Saved — the new fee applies immediately, network-wide on this node.',
       });
     } catch (err) {
       setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
@@ -162,59 +147,16 @@ function EconomicsCard() {
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="section-title">Economics</div>
       <p className="muted" style={{ margin: '2px 0 12px' }}>
-        The node's live monetary policy — fees fund operators and burns give aETH scarcity.
-        Authority admission is invite-only (no stake). Admin-only to change; applies without a
-        restart.
+        The node's live monetary policy. USDC-only: the platform fee is the sole knob — there is no
+        token issuance (block rewards, minted rewards, burns and staking were retired). Node revenue
+        comes from real demand: this fee plus hosting/inference commission, all in USDC. Authority
+        admission is invite-only. Admin-only to change; applies without a restart.
       </p>
       <div className="form-grid">
         <div className="field">
           <label htmlFor="eco-fee">Protocol fee (bps)</label>
           <input id="eco-fee" value={feeBps} onChange={(ev) => setFeeBps(ev.target.value)} />
-          <span className="hint">100 bps = 1% of every payment → node treasury</span>
-        </div>
-        <div className="field">
-          <label htmlFor="eco-burn">Burn (bps)</label>
-          <input id="eco-burn" value={burnBps} onChange={(ev) => setBurnBps(ev.target.value)} />
-          <span className="hint">EIP-1559-style: burned forever → supply sink</span>
-        </div>
-        <div className="field">
-          <label htmlFor="eco-reward">Block reward (aETH)</label>
-          <input
-            id="eco-reward"
-            value={rewardAeth}
-            onChange={(ev) => setRewardAeth(ev.target.value)}
-          />
-          <span className="hint">minted to the proposer's treasury per block</span>
-        </div>
-      </div>
-
-      <div className="section-title" style={{ fontSize: 'var(--fs-title)', marginTop: 14 }}>
-        Node contribution rewards
-      </div>
-      <p className="muted" style={{ margin: '2px 0 10px' }}>
-        Proof-of-Contribution: pay every live node — not just authorities — for the uptime and
-        compute it lends. The pool is minted each epoch and split across contributors by score,
-        capped per node. Set the pool to 0 to turn the engine off.
-      </p>
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="eco-pool">Reward pool / epoch (aETH)</label>
-          <input id="eco-pool" value={poolAeth} onChange={(ev) => setPoolAeth(ev.target.value)} />
-          <span className="hint">split across live contributing nodes · 0 = off</span>
-        </div>
-        <div className="field">
-          <label htmlFor="eco-epoch">Epoch length (blocks)</label>
-          <input
-            id="eco-epoch"
-            value={epochBlocks}
-            onChange={(ev) => setEpochBlocks(ev.target.value)}
-          />
-          <span className="hint">pool is distributed once every this many blocks</span>
-        </div>
-        <div className="field">
-          <label htmlFor="eco-cap">Per-node cap (bps)</label>
-          <input id="eco-cap" value={capBps} onChange={(ev) => setCapBps(ev.target.value)} />
-          <span className="hint">2000 = one node may take at most 20% · 0 = uncapped</span>
+          <span className="hint">100 bps = 1% of every payment, split treasury / serving node</span>
         </div>
       </div>
 
@@ -791,7 +733,7 @@ export function Operator() {
       const res = await api.collectEarnings();
       setCollectMsg({
         kind: 'ok',
-        text: `Collected ${res.collectedFormatted} — your wallet holds ${formatAmount(res.walletBalance)}. Stake it below.`,
+        text: `Collected ${res.collectedFormatted} — your wallet holds ${formatAmount(res.walletBalance)}.`,
       });
       refresh();
     } catch (err) {
@@ -835,9 +777,9 @@ export function Operator() {
         <>
           <div className="grid-2" style={{ marginBottom: 18 }}>
             {isAdmin ? (
-              // The node TREASURY (fees + block rewards) + the sweep-to-wallet action — the node
-              // owner's money. Only the admin sees the treasury; an operator sees their OWN wallet
-              // below (their personal earnings), even on their own node.
+              // The node TREASURY (accumulated fees) + the sweep-to-wallet action — the node owner's
+              // money. Only the admin sees the treasury; an operator sees their OWN wallet below
+              // (their personal earnings), even on their own node.
               <div className="card">
                 <div className="section-title">Node earnings</div>
                 <div
@@ -853,18 +795,16 @@ export function Operator() {
                   in <code>{node.treasuryId}</code>
                 </p>
                 <dl className="kv">
-                  <dt>Protocol fees</dt>
+                  <dt>Treasury fees</dt>
                   <dd>{formatAmount(e?.fees ?? 0)}</dd>
-                  <dt>Block rewards</dt>
-                  <dd>{formatAmount(e?.rewards ?? 0)}</dd>
-                  <dt>Contribution rewards</dt>
+                  <dt>Node fee-share</dt>
                   <dd>{formatAmount(e?.contribution ?? 0)}</dd>
                 </dl>
                 {e && e.balance === 0 && (e.contribution ?? 0) === 0 && (
                   <p className="hint">
-                    Earnings are off by default — set <code>WEB3_FEE_BPS</code>,{' '}
-                    <code>WEB3_BLOCK_REWARD</code>, or a <b>node reward pool</b> (below) to start
-                    earning.
+                    Node revenue comes from real demand — the platform fee (
+                    <code>WEB3_FEE_BPS</code>) plus hosting/inference commission, all in USDC.
+                    Nothing is earned until agents transact or rent your capacity.
                   </p>
                 )}
                 {e && (e.balance > 0 || (e.contribution ?? 0) > 0) && (
@@ -952,50 +892,6 @@ export function Operator() {
               </div>
             )}
           </div>
-
-          {ownsNode && node.contribution && (
-            <div className="card" style={{ marginBottom: 18 }}>
-              <div className="section-title">Contribution rewards</div>
-              <p className="muted" style={{ margin: '2px 0 12px' }}>
-                {node.contribution.enabled
-                  ? 'Proof-of-Contribution is live — your node earns aETH each epoch for the uptime and compute it lends, alongside every other live node.'
-                  : 'Proof-of-Contribution is off. Set a node reward pool in Economics to start paying live nodes for the resources they contribute.'}
-              </p>
-              <dl className="kv">
-                <dt>Your score</dt>
-                <dd>
-                  {node.contribution.myScore}{' '}
-                  <span className="muted">
-                    of {node.contribution.totalScore} across {node.contribution.liveContributors}{' '}
-                    live node{node.contribution.liveContributors === 1 ? '' : 's'}
-                  </span>
-                </dd>
-                <dt>Projected / epoch</dt>
-                <dd>
-                  {formatAmount(node.contribution.projectedPerEpoch)}{' '}
-                  <span className="muted">
-                    from a {formatAmount(node.contribution.pool)} pool every{' '}
-                    {node.contribution.epochBlocks} blocks
-                  </span>
-                </dd>
-                <dt>Earned, uncollected</dt>
-                <dd>{node.contribution.walletFormatted}</dd>
-              </dl>
-              <p className="hint">
-                {isAdmin ? (
-                  <>
-                    Contribution rewards land in your node's reward wallet and sweep into your
-                    account with <b>Collect to wallet</b> above.
-                  </>
-                ) : (
-                  <>
-                    Contribution rewards accrue to your node's reward wallet and are collected by
-                    the node's owner.
-                  </>
-                )}
-              </p>
-            </div>
-          )}
 
           {ownsNode && (
             <div className="card" style={{ marginBottom: 18 }}>

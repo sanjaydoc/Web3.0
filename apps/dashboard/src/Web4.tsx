@@ -5,6 +5,7 @@ import {
   type Erc8004Root,
   NODE_URL,
   type SettlementInfo,
+  type X402Info,
   type X402Receipt,
   type X402Service,
   type X402Supported,
@@ -132,6 +133,7 @@ function OxygenPanel() {
         <button type="button" className="btn" onClick={connect}>
           {copiedCli ? 'Command copied ✓ — paste in your terminal' : '⚡ Connect to Claude Code'}
         </button>
+        {/* biome-ignore lint/a11y/useSemanticElements: styled div toggle, not a form fieldset */}
         <div className="role-toggle" role="group" aria-label="Platform">
           <button
             type="button"
@@ -167,8 +169,8 @@ function OxygenPanel() {
 
       <p className="muted" style={{ marginTop: 10 }}>
         Prereq: clone the repo, run <code>pnpm install</code>, and run the command from that folder
-        (or set <code>cwd</code>). For a funded wallet, add <code>-e OXYGEN_WALLET_KEY=0x…</code>;
-        left out, it runs in demo mode with a $50 balance. This node is at{' '}
+        (or set <code>cwd</code>). For a funded wallet, add <code>-e OXYGEN_WALLET_KEY=0x…</code>
+        {'; '}left out, it runs in demo mode with a $50 balance. This node is at{' '}
         <span className="mono-hash">{NODE_URL}</span>.
       </p>
     </div>
@@ -190,6 +192,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
   const [receipts, setReceipts] = useState<X402Receipt[]>([]);
   const [services, setServices] = useState<X402Service[]>([]);
   const [settlement, setSettlement] = useState<SettlementInfo | null>(null);
+  const [x402info, setX402info] = useState<X402Info | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -197,7 +200,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
     setLoading(true);
     setError(null);
     try {
-      const [rootRes, agentsRes, supp, rcpts, dir, settle] = await Promise.all([
+      const [rootRes, agentsRes, supp, rcpts, dir, settle, info] = await Promise.all([
         api.erc8004Root().catch(() => null),
         api
           .erc8004Agents()
@@ -206,12 +209,14 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
         api.x402Receipts().catch(() => ({ receipts: [] as X402Receipt[] })),
         api.x402Directory().catch(() => ({ services: [] as X402Service[] })),
         api.settlement().catch(() => null),
+        api.x402Info().catch(() => null),
       ]);
       setRoot(rootRes);
       setSupported(supp);
       setReceipts(rcpts.receipts);
       setServices(dir.services);
       setSettlement(settle);
+      setX402info(info);
       // Fetch reputation for each identity (bounded — one node's agents).
       const reps = await Promise.all(
         agentsRes.agents.map(async (agent) => ({
@@ -269,6 +274,44 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>💸</span> x402 — money
         </div>
+        {x402info && (
+          <div
+            className="muted"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 10,
+              margin: '2px 0 14px',
+              fontSize: 'var(--fs-small, 13px)',
+            }}
+          >
+            <span
+              className="pill"
+              style={{
+                padding: '2px 8px',
+                borderRadius: 999,
+                border: '1px solid var(--hair)',
+              }}
+            >
+              {x402info.live ? '🟢 Live settlement' : '🧪 Sandbox (ledger)'} · {x402info.network}
+            </span>
+            {x402info.faucetUrl && (
+              <>
+                <span>Need test USDC to try a payment?</span>
+                <a
+                  href={x402info.faucetUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="btn"
+                  style={{ padding: '3px 10px' }}
+                >
+                  Get testnet USDC ↗
+                </a>
+              </>
+            )}
+          </div>
+        )}
         {scope === 'node' ? (
           <NodeX402 supported={supported} receipts={receipts} settlement={settlement} />
         ) : (

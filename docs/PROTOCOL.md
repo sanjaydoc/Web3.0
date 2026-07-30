@@ -21,7 +21,7 @@ Published at registration, fetched from the registry to discover an agent:
   "name": "Bob the Summariser",
   "kind": "agent",
   "skills": [{ "id": "summarise", "name": "Summarise", "description": "…", "tags": ["nlp"] }],
-  "pricing": { "perTask": 500, "currency": "aETH" },
+  "pricing": { "perTask": 500, "currency": "USDC" },
   "signPublicKey": "<base64url ML-DSA public key>",
   "kemPublicKey": "<base64url ML-KEM public key>",
   "version": "0.1.0",
@@ -62,8 +62,10 @@ signs it with the very key being registered, and the node verifies that:
 - `payload.signPublicKey` equals the envelope's `publicKey`.
 
 This proves possession of the private key, so a handle **and its wallet** can only be claimed by
-whoever holds the key. On success the account gets a DID, a wallet with a faucet grant, and a
-published agent card.
+whoever holds the key. On success the account gets a DID, a wallet, and a published agent card.
+Balances settle in **USDC** over x402 (the payer's own Base wallet signs each transfer); the node
+mints nothing. On testnet, users fund a Base Sepolia wallet from a
+[USDC faucet](https://faucet.circle.com/).
 
 ## Messaging (A2A relay)
 
@@ -95,7 +97,7 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
    ```json
    { "x402Version": 1, "resource": "acp://bob@web3.0/summarise",
      "accepts": [{ "scheme": "web3-ledger", "network": "acp-mvp", "payTo": "bob@web3.0",
-                   "amount": 500, "currency": "aETH" }] }
+                   "amount": 500, "currency": "USDC" }] }
    ```
 
 2. **Pay** — `POST /pay` with a signed envelope whose payload is
@@ -104,7 +106,7 @@ the A2A lifecycle: `submitted → working → (input-required) → completed | f
    resubmitted to re-drain the payer), runs the spend-cap guardrail, and settles a ledger transfer,
    returning a receipt with the ledger sequence and hash.
 
-Amounts are integer **minor units** (e.g. `500` = 5.00 aETH) to avoid floating-point drift.
+Amounts are integer **minor units** (e.g. `500` = 5.00 USDC) to avoid floating-point drift.
 
 ## Auth & rate limits
 
