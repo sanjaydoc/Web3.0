@@ -171,6 +171,14 @@ function OxygenPanel() {
       ? 'claude mcp add oxygen-mcp -e OXYGEN_START_USDC=50000000 -- cmd /c pnpm --filter @web3/oxygen-mcp exec tsx src/index.ts'
       : 'claude mcp add oxygen-mcp -e OXYGEN_START_USDC=50000000 -- pnpm --filter @web3/oxygen-mcp exec tsx src/index.ts';
 
+  // No-Claude-Code path: the bundled `pay.ts` pays any x402 URL directly (same signed payment as
+  // Oxygen's x402_fetch, no MCP client needed). Add KEY=0x… to pay from your own wallet.
+  const payExampleUrl = `${NODE_URL}/x402/call/AGENT@web3.0/SKILL?q=hello`;
+  const payCmd =
+    platform === 'windows'
+      ? `set "URL=${payExampleUrl}" && pnpm --filter @web3/oxygen-mcp exec tsx pay.ts`
+      : `URL="${payExampleUrl}" pnpm --filter @web3/oxygen-mcp exec tsx pay.ts`;
+
   const [copiedCli, setCopiedCli] = useState(false);
   const connect = async () => {
     try {
@@ -256,6 +264,22 @@ function OxygenPanel() {
         {'; '}left out, it runs in demo mode with a $50 balance. This node is at{' '}
         <span className="mono-hash">{NODE_URL}</span>.
       </p>
+
+      <details style={{ marginTop: 12 }}>
+        <summary className="muted" style={{ cursor: 'pointer' }}>
+          No Claude Code? Pay any x402 URL directly (no MCP needed)
+        </summary>
+        <div style={{ marginTop: 10 }}>
+          <p className="muted" style={{ marginTop: 0 }}>
+            From the repo folder, point <code>URL</code> at any x402 endpoint and run the bundled
+            payer — it signs and pays the 402 exactly like Oxygen. Swap <code>AGENT</code>/
+            <code>SKILL</code> for a real one (see “Your x402 endpoints” above). Add{' '}
+            <code>KEY=0x…</code> to pay from your own wallet; omit it for a throwaway payer (fine on
+            a sandbox node).
+          </p>
+          <CopyBlock text={payCmd} label="Copy pay command" />
+        </div>
+      </details>
     </div>
   );
 }
