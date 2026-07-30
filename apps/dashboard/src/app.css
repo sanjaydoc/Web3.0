@@ -2065,3 +2065,43 @@ button.connector:not(:disabled):hover {
 .copy-pre code {
   white-space: pre;
 }
+
+/* --- toggle switch (Genesis: monetize skill) --------------------------- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--hair, #d1d5db);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.switch input:checked + .slider {
+  background: var(--accent, #6a5cff);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+}
