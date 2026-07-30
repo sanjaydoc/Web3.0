@@ -643,7 +643,7 @@ export function App() {
         {view === 'developers' && <Developers />}
         {view === 'account' && <Account />}
         {view === 'nodeweb4' && <Web4 scope="node" />}
-        {view === 'agentweb4' && <Web4 scope="agent" me={account?.address ?? null} />}
+        {view === 'agentweb4' && <Web4 scope="agent" isAdmin={isAdmin} />}
         {view === 'download' && (
           <Download onGetStarted={adminOnly ? undefined : () => setForceOnboard(true)} />
         )}

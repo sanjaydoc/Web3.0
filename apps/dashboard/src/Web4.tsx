@@ -185,9 +185,18 @@ function OxygenPanel() {
  * `scope="agent"` renders the agent-owner view (your agents' earnings + trust, bind a wallet);
  * `scope="node"` renders the node-operator view (facilitator receipts + the ERC-8004 registry).
  */
-export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | null }) {
+export function Web4({
+  scope,
+  isAdmin,
+}: {
+  scope: 'agent' | 'node';
+  isAdmin?: boolean;
+}) {
   const [root, setRoot] = useState<Erc8004Root | null>(null);
   const [rows, setRows] = useState<AgentRep[]>([]);
+  // The signed-in agent-owner's OWN agents (server-scoped to createdBy via /hosted) — used to narrow
+  // the agent view to their agents only. Empty for the node scope / admin (who sees everything).
+  const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [supported, setSupported] = useState<X402Supported | null>(null);
   const [receipts, setReceipts] = useState<X402Receipt[]>([]);
   const [services, setServices] = useState<X402Service[]>([]);
@@ -200,7 +209,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
     setLoading(true);
     setError(null);
     try {
-      const [rootRes, agentsRes, supp, rcpts, dir, settle, info] = await Promise.all([
+      const [rootRes, agentsRes, supp, rcpts, dir, settle, info, hostedRes] = await Promise.all([
         api.erc8004Root().catch(() => null),
         api
           .erc8004Agents()
@@ -210,6 +219,11 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
         api.x402Directory().catch(() => ({ services: [] as X402Service[] })),
         api.settlement().catch(() => null),
         api.x402Info().catch(() => null),
+        // The agent-owner's own agents (server-scoped to createdBy). Skipped for admin / node scope,
+        // who see the whole registry.
+        scope === 'agent' && !isAdmin
+          ? api.hosted().catch(() => ({ agents: [] as { web3Id: string }[] }))
+          : Promise.resolve({ agents: [] as { web3Id: string }[] }),
       ]);
       setRoot(rootRes);
       setSupported(supp);
@@ -217,6 +231,7 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
       setServices(dir.services);
       setSettlement(settle);
       setX402info(info);
+      setOwnedIds(new Set(hostedRes.agents.map((a) => a.web3Id)));
       // Fetch reputation for each identity (bounded — one node's agents).
       const reps = await Promise.all(
         agentsRes.agents.map(async (agent) => ({
@@ -230,21 +245,21 @@ export function Web4({ scope, me }: { scope: 'agent' | 'node'; me?: string | nul
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope, isAdmin]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // For the agent-owner view, narrow to the signed-in owner's agents when we can match them.
+  // Agent-owner view: show ONLY the signed-in owner's agents (their /hosted set, scoped to createdBy).
+  // No fallback to the whole registry — a leak that showed every other owner's agents. Admin (and the
+  // node scope) still see everything.
   const mine = useMemo(() => {
-    if (scope !== 'agent') return rows;
-    if (!me) return rows;
-    const owned = rows.filter((r) => r.agent.web3Id === me || r.agent.agentDomain === me);
-    return owned.length ? owned : rows;
-  }, [rows, scope, me]);
+    if (scope !== 'agent' || isAdmin) return rows;
+    return rows.filter((r) => r.agent.web3Id !== undefined && ownedIds.has(r.agent.web3Id));
+  }, [rows, scope, isAdmin, ownedIds]);
 
-  const ownFilterActive = scope === 'agent' && !!me && mine.length < rows.length;
+  const ownFilterActive = scope === 'agent' && !isAdmin;
 
   return (
     <div>
