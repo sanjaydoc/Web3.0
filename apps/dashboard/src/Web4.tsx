@@ -12,6 +12,78 @@ import {
   api,
 } from './api.js';
 
+// Line icons for the section headers / status pill — monochrome, currentColor, matching the
+// dashboard's other inline marks (viewBox 24, ~1.6 stroke). Replaces the emoji.
+const svgBase = {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  'aria-hidden': true,
+} as const;
+
+/** Banknote — the x402 "money" section. */
+function MoneyMark() {
+  return (
+    <svg {...svgBase}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6 9.5v5M18 9.5v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Erlenmeyer flask — the sandbox (testnet) settlement mode. */
+function FlaskMark({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...svgBase} width={size} height={size}>
+      <path
+        d="M9.5 3h5M10.5 3v5.5L5.8 16.5A1.8 1.8 0 0 0 7.4 19.2h9.2a1.8 1.8 0 0 0 1.6-2.7L13.5 8.5V3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M8.3 14h7.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Shield with a check — the ERC-8004 identity & reputation (verified trust) section. */
+function IdMark() {
+  return (
+    <svg {...svgBase}>
+      <path
+        d="M12 3 5 5.8v5.2c0 4.3 3 7.5 7 8.9 4-1.4 7-4.6 7-8.9V5.8L12 3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 11.8l2.2 2.2L15 10"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Lightning bolt — the Oxygen "Connect" action. */
+function BoltMark() {
+  return (
+    <svg {...svgBase} width={14} height={14}>
+      <path
+        d="M13 2 4.5 13.5H10l-1 8.5L19.5 10H13l0-8Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Format atomic USDC (6dp) as `$x.xx`. */
 function usdc(atomic: string | number): string {
   let v: bigint;
@@ -130,8 +202,19 @@ function OxygenPanel() {
           marginBottom: 6,
         }}
       >
-        <button type="button" className="btn" onClick={connect}>
-          {copiedCli ? 'Command copied ✓ — paste in your terminal' : '⚡ Connect to Claude Code'}
+        <button
+          type="button"
+          className="btn"
+          onClick={connect}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          {copiedCli ? (
+            'Command copied ✓ — paste in your terminal'
+          ) : (
+            <>
+              <BoltMark /> Connect to Claude Code
+            </>
+          )}
         </button>
         {/* biome-ignore lint/a11y/useSemanticElements: styled div toggle, not a form fieldset */}
         <div className="role-toggle" role="group" aria-label="Platform">
@@ -287,7 +370,7 @@ export function Web4({
       {/* ── Section 1 — x402 · money ─────────────────────────────────────────────────────────── */}
       <div className="card" style={{ marginBottom: 22 }}>
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>💸</span> x402 — money
+          <MoneyMark /> x402 — money
         </div>
         {x402info && (
           <div
@@ -304,12 +387,28 @@ export function Web4({
             <span
               className="pill"
               style={{
-                padding: '2px 8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '2px 9px',
                 borderRadius: 999,
                 border: '1px solid var(--hair)',
               }}
             >
-              {x402info.live ? '🟢 Live settlement' : '🧪 Sandbox (ledger)'} · {x402info.network}
+              {x402info.live ? (
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    background: 'var(--ok, #12a150)',
+                    display: 'inline-block',
+                  }}
+                />
+              ) : (
+                <FlaskMark />
+              )}
+              {x402info.live ? 'Live settlement' : 'Sandbox (ledger)'} · {x402info.network}
             </span>
             {x402info.faucetUrl && (
               <>
@@ -342,7 +441,7 @@ export function Web4({
       {/* ── Section 2 — ERC-8004 · identity & reputation ─────────────────────────────────────── */}
       <div className="card">
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>🪪</span> ERC-8004 — identity &amp; reputation
+          <IdMark /> ERC-8004 — identity &amp; reputation
         </div>
         {scope === 'node' ? (
           <NodeErc8004 root={root} rows={rows} loading={loading} />
@@ -607,25 +706,33 @@ function AgentX402({
         Point one of your agents at the USDC address it gets paid to. Payments to that address then
         count toward its ERC-8004 economic reputation.
       </p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select
-          value={agentId}
-          onChange={(e) => setAgentId(e.target.value ? Number(e.target.value) : '')}
-        >
-          <option value="">Select agent…</option>
-          {rows.map((r) => (
-            <option key={r.agent.agentId} value={r.agent.agentId}>
-              {r.agent.agentDomain} (#{r.agent.agentId})
-            </option>
-          ))}
-        </select>
-        <input
-          placeholder="0x… receiving address"
-          value={addr}
-          onChange={(e) => setAddr(e.target.value)}
-          style={{ minWidth: 320, fontFamily: 'monospace' }}
-        />
-        <button type="button" className="btn" onClick={bind} disabled={busy}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div className="field" style={{ minWidth: 200 }}>
+          <label htmlFor="bind-agent">Agent</label>
+          <select
+            id="bind-agent"
+            value={agentId}
+            onChange={(e) => setAgentId(e.target.value ? Number(e.target.value) : '')}
+          >
+            <option value="">Select agent…</option>
+            {rows.map((r) => (
+              <option key={r.agent.agentId} value={r.agent.agentId}>
+                {r.agent.agentDomain} (#{r.agent.agentId})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ flex: 1, minWidth: 300 }}>
+          <label htmlFor="bind-addr">Receiving address</label>
+          <input
+            id="bind-addr"
+            placeholder="0x… USDC address you control"
+            value={addr}
+            onChange={(e) => setAddr(e.target.value)}
+            style={{ fontFamily: 'var(--mono, ui-monospace, monospace)' }}
+          />
+        </div>
+        <button type="button" className="btn act" onClick={bind} disabled={busy}>
           {busy ? 'Binding…' : 'Bind wallet'}
         </button>
       </div>
