@@ -5,6 +5,7 @@ import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
 import { HostedDapps } from './HostedDapps.js';
+import { Hosting } from './Hosting.js';
 import { InstallBanner } from './InstallBanner.js';
 import { InstallButton } from './InstallButton.js';
 import { Landing } from './Landing.js';
@@ -50,6 +51,7 @@ type View =
   | 'marketplace'
   | 'agentweb4'
   | 'nodeweb4'
+  | 'hosting'
   | 'download';
 
 type Role = 'operator' | 'admin';
@@ -74,6 +76,7 @@ const NAV: {
   { id: 'nodeweb4', label: 'x402 · ERC-8004', operator: true },
   { id: 'agentweb4', label: 'x402 · ERC-8004', operator: true },
   { id: 'llmtunnel', label: 'Host LLM tunnel', operator: true },
+  { id: 'hosting', label: 'Hosting · sell your RAM', operator: true },
   { id: 'network', label: 'Network' },
   { id: 'connectors', label: 'Connectors' },
   { id: 'skills', label: 'Skills' },
@@ -113,6 +116,7 @@ const OPERATOR_NAV = new Set<View>([
   'download',
   'mynode',
   'llmtunnel',
+  'hosting',
   'nodeweb4',
   'ledger',
 ]);
@@ -174,7 +178,7 @@ const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
       'hosteddapps',
     ],
   },
-  { title: 'Node', items: ['mynode', 'download', 'llmtunnel', 'nodeweb4'] },
+  { title: 'Node', items: ['mynode', 'download', 'llmtunnel', 'hosting', 'nodeweb4'] },
   { title: 'Network', items: ['network', 'traffic', 'guardrails'] },
 ];
 
@@ -653,6 +657,7 @@ export function App() {
         )}
         {view === 'mynode' && <Operator />}
         {view === 'llmtunnel' && <LlmTunnel />}
+        {view === 'hosting' && <Hosting />}
         {view === 'agents' && (
           <Agents
             agents={agentsForView}
@@ -888,6 +893,7 @@ function Agents({
                 <tr>
                   <th>Web3.0 ID</th>
                   <th>Control</th>
+                  <th>Runs on</th>
                   <th>Kind</th>
                   <th>Skills</th>
                   <th>Wallet</th>
@@ -938,6 +944,27 @@ function Agents({
                           </div>
                         ) : (
                           <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {/* RAM economy: where this agent's body actually runs. */}
+                        {!h?.placement || h.placement === 'local' ? (
+                          <span className="muted">this node</span>
+                        ) : h.placement === 'pending' ? (
+                          <span
+                            className="pill"
+                            title="No operator has free capacity yet — the network keeps retrying"
+                          >
+                            pending · waiting for a host
+                          </span>
+                        ) : (
+                          <span
+                            className="pill ok"
+                            title={`Body placed on operator ${h.placement}`}
+                          >
+                            operator{' '}
+                            {h.placement.length > 12 ? `${h.placement.slice(0, 8)}…` : h.placement}
+                          </span>
                         )}
                       </td>
                       <td>

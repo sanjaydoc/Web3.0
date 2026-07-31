@@ -92,6 +92,21 @@ export interface HostedAgent {
   webhookUrl?: string;
   did: string;
   walletBalance: number;
+  /** RAM economy: where the body runs — 'local', 'pending' (waiting for a host), or an operator node
+   *  key (placed remotely). */
+  placement?: string;
+  /** RAM economy (operator view): the remote owner this body is hosted FOR (undefined for own agents). */
+  hostedForOwner?: string;
+}
+
+/** RAM economy — the operator's "Hosting · sell your RAM" summary. */
+export interface HostingSummary {
+  nodeKey: string;
+  serveId: string;
+  /** Hosting capacity: total slots (from contributed RAM), used, and free (null = uncapped). */
+  capacity: { cap: number; used: number; free: number | null };
+  /** Agent bodies this node is hosting for other owners (the RAM it's selling). */
+  hosted: HostedAgent[];
 }
 
 export interface HostedLaunchConfig {
@@ -638,6 +653,8 @@ export const api = {
   telegramStop: (adminToken?: string) => post<TelegramStatus>('/telegram/stop', {}, adminToken),
   hosted: () =>
     get<{ agents: HostedAgent[]; adminRequired: boolean; scopedTo: string | null }>('/hosted'),
+  /** RAM economy: the operator's hosting capacity + the bodies it hosts for others. */
+  hostingSummary: () => get<HostingSummary>('/hosted/hosting'),
   hostedLaunch: (config: HostedLaunchConfig, adminToken?: string) =>
     post<HostedAgent>('/hosted/launch', config, adminToken),
   hostedStop: (handle: string, adminToken?: string) =>
