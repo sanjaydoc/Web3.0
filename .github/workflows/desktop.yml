@@ -17,7 +17,7 @@ on:
     inputs:
       source_ref:
         description: 'web3-core branch or tag to build'
-        default: 'claude/web3-project-planning-ece7tu'
+        default: 'main'
       all_platforms:
         description: 'Also build macOS + Linux (Windows always builds)'
         type: boolean
