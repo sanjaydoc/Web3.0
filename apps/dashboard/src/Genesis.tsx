@@ -41,6 +41,7 @@ export function Genesis() {
   const [price, setPrice] = useState('3.00');
   const [priced, setPriced] = useState(true);
   const [createdBy, setCreatedBy] = useState('');
+  const [copiedId, setCopiedId] = useState(''); // web3Id whose endpoint was just copied (button feedback)
   const [provider, setProvider] = useState('local');
   const [model, setModel] = useState('qwen2.5:7b');
   const [system, setSystem] = useState(
@@ -631,6 +632,32 @@ while True:
                   )}
                 </span>
                 <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  {/* Copy the agent's callable endpoint so it drops straight into an app/workflow.
+                      Priced agents → their x402 (pay-per-call) URL; free agents → the public /ask URL. */}
+                  <button
+                    type="button"
+                    className="btn ghost btn-sm"
+                    title={
+                      h.price > 0
+                        ? "Copy this agent's paid (x402) endpoint"
+                        : "Copy this agent's public endpoint — POST a question, get an answer"
+                    }
+                    onClick={() => {
+                      const url =
+                        h.price > 0
+                          ? `${NODE_URL}/x402/call/${h.web3Id}/${h.skill}`
+                          : `${NODE_URL}/agents/${h.web3Id}/ask`;
+                      navigator.clipboard?.writeText(url);
+                      setCopiedId(h.web3Id);
+                      setTimeout(() => setCopiedId(''), 1500);
+                    }}
+                  >
+                    {copiedId === h.web3Id
+                      ? 'Copied ✓'
+                      : h.price > 0
+                        ? 'Copy paid endpoint'
+                        : 'Copy endpoint'}
+                  </button>
                   {h.running && (
                     <button
                       type="button"
