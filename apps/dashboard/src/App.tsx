@@ -846,6 +846,7 @@ function Agents({
   // own hosted agents to a non-admin, so the controls appear only on rows the operator owns.
   const [busy, setBusy] = useState<string | null>(null);
   const [chatWith, setChatWith] = useState<HostedAgent | null>(null);
+  const [copiedId, setCopiedId] = useState(''); // web3Id whose endpoint was just copied (button feedback)
   const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
   // An agent owner sees only THEIR OWN agents here (the ones this node reports as hosted-by-them);
   // admins see the whole registry. Stops other owners' agents leaking into a personal Agents view.
@@ -952,42 +953,77 @@ function Agents({
                         <strong>{a.web3Id}</strong>
                       </td>
                       <td>
-                        {h ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <button
-                              type="button"
-                              className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
-                              disabled={busy === a.web3Id}
-                              onClick={() => toggle(h)}
-                            >
-                              {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
-                            </button>
-                            {h.running && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 6,
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          {/* Copy the agent's callable endpoint — drops straight into an app/workflow.
+                              Priced agents → their x402 (pay-per-call) URL; free → the public /ask URL. */}
+                          <button
+                            type="button"
+                            className="btn ghost btn-sm"
+                            title={
+                              (a.pricing?.perTask ?? 0) > 0
+                                ? "Copy this agent's paid (x402) endpoint"
+                                : "Copy this agent's public endpoint — POST a question, get an answer"
+                            }
+                            onClick={() => {
+                              const perTask = a.pricing?.perTask ?? 0;
+                              const skillId = a.skills[0]?.id ?? 'ask';
+                              const url =
+                                perTask > 0
+                                  ? `${NODE_URL}/x402/call/${a.web3Id}/${skillId}`
+                                  : `${NODE_URL}/agents/${a.web3Id}/ask`;
+                              navigator.clipboard?.writeText(url);
+                              setCopiedId(a.web3Id);
+                              setTimeout(() => setCopiedId(''), 1500);
+                            }}
+                          >
+                            {copiedId === a.web3Id
+                              ? 'Copied ✓'
+                              : (a.pricing?.perTask ?? 0) > 0
+                                ? 'Copy paid endpoint'
+                                : 'Copy endpoint'}
+                          </button>
+                          {h && (
+                            <>
                               <button
                                 type="button"
-                                className="btn act"
-                                style={{ padding: '4px 10px' }}
-                                onClick={() => setChatWith(h)}
-                                title="Chat with this agent to test it"
+                                className={`btn-run ${h.running ? 'btn-stop' : 'btn-start'}`}
+                                disabled={busy === a.web3Id}
+                                onClick={() => toggle(h)}
                               >
-                                Test
+                                {busy === a.web3Id ? '…' : h.running ? 'Stop' : 'Start'}
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              className="btn ghost btn-trash"
-                              style={{ padding: '4px 8px' }}
-                              disabled={busy === a.web3Id}
-                              onClick={() => remove(h)}
-                              title="Delete this agent"
-                              aria-label={`Delete ${h.handle}`}
-                            >
-                              🗑
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
+                              {h.running && (
+                                <button
+                                  type="button"
+                                  className="btn act"
+                                  style={{ padding: '4px 10px' }}
+                                  onClick={() => setChatWith(h)}
+                                  title="Chat with this agent to test it"
+                                >
+                                  Test
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn ghost btn-trash"
+                                style={{ padding: '4px 8px' }}
+                                disabled={busy === a.web3Id}
+                                onClick={() => remove(h)}
+                                title="Delete this agent"
+                                aria-label={`Delete ${h.handle}`}
+                              >
+                                🗑
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                       <td>
                         {/* RAM economy: where this agent's body actually runs. */}
