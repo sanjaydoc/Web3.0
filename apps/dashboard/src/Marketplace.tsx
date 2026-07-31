@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type LlmMarketOffer, type LlmUsageRow, api, formatAmount } from './api.js';
+import { type Lease, type LlmMarketOffer, type LlmUsageRow, api, formatAmount } from './api.js';
 
 /**
  * Marketplace — the agent-owner side of the compute marketplace. Browse the hosted models node
@@ -12,19 +12,26 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
   const [inferenceSpend, setInferenceSpend] = useState(0);
   // Per-agent hosted-brain usage rows (tokens consumed + accrued cost).
   const [usage, setUsage] = useState<LlmUsageRow[]>([]);
+  // Per-agent hosted-RAM rentals: the owner's agent bodies running on operators' RAM + rent paid.
+  const [ramRentals, setRamRentals] = useState<Lease[]>([]);
 
   const load = useCallback(async () => {
     try {
-      const [brains, spend, use] = await Promise.all([
+      const [brains, spend, use, leaseRes, acct] = await Promise.all([
         api.llmMarket(),
         api.llmSpend().catch(() => ({ spend: 0, accrued: 0 })),
         api.llmUsage().catch(() => ({ usage: [] as LlmUsageRow[] })),
+        api.hostingLeases().catch(() => ({ leases: [] as Lease[] })),
+        api.me().catch(() => null),
       ]);
       setModels(brains.offers);
       // Show accrued cost — what usage has cost, whether or not it settled — so the meter isn't
       // stuck at 0 just because free models or empty wallets mean nothing was debited.
       setInferenceSpend(spend.accrued ?? 0);
       setUsage(use.usage);
+      // My hosted-RAM rentals: leases where I'm the OWNER paying a host to run my agent's body
+      // (not ones I host as an operator — those live on the Hosting page).
+      setRamRentals(acct ? leaseRes.leases.filter((l) => l.owner === acct.address) : []);
     } catch {
       /* node offline — keep last */
     }
@@ -180,6 +187,51 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                     <td className="mono-hash">{u.host}</td>
                     <td>{(u.billedTokens + u.unbilledTokens).toLocaleString('en-US')}</td>
                     <td>{u.accruedCost > 0 ? formatAmount(u.accruedCost) : 'free'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <div className="section-title">Your rentals · agents on hosted RAM</div>
+        <p className="muted" style={{ margin: '2px 0 12px' }}>
+          Every agent of yours whose body runs on a node operator's contributed RAM, the host it's
+          placed on, and the per-epoch rent it has accrued — like a usage meter. It fills in each
+          epoch a placed agent runs (0.00 for a free host); a paid host accrues rent every epoch.
+        </p>
+        {ramRentals.length === 0 ? (
+          <div className="empty">
+            No hosted-RAM rentals yet — when one of your agents is placed on an operator's node it
+            appears here with its rent. (No node of your own? The network auto-places your agents
+            onto an operator with free capacity.)
+          </div>
+        ) : (
+          <div className="hscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Host</th>
+                  <th>Rent / epoch</th>
+                  <th>Epochs</th>
+                  <th>Total rent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ramRentals.map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      <strong>{l.agentId}</strong>
+                    </td>
+                    <td className="mono-hash">{l.host}</td>
+                    <td>
+                      {l.pricePerEpoch > 0 ? `${formatAmount(l.pricePerEpoch)} / epoch` : 'free'}
+                    </td>
+                    <td>{l.epochsBilled.toLocaleString('en-US')}</td>
+                    <td>{l.paidTotal > 0 ? formatAmount(l.paidTotal) : 'free'}</td>
                   </tr>
                 ))}
               </tbody>

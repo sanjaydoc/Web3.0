@@ -637,14 +637,17 @@ export function App() {
         {view === 'overview' && (
           <Overview
             snap={snap}
-            // An agent-owner's Overview is scoped to THEIR agents + THEIR ledger, never the
-            // network-wide aggregates (those are admin/node data). Numbers come from the same
-            // owner-scoped sources the rest of their console uses: `hosted` (server-scoped to
-            // createdBy), its `.running` flag, and the already-account-scoped ledger entries.
-            // Recent activity is filtered to events that touch the owner's own identity — their
-            // account address or one of their agents — instead of the whole-network feed.
+            // ANY non-admin (node operator OR agent owner) gets an Overview scoped to THEIR OWN
+            // agents + ledger — never the network-wide aggregates (Nodes online, Value in network,
+            // Total agents) or other owners' activity, which are admin/node data. Only the admin
+            // (sanjay@web3.0) sees the network view. Regression: a plain operator was getting
+            // scope=undefined → the full-network Overview leaked to them (29 agents, network value,
+            // other owners' erc8004 registrations). Numbers come from the same owner-scoped sources
+            // the rest of their console uses: `hosted` (server-scoped to createdBy), its `.running`
+            // flag, and the already-account-scoped ledger entries; recent activity is filtered to
+            // events touching the account's own identity — its address or one of its agents.
             scope={
-              isAgentOwner
+              !isAdmin
                 ? {
                     totalAgents: hosted.length,
                     agents: agentsBadgeCount,
