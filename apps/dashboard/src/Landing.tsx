@@ -89,8 +89,8 @@ const ICONS: Record<string, ReactNode> = {
 
 // Desktop installers — the latest release on the public repo. `DL_VER` = the release tag; `DL_FILE`
 // = the installer file version (electron-builder names files from desktop/package.json). Bump both.
-const DL_VER = '0.1.38';
-const DL_FILE = '0.1.38';
+const DL_VER = '0.1.39';
+const DL_FILE = '0.1.39';
 const DL_BASE = `https://github.com/sanjaydoc/Web3.0/releases/download/v${DL_VER}`;
 const RELEASES = 'https://github.com/sanjaydoc/Web3.0/releases/latest';
 
