@@ -55,9 +55,9 @@ One double-click. Bundles a full node **and** this dashboard into a single windo
 
 | Platform | Download |
 |---|---|
-| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.40/Web3.0.Setup.0.1.40.exe) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.40/Web3.0.0.1.40.msi) |
-| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.40/Web3.0-0.1.40-universal.dmg) |
-| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.40/Web3.0-0.1.40.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.40/web3_0.1.40_amd64.deb) |
+| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.41/Web3.0.Setup.0.1.41.exe) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.41/Web3.0.0.1.41.msi) |
+| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.41/Web3.0-0.1.41-universal.dmg) |
+| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.41/Web3.0-0.1.41.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.41/web3_0.1.41_amd64.deb) |
 
 The build is unsigned, so the first launch needs one extra click — **Windows:** *More info → Run
 anyway*; **macOS:** right-click → *Open* (or `xattr -cr /Applications/Web3.0.app`); **Linux:**
