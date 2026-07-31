@@ -231,7 +231,9 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                       {l.pricePerEpoch > 0 ? `${formatAmount(l.pricePerEpoch)} / epoch` : 'free'}
                     </td>
                     <td>{l.epochsBilled.toLocaleString('en-US')}</td>
-                    <td>{l.paidTotal > 0 ? formatAmount(l.paidTotal) : 'free'}</td>
+                    {/* A paid host shows the accruing total (0.00 until the first epoch bills), not
+                        "free" — only a genuinely free host (0/epoch) is free. */}
+                    <td>{l.pricePerEpoch > 0 ? formatAmount(l.paidTotal) : 'free'}</td>
                   </tr>
                 ))}
               </tbody>
