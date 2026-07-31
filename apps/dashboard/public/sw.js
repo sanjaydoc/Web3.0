@@ -1,7 +1,13 @@
 // Web3.0 Console service worker — offline app shell + installability.
 // Strategy: precache the shell, then serve same-origin GETs stale-while-revalidate. API traffic
 // (the node, a different origin) is never intercepted — it must always hit the live node.
-const CACHE = 'web3-console-v1';
+//
+// CACHE embeds a per-BUILD id (stamped into this file at build time — see vite.config's
+// stampServiceWorker plugin). Because the id changes every release, (a) this file's bytes change so the
+// browser detects the SW update and installs it, and (b) `activate` below purges every cache whose name
+// isn't the current one — so a returning visitor never gets stuck on a stale shell that points at
+// deleted asset hashes (which showed as a blank page). In dev the literal placeholder is fine.
+const CACHE = 'web3-console-__BUILD_ID__';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
