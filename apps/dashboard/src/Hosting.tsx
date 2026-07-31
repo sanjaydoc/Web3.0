@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type HostingSummary, NODE_URL, api, formatAmount } from './api.js';
+import { type HostingSummary, NODE_URL, api, formatAmount, ratePerHour } from './api.js';
 
 // Hosting agent bodies runs on the operator's OWN machine (its contributed RAM), so — like the LLM
 // tunnel — this section is only meaningful when the dashboard drives a LOCAL node (desktop/mobile).
@@ -11,6 +11,151 @@ const IS_NATIVE_HOST =
     NODE_URL.includes('localhost'));
 
 const shortKey = (k: string) => (k.length > 14 ? `${k.slice(0, 8)}…${k.slice(-4)}` : k);
+
+const ADMIN_KEY = 'web3.adminToken';
+
+/**
+ * Contribution — how much of THIS machine the operator lends to the network (RAM → hosting slots,
+ * max agents, whether to host others at all). Lives here on the Hosting page (not "My node earnings")
+ * because it's the input side of selling RAM: what you contribute here sets the capacity shown below.
+ */
+function Contribution() {
+  const [contribute, setContribute] = useState(true);
+  const [maxRamGb, setMaxRamGb] = useState('0');
+  const [maxAgents, setMaxAgents] = useState('0');
+  const [admin, setAdmin] = useState(() =>
+    typeof localStorage !== 'undefined' ? (localStorage.getItem(ADMIN_KEY) ?? '') : '',
+  );
+  const [adminReq, setAdminReq] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [touched, setTouched] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const n = await api.node();
+      if (!touched) {
+        setContribute(n.limits.contribute);
+        setMaxRamGb((n.limits.maxRamMb / 1024).toFixed(1).replace(/\.0$/, ''));
+        setMaxAgents(String(n.limits.maxAgents));
+      }
+    } catch {
+      /* offline — keep last */
+    }
+    api
+      .telegram()
+      .then((t) => setAdminReq(t.adminRequired))
+      .catch(() => undefined);
+  }, [touched]);
+
+  useEffect(() => {
+    if (!IS_NATIVE_HOST) return;
+    refresh();
+    const t = setInterval(refresh, 4000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  const rememberAdmin = (v: string) => {
+    setAdmin(v);
+    if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_KEY, v);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.nodeLimits(
+        {
+          contribute,
+          maxRamMb: Math.round(Number.parseFloat(maxRamGb || '0') * 1024),
+          maxAgents: Math.max(0, Math.round(Number.parseFloat(maxAgents || '0'))),
+        },
+        admin,
+      );
+      setMsg({ kind: 'ok', text: 'Contribution saved.' });
+      setTouched(false);
+      refresh();
+      // Changing contributed RAM may unlock a new local-model tier — kick a background re-pull.
+      (window as unknown as { web3desktop?: { ensureModel?: () => Promise<unknown> } }).web3desktop
+        ?.ensureModel?.()
+        .catch(() => undefined);
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">Contribution</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        Choose how much of this machine you lend to the network. Limits are enforced — the node
+        won't host past your caps.
+      </p>
+      {adminReq && (
+        <div className="field wide">
+          <label htmlFor="h-admin">Admin token</label>
+          <input
+            id="h-admin"
+            type="password"
+            value={admin}
+            onChange={(ev) => rememberAdmin(ev.target.value)}
+            placeholder="required to change limits"
+          />
+        </div>
+      )}
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="h-ram">Max RAM to contribute (GB)</label>
+          <input
+            id="h-ram"
+            value={maxRamGb}
+            onChange={(ev) => {
+              setMaxRamGb(ev.target.value);
+              setTouched(true);
+            }}
+          />
+          <span className="hint">0 = no cap</span>
+        </div>
+        <div className="field">
+          <label htmlFor="h-agents">Max agents to host</label>
+          <input
+            id="h-agents"
+            value={maxAgents}
+            onChange={(ev) => {
+              setMaxAgents(ev.target.value);
+              setTouched(true);
+            }}
+          />
+          <span className="hint">0 = no cap</span>
+        </div>
+        <div className="field">
+          <label htmlFor="h-contrib">Offer spare compute</label>
+          <select
+            id="h-contrib"
+            value={contribute ? 'yes' : 'no'}
+            onChange={(ev) => {
+              setContribute(ev.target.value === 'yes');
+              setTouched(true);
+            }}
+          >
+            <option value="yes">Yes — host others' agents</option>
+            <option value="no">No — my agents only</option>
+          </select>
+        </div>
+      </div>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy} onClick={save}>
+          {busy ? 'Saving…' : 'Save contribution'}
+        </button>
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Hosting · sell your RAM — the node operator's section for the RAM economy (the body counterpart to
@@ -28,6 +173,8 @@ export function Hosting() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const [net, setNet] = useState<{ operators: number; freeSlots: number } | null>(null);
+  // Epoch duration (ms) so rent shows as a human /hour rate (billing stays per-epoch under the hood).
+  const [epochMs, setEpochMs] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -40,7 +187,10 @@ export function Hosting() {
       setSummary(s);
       if (rev) setRevenue(rev.revenue);
       if (offer) setPrice(offer.pricePerEpoch);
-      if (network) setNet(network.totals);
+      if (network) {
+        setNet(network.totals);
+        setEpochMs(network.epochMs || 0);
+      }
     } catch {
       /* offline / not signed in — keep last */
     }
@@ -121,6 +271,8 @@ export function Hosting() {
         }
         aria-disabled={!IS_NATIVE_HOST}
       >
+        <Contribution />
+
         <div className="card" style={{ marginBottom: 18 }}>
           <div className="section-title">Your hosting capacity</div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -137,7 +289,7 @@ export function Hosting() {
             <dt>Hosting for others</dt>
             <dd>{hosted.length}</dd>
             <dt>Rent price</dt>
-            <dd>{price === null ? '—' : price > 0 ? `${formatAmount(price)} / epoch` : 'free'}</dd>
+            <dd>{price === null ? '—' : price > 0 ? ratePerHour(price, epochMs) : 'free'}</dd>
             <dt>Rent earned</dt>
             <dd>{formatAmount(revenue)}</dd>
             <dt>Network capacity</dt>
@@ -171,7 +323,11 @@ export function Hosting() {
               {saving ? 'Saving…' : 'Set rent price'}
             </button>
             <span className="muted" style={{ fontSize: 12 }}>
-              per agent, per epoch · 100 minor = 1.00 USDC · you keep the operator share, the
+              per agent · 100 minor = 1.00 USDC/epoch
+              {price !== null && price > 0 && epochMs > 0
+                ? ` (renters see ≈ ${ratePerHour(price, epochMs)})`
+                : ''}{' '}
+              · billed each epoch, shown to renters per hour · you keep the operator share, the
               platform takes its commission
             </span>
           </div>
@@ -220,7 +376,7 @@ export function Hosting() {
                       </td>
                       <td>
                         {price && price > 0 ? (
-                          `${formatAmount(price)} / epoch`
+                          ratePerHour(price, epochMs)
                         ) : (
                           <span className="muted">free</span>
                         )}

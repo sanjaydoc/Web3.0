@@ -674,7 +674,7 @@ export const api = {
     post<{ host: string; pricePerEpoch: number }>('/hosting/offer', { pricePerEpoch }),
   rentHost: (agentId: string, mandate?: unknown) =>
     post<Lease>('/hosting/rent', { agentId, mandate }),
-  hostingLeases: () => get<{ leases: Lease[] }>('/hosting/leases'),
+  hostingLeases: () => get<{ leases: Lease[]; epochMs: number }>('/hosting/leases'),
   hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
   /** Attach an owner-signed lease mandate authorizing recurring hosting rent for a placed agent. */
   hostingMandate: (agentId: string, mandate: unknown) =>
@@ -689,6 +689,7 @@ export const api = {
         pricePerEpoch: number;
       }[];
       totals: { operators: number; freeSlots: number };
+      epochMs: number;
     }>('/hosting/network'),
   endLease: (id: string) =>
     post<{ ended: boolean }>(`/hosting/lease/${encodeURIComponent(id)}/end`, {}),
@@ -763,4 +764,20 @@ export const api = {
 
 export function formatAmount(minor: number, currency = 'USDC'): string {
   return `${(minor / 100).toFixed(2)} ${currency}`;
+}
+
+/** Epochs per hour for a given epoch duration (ms). Falls back to 1 so callers never divide by 0. */
+export function epochsPerHour(epochMs: number): number {
+  return epochMs && epochMs > 0 ? 3_600_000 / epochMs : 1;
+}
+
+/**
+ * Render a per-epoch minor-unit rent as a human /hour rate, e.g. "6.00 USDC / hour". Billing stays
+ * per-epoch on-chain; this is purely the human-facing display (the epoch is the unit money moves).
+ */
+export function ratePerHour(pricePerEpoch: number, epochMs: number, currency = 'USDC'): string {
+  // Until the node reports epoch duration (older backend), don't mislabel a per-epoch figure as
+  // /hour — fall back to the honest /epoch label.
+  if (!epochMs || epochMs <= 0) return `${formatAmount(pricePerEpoch, currency)} / epoch`;
+  return `${formatAmount(pricePerEpoch * epochsPerHour(epochMs), currency)} / hour`;
 }

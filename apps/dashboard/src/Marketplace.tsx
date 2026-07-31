@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type Lease, type LlmMarketOffer, type LlmUsageRow, api, formatAmount } from './api.js';
+import {
+  type Lease,
+  type LlmMarketOffer,
+  type LlmUsageRow,
+  api,
+  formatAmount,
+  ratePerHour,
+} from './api.js';
 
 /**
  * Marketplace — the agent-owner side of the compute marketplace. Browse the hosted models node
@@ -14,6 +21,8 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
   const [usage, setUsage] = useState<LlmUsageRow[]>([]);
   // Per-agent hosted-RAM rentals: the owner's agent bodies running on operators' RAM + rent paid.
   const [ramRentals, setRamRentals] = useState<Lease[]>([]);
+  // Epoch duration (ms) from the node, so rent renders as a human /hour rate.
+  const [ramEpochMs, setRamEpochMs] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -21,7 +30,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
         api.llmMarket(),
         api.llmSpend().catch(() => ({ spend: 0, accrued: 0 })),
         api.llmUsage().catch(() => ({ usage: [] as LlmUsageRow[] })),
-        api.hostingLeases().catch(() => ({ leases: [] as Lease[] })),
+        api.hostingLeases().catch(() => ({ leases: [] as Lease[], epochMs: 0 })),
         api.me().catch(() => null),
       ]);
       setModels(brains.offers);
@@ -32,6 +41,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
       // My hosted-RAM rentals: leases where I'm the OWNER paying a host to run my agent's body
       // (not ones I host as an operator — those live on the Hosting page).
       setRamRentals(acct ? leaseRes.leases.filter((l) => l.owner === acct.address) : []);
+      setRamEpochMs(leaseRes.epochMs || 0);
     } catch {
       /* node offline — keep last */
     }
@@ -215,7 +225,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                 <tr>
                   <th>Agent</th>
                   <th>Host</th>
-                  <th>Rent / epoch</th>
+                  <th>Rent / hour</th>
                   <th>Epochs</th>
                   <th>Total rent</th>
                 </tr>
@@ -228,7 +238,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                     </td>
                     <td className="mono-hash">{l.host}</td>
                     <td>
-                      {l.pricePerEpoch > 0 ? `${formatAmount(l.pricePerEpoch)} / epoch` : 'free'}
+                      {l.pricePerEpoch > 0 ? ratePerHour(l.pricePerEpoch, ramEpochMs) : 'free'}
                     </td>
                     <td>{l.epochsBilled.toLocaleString('en-US')}</td>
                     {/* A paid host shows the accruing total (0.00 until the first epoch bills), not
