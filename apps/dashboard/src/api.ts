@@ -676,6 +676,13 @@ export const api = {
     post<Lease>('/hosting/rent', { agentId, mandate }),
   hostingLeases: () => get<{ leases: Lease[]; epochMs: number }>('/hosting/leases'),
   hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
+  // Ledger-derived hosting income + hosted agents (correct on any node, unlike /revenue).
+  hostingEarned: () =>
+    get<{
+      host: string;
+      total: number;
+      agents: { agentId: string; owner: string; total: number; payments: number }[];
+    }>('/hosting/earned'),
   /** Attach an owner-signed lease mandate authorizing recurring hosting rent for a placed agent. */
   hostingMandate: (agentId: string, mandate: unknown) =>
     post<{ ok: boolean }>('/hosting/mandate', { agentId, mandate }),

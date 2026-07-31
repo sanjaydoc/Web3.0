@@ -175,17 +175,25 @@ export function Hosting() {
   const [net, setNet] = useState<{ operators: number; freeSlots: number } | null>(null);
   // Epoch duration (ms) so rent shows as a human /hour rate (billing stays per-epoch under the hood).
   const [epochMs, setEpochMs] = useState(0);
+  // Ledger-derived hosting income + hosted agents — correct on ANY node the dashboard connects to
+  // (the lease list lives only on the owner's node; the ledger is replicated everywhere).
+  const [earned, setEarned] = useState<{
+    total: number;
+    agents: { agentId: string; owner: string; total: number; payments: number }[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [s, rev, offer, network] = await Promise.all([
+      const [s, rev, offer, network, earn] = await Promise.all([
         api.hostingSummary(),
         api.hostingRevenue().catch(() => null),
         api.hostingOffer().catch(() => null),
         api.hostingNetwork().catch(() => null),
+        api.hostingEarned().catch(() => null),
       ]);
       setSummary(s);
       if (rev) setRevenue(rev.revenue);
+      setEarned(earn);
       if (offer) setPrice(offer.pricePerEpoch);
       if (network) {
         setNet(network.totals);
@@ -233,6 +241,22 @@ export function Hosting() {
         : 'not contributing RAM yet';
   const freeLabel = cap == null ? '—' : cap.free === null ? 'unlimited' : `${cap.free} slots free`;
   const hosted = summary?.hosted ?? [];
+  // The authoritative "who am I hosting + earning" comes from the ledger (earned.agents). Merge the
+  // local body (model/status) when the dashboard IS connected to the physical hosting node.
+  const earnedTotal = earned?.total ?? revenue;
+  const hostRows = (earned?.agents ?? []).map((e) => {
+    const local = hosted.find((h) => h.web3Id === e.agentId);
+    return {
+      agentId: e.agentId,
+      name: local?.name || local?.handle || e.agentId,
+      owner: e.owner,
+      model: local?.model,
+      running: local?.running,
+      hasLocal: Boolean(local),
+      earned: e.total,
+      payments: e.payments,
+    };
+  });
 
   return (
     <>
@@ -287,11 +311,11 @@ export function Hosting() {
             <dt>Free</dt>
             <dd>{freeLabel}</dd>
             <dt>Hosting for others</dt>
-            <dd>{hosted.length}</dd>
+            <dd>{Math.max(hostRows.length, hosted.length)}</dd>
             <dt>Rent price</dt>
             <dd>{price === null ? '—' : price > 0 ? ratePerHour(price, epochMs) : 'free'}</dd>
             <dt>Rent earned</dt>
-            <dd>{formatAmount(revenue)}</dd>
+            <dd>{formatAmount(earnedTotal)}</dd>
             <dt>Network capacity</dt>
             <dd>
               {net
@@ -340,7 +364,7 @@ export function Hosting() {
 
         <div className="card">
           <div className="section-title">Agents you're hosting</div>
-          {hosted.length === 0 ? (
+          {hostRows.length === 0 ? (
             <div className="empty">
               You're not hosting any agents yet. When an owner's agent is placed on your node it
               shows here — make sure you've contributed RAM in <b>Run a node</b> and your node is
@@ -355,32 +379,37 @@ export function Hosting() {
                     <th>Owner</th>
                     <th>Model</th>
                     <th>Status</th>
-                    <th>Rent</th>
+                    <th>Rent earned</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {hosted.map((a) => (
-                    <tr key={a.web3Id}>
+                  {hostRows.map((a) => (
+                    <tr key={a.agentId}>
                       <td>
-                        <strong>{a.name || a.handle}</strong>
+                        <strong>{a.name}</strong>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          {a.web3Id}
+                          {a.agentId}
                         </div>
                       </td>
-                      <td>{a.hostedForOwner ? shortKey(a.hostedForOwner) : '—'}</td>
+                      <td>{shortKey(a.owner)}</td>
                       <td>{a.model || '—'}</td>
                       <td>
-                        <span className={a.running ? 'pill ok' : 'pill'}>
-                          {a.running ? 'running' : 'stopped'}
-                        </span>
-                      </td>
-                      <td>
-                        {price && price > 0 ? (
-                          ratePerHour(price, epochMs)
+                        {a.hasLocal ? (
+                          <span className={a.running ? 'pill ok' : 'pill'}>
+                            {a.running ? 'running' : 'stopped'}
+                          </span>
                         ) : (
-                          <span className="muted">free</span>
+                          // The dashboard is connected to a node OTHER than the physical host (e.g. a
+                          // seed node), so the live body isn't visible here — but the ledger proves it.
+                          <span
+                            className="pill"
+                            title="hosted on your node; connect to it for live status"
+                          >
+                            hosted
+                          </span>
                         )}
                       </td>
+                      <td>{formatAmount(a.earned)}</td>
                     </tr>
                   ))}
                 </tbody>
