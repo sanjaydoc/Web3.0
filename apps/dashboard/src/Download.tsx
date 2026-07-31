@@ -11,8 +11,8 @@ const REPO = 'https://github.com/sanjaydoc/Web3.0';
 // public repo's releases.
 // DESKTOP_VERSION = the release tag (shown to users + the /releases/download/v… path). DESKTOP_FILE =
 // the installer file version (electron-builder names files from desktop/package.json); can differ.
-const DESKTOP_VERSION = '0.1.39';
-const DESKTOP_FILE = '0.1.39';
+const DESKTOP_VERSION = '0.1.40';
+const DESKTOP_FILE = '0.1.40';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_FILE}.exe`;
