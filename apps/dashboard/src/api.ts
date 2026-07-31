@@ -676,6 +676,20 @@ export const api = {
     post<Lease>('/hosting/rent', { agentId, mandate }),
   hostingLeases: () => get<{ leases: Lease[] }>('/hosting/leases'),
   hostingRevenue: () => get<{ host: string; revenue: number }>('/hosting/revenue'),
+  /** Attach an owner-signed lease mandate authorizing recurring hosting rent for a placed agent. */
+  hostingMandate: (agentId: string, mandate: unknown) =>
+    post<{ ok: boolean }>('/hosting/mandate', { agentId, mandate }),
+  /** RAM economy: the live network-wide hosting picture (operators advertising free capacity). */
+  hostingNetwork: () =>
+    get<{
+      operators: {
+        nodeKey: string;
+        freeSlots: number;
+        account: string | null;
+        pricePerEpoch: number;
+      }[];
+      totals: { operators: number; freeSlots: number };
+    }>('/hosting/network'),
   endLease: (id: string) =>
     post<{ ended: boolean }>(`/hosting/lease/${encodeURIComponent(id)}/end`, {}),
   // Host-LLM tunnel — operators host local models and sell inference; owners pick one from the market.

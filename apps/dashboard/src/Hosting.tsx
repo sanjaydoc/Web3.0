@@ -27,16 +27,20 @@ export function Hosting() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
+  const [net, setNet] = useState<{ operators: number; freeSlots: number } | null>(null);
+
   const load = useCallback(async () => {
     try {
-      const [s, rev, offer] = await Promise.all([
+      const [s, rev, offer, network] = await Promise.all([
         api.hostingSummary(),
         api.hostingRevenue().catch(() => null),
         api.hostingOffer().catch(() => null),
+        api.hostingNetwork().catch(() => null),
       ]);
       setSummary(s);
       if (rev) setRevenue(rev.revenue);
       if (offer) setPrice(offer.pricePerEpoch);
+      if (network) setNet(network.totals);
     } catch {
       /* offline / not signed in — keep last */
     }
@@ -136,6 +140,12 @@ export function Hosting() {
             <dd>{price === null ? '—' : price > 0 ? `${formatAmount(price)} / epoch` : 'free'}</dd>
             <dt>Rent earned</dt>
             <dd>{formatAmount(revenue)}</dd>
+            <dt>Network capacity</dt>
+            <dd>
+              {net
+                ? `${net.operators} other operator${net.operators === 1 ? '' : 's'} · ${net.freeSlots} slots free`
+                : '—'}
+            </dd>
           </dl>
 
           {/* Set the per-epoch rent this operator charges to run one agent body. 0 = free hosting. */}

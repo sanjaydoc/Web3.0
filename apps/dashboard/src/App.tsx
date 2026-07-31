@@ -31,6 +31,7 @@ import {
   formatAmount,
   getWeb3Token,
 } from './api.js';
+import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 
 type View =
   | 'overview'
@@ -859,6 +860,45 @@ function Agents({
     }
   };
 
+  // R2 hardening: sign a host-agnostic lease mandate authorizing recurring rent for a placed agent, so
+  // each epoch's debit is individually owner-authorized (ML-DSA), capped at a max the owner picks.
+  const authorizeRent = async (h: HostedAgent) => {
+    const key = loadAccountKey(h.createdBy);
+    if (!key) {
+      window.alert(
+        `Your signing key for ${h.createdBy} isn't on this device — import it in Account.`,
+      );
+      return;
+    }
+    const input = window.prompt(
+      'Max rent to authorize per epoch to keep this agent hosted (USDC minor units · 100 = 1.00 USDC):',
+      '1000',
+    );
+    if (input === null) return;
+    const maxPerEpoch = Math.max(0, Math.round(Number(input)));
+    if (!Number.isFinite(maxPerEpoch) || maxPerEpoch <= 0) {
+      window.alert('Enter a positive number.');
+      return;
+    }
+    try {
+      const mandate = signLeaseMandate(key, {
+        owner: h.createdBy,
+        host: '*', // wildcard — whatever operator the network placed it on
+        agentId: h.web3Id,
+        maxPerEpoch,
+        maxEpochs: 0,
+        expiry: '',
+        nonce: mandateNonce(),
+      });
+      await api.hostingMandate(h.web3Id, mandate);
+      window.alert(
+        `Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`,
+      );
+    } catch (e) {
+      window.alert(`Could not authorize: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   const remove = async (h: HostedAgent) => {
     if (!window.confirm(`Delete agent "${h.handle}"? This can't be undone.`)) return;
     setBusy(h.web3Id);
@@ -958,13 +998,35 @@ function Agents({
                             pending · waiting for a host
                           </span>
                         ) : (
-                          <span
-                            className="pill ok"
-                            title={`Body placed on operator ${h.placement}`}
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: 6,
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                            }}
                           >
-                            operator{' '}
-                            {h.placement.length > 12 ? `${h.placement.slice(0, 8)}…` : h.placement}
-                          </span>
+                            <span
+                              className="pill ok"
+                              title={`Body placed on operator ${h.placement}`}
+                            >
+                              operator{' '}
+                              {h.placement.length > 12
+                                ? `${h.placement.slice(0, 8)}…`
+                                : h.placement}
+                            </span>
+                            {h && (
+                              <button
+                                type="button"
+                                className="btn"
+                                style={{ padding: '3px 8px', fontSize: 12 }}
+                                onClick={() => authorizeRent(h)}
+                                title="Sign a mandate authorizing recurring rent for this agent"
+                              >
+                                Authorize rent
+                              </button>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td>
