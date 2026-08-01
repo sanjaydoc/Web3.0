@@ -63,6 +63,11 @@ function toBrief(a: HostedAgent, full?: HostedFullConfig): GenesisAgentBrief {
   };
 }
 
+// Text-like files we can read client-side and stage into a new agent's RAG (mirrors KnowledgePanel;
+// PDF/Word import is a server-side follow-on).
+const KB_TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
+const KB_ACCEPT = '.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
+
 /** Best-effort human text from a hosted agent's ask output (shape varies by skill). */
 function formatTestOutput(output: Record<string, unknown>): string {
   for (const k of ['answer', 'reply', 'text', 'output', 'result', 'message']) {
@@ -98,6 +103,10 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   const [created, setCreated] = useState<HostedAgent | null>(null);
   const [createdWasEdit, setCreatedWasEdit] = useState(false); // captured at launch (agents refresh after)
   const [copied, setCopied] = useState(false);
+  // Files the owner attaches DURING the interview, before the agent exists. Staged here (read as text
+  // client-side), then flushed into the new agent's RAG knowledge base the moment it's created.
+  const [pendingFiles, setPendingFiles] = useState<{ name: string; text: string }[]>([]);
+  const [kbNote, setKbNote] = useState('');
 
   // The owner's own agents — powers edit/test/FAQ (the brain gets a compact brief of these).
   const [agents, setAgents] = useState<HostedAgent[]>([]);
@@ -223,6 +232,28 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     send(chosen.length ? chosen.map((o) => o.label).join(', ') : 'none');
   }
 
+  // Stage text-like files during the interview; they're indexed into the agent's RAG on create.
+  async function attachFiles(files: FileList) {
+    const accepted: { name: string; text: string }[] = [];
+    const rejected: string[] = [];
+    for (const file of Array.from(files)) {
+      if (!KB_TEXT_EXT.test(file.name)) {
+        rejected.push(file.name);
+        continue;
+      }
+      accepted.push({ name: file.name, text: await file.text() });
+    }
+    if (accepted.length) setPendingFiles((p) => [...p, ...accepted]);
+    setKbNote(
+      rejected.length
+        ? `Attached ${accepted.length} file(s). Skipped ${rejected.join(', ')} — text files only (.txt .md .csv .json …; PDF/Word coming).`
+        : `Attached ${accepted.length} file(s) — I'll add these to the agent's knowledge when you create it.`,
+    );
+  }
+  function removePending(name: string) {
+    setPendingFiles((p) => p.filter((f) => f.name !== name));
+  }
+
   async function launch() {
     setLaunching(true);
     setError('');
@@ -251,6 +282,29 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
       });
       setCreated(agent);
       setAgentKey('');
+      // Flush any files attached during the interview into the new agent's RAG knowledge base.
+      if (pendingFiles.length) {
+        let ok = 0;
+        for (const f of pendingFiles) {
+          try {
+            await api.addKnowledge(agent.web3Id, {
+              kind: 'file',
+              filename: f.name,
+              title: f.name,
+              text: f.text,
+            });
+            ok++;
+          } catch {
+            /* skip a file that fails to index; keep going with the rest */
+          }
+        }
+        setPendingFiles([]);
+        setKbNote(
+          ok
+            ? `Indexed ${ok} document${ok === 1 ? '' : 's'} into ${agent.name}'s knowledge base.`
+            : '',
+        );
+      }
       loadAgents(); // so a follow-up edit/test sees the new (or just-updated) agent
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -267,6 +321,8 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     setCreated(null);
     setAgentKey('');
     setError('');
+    setPendingFiles([]);
+    setKbNote('');
   }
 
   const brainReady = Boolean(brain?.configured);
@@ -366,6 +422,23 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
               </div>
             ) : null}
 
+            {pendingFiles.length > 0 && (
+              <div className="gchat-attachments">
+                {pendingFiles.map((f) => (
+                  <span key={f.name} className="chip gchat-file-chip">
+                    📄 {f.name}
+                    <button
+                      type="button"
+                      className="gchat-file-x"
+                      aria-label={`Remove ${f.name}`}
+                      onClick={() => removePending(f.name)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <form
               className="gchat-composer"
               onSubmit={(e) => {
@@ -373,6 +446,22 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
                 send(input);
               }}
             >
+              <label
+                className="gchat-attach"
+                title="Attach files for the agent's knowledge (RAG)"
+              >
+                📎
+                <input
+                  type="file"
+                  multiple
+                  accept={KB_ACCEPT}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files?.length) void attachFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
               <input
                 type="text"
                 placeholder={sending ? 'Genesis is thinking…' : 'Message Genesis…'}
@@ -384,6 +473,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
                 Send
               </button>
             </form>
+            {kbNote && <p className="hint ok">{kbNote}</p>}
             {error && <p className="hint err">{error}</p>}
           </div>
 
