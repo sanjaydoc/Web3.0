@@ -5,6 +5,7 @@ import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
 import { ConnectMcp } from './ConnectMcp.js';
+import { uiAlert, uiConfirm, uiPrompt } from './dialog.js';
 import { GenesisChat } from './GenesisChat.js';
 import { HostedDapps } from './HostedDapps.js';
 import { Hosting } from './Hosting.js';
@@ -886,19 +887,20 @@ function Agents({
   const authorizeRent = async (h: HostedAgent) => {
     const key = loadAccountKey(h.createdBy);
     if (!key) {
-      window.alert(
-        `Your signing key for ${h.createdBy} isn't on this device — import it in Account.`,
-      );
+      await uiAlert(`Your signing key for ${h.createdBy} isn't on this device — import it in Account.`, {
+        title: 'Signing key needed',
+      });
       return;
     }
-    const input = window.prompt(
+    const input = await uiPrompt(
       'Max rent to authorize per epoch to keep this agent hosted (USDC minor units · 100 = 1.00 USDC):',
       '1000',
+      { title: 'Authorize rent', confirmLabel: 'Authorize' },
     );
     if (input === null) return;
     const maxPerEpoch = Math.max(0, Math.round(Number(input)));
     if (!Number.isFinite(maxPerEpoch) || maxPerEpoch <= 0) {
-      window.alert('Enter a positive number.');
+      await uiAlert('Enter a positive number.', { title: 'Authorize rent' });
       return;
     }
     try {
@@ -912,16 +914,25 @@ function Agents({
         nonce: mandateNonce(),
       });
       await api.hostingMandate(h.web3Id, mandate);
-      window.alert(
-        `Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`,
-      );
+      await uiAlert(`Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`, {
+        title: 'Rent authorized',
+      });
     } catch (e) {
-      window.alert(`Could not authorize: ${e instanceof Error ? e.message : String(e)}`);
+      await uiAlert(`Could not authorize: ${e instanceof Error ? e.message : String(e)}`, {
+        title: 'Authorization failed',
+      });
     }
   };
 
   const remove = async (h: HostedAgent) => {
-    if (!window.confirm(`Delete agent "${h.handle}"? This can't be undone.`)) return;
+    if (
+      !(await uiConfirm(`Delete agent "${h.handle}"? This can't be undone.`, {
+        title: 'Delete agent',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return;
     setBusy(h.web3Id);
     try {
       const r = await api.hostedDelete(h.handle);

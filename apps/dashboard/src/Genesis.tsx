@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BUILTIN_CONNECTORS } from './Connectors.js';
+import { uiConfirm } from './dialog.js';
 import {
   type CustomConnector,
   type HostedAgent,
@@ -240,7 +241,14 @@ export function Genesis() {
   }
 
   async function deleteHosted(h: string) {
-    if (!window.confirm(`Delete agent "${h}"? This can't be undone.`)) return;
+    if (
+      !(await uiConfirm(`Delete agent "${h}"? This can't be undone.`, {
+        title: 'Delete agent',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return;
     try {
       await api.hostedDelete(h, admin);
       refreshHosted();

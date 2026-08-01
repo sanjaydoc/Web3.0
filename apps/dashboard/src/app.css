@@ -1718,6 +1718,78 @@ button.connector:not(:disabled):hover {
   font-weight: 600;
 }
 
+/* Theme dialogs (replace the native alert/confirm/prompt) — centered card + backdrop. */
+.ui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(16, 16, 20, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: ui-dialog-fade 0.16s ease both;
+}
+.ui-dialog {
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 48px rgba(16, 16, 20, 0.28);
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 24px 18px;
+  animation: ui-dialog-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ui-dialog-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.ui-dialog-msg {
+  color: var(--ink-2);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.ui-dialog-field {
+  margin-bottom: 16px;
+}
+.ui-dialog-field input {
+  width: 100%;
+}
+.ui-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@keyframes ui-dialog-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ui-dialog-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog-backdrop,
+  .ui-dialog {
+    animation: none;
+  }
+}
+
 /* Row DELETE button — soft neumorphic pill, monochrome at rest, danger-red on
    intent; presses in on click. Matches the editorial theme without a loud blob. */
 .btn-delete {
