@@ -233,6 +233,19 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
         await turn(convo, depth + 1);
         return;
       }
+
+      // AUTO-CREATE: the brain sets done=true exactly when the user confirms create/save. Fire the
+      // real launch here (the same path as the manual Create button) so "create it" in chat actually
+      // creates the agent — instead of the brain only *claiming* it did. Use the freshly-merged config
+      // (setConfig hasn't committed yet this turn). Keyed providers still need their secret first, so
+      // those fall back to the done-state key field + Create button.
+      if (r.done === true && !created && !launching) {
+        const merged = { ...config, ...(r.config ?? {}) };
+        const keyed = Boolean(merged.provider && KEYED_AGENT_PROVIDERS.has(merged.provider));
+        if (merged.handle && (!keyed || agentKey.trim())) {
+          await launch(merged);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setMessages(next); // keep the user's turn even if the brain call failed
@@ -290,31 +303,35 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     setPendingFiles((p) => p.filter((f) => f.name !== name));
   }
 
-  async function launch() {
+  // Launch (or save, on an edit) the agent. `cfgArg` lets the chat-driven auto-create pass the
+  // freshly-merged config (React's setConfig hasn't committed yet in the same turn), while the manual
+  // Create button calls launch() with no arg and uses the committed `config` state.
+  async function launch(cfgArg?: GenesisConfig) {
+    const cfg = cfgArg ?? config;
     setLaunching(true);
     setError('');
     setCreatedWasEdit(isEdit); // capture before the post-launch agents refresh flips isEdit
     try {
       // On an edit, fall back to the agent's stored config for any field the brain didn't restate —
       // above all the system prompt AND the price — so an edit never silently blanks the original.
-      const base = config.handle ? editCache[config.handle] : undefined;
+      const base = cfg.handle ? editCache[cfg.handle] : undefined;
       const price =
-        config.priceUsd !== undefined
-          ? Math.max(0, Math.round(config.priceUsd * 100))
+        cfg.priceUsd !== undefined
+          ? Math.max(0, Math.round(cfg.priceUsd * 100))
           : (base?.price ?? 0);
       const agent = await api.hostedLaunch({
-        handle: config.handle ?? '',
-        name: config.name ?? base?.name ?? config.handle ?? 'Agent',
-        description: config.description ?? base?.description ?? '',
-        skillId: config.skillId ?? base?.skillId ?? 'ask',
-        skillName: config.skillName ?? base?.skillName ?? 'Ask',
-        skillDesc: config.skillDesc ?? base?.skillDesc ?? 'Answer a question',
+        handle: cfg.handle ?? '',
+        name: cfg.name ?? base?.name ?? cfg.handle ?? 'Agent',
+        description: cfg.description ?? base?.description ?? '',
+        skillId: cfg.skillId ?? base?.skillId ?? 'ask',
+        skillName: cfg.skillName ?? base?.skillName ?? 'Ask',
+        skillDesc: cfg.skillDesc ?? base?.skillDesc ?? 'Answer a question',
         price,
-        provider: config.provider ?? base?.provider ?? 'local',
-        model: config.model ?? base?.model ?? 'qwen2.5:7b',
+        provider: cfg.provider ?? base?.provider ?? 'local',
+        model: cfg.model ?? base?.model ?? 'qwen2.5:7b',
         apiKey: agentKey.trim() || undefined,
-        system: config.system ?? base?.system,
-        connectors: config.connectors ?? base?.connectors,
+        system: cfg.system ?? base?.system,
+        connectors: cfg.connectors ?? base?.connectors,
       });
       setCreated(agent);
       setAgentKey('');
