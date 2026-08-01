@@ -1437,7 +1437,7 @@ function LedgerView({
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th>No</th>
                     <th>Type</th>
                     <th>From → To</th>
                     <th>Amount</th>
