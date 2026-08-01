@@ -31,7 +31,7 @@ function Snippet({ title, code }: { title: string; code: string }) {
             );
           }}
         >
-          {copied ? 'copied ✓' : 'Copy'}
+          {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
       <pre>

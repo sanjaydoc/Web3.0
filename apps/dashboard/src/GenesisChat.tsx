@@ -363,7 +363,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
               {messages.length === 0 && (
                 <div className="gchat-empty muted">
                   <p>
-                    👋 Hi — I’m Genesis. I can create, edit, test, or answer questions about your
+                    Hi — I’m Genesis. I can create, edit, test, or answer questions about your
                     agents.
                   </p>
                   <div className="chip-pick">
@@ -438,7 +438,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
               <div className="gchat-attachments">
                 {pendingFiles.map((f) => (
                   <span key={f.name} className="chip gchat-file-chip">
-                    📄 {f.name}
+                    {f.name}
                     <button
                       type="button"
                       className="gchat-file-x"
@@ -497,7 +497,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
             {created ? (
               <div className="gchat-created">
                 <p className="hint ok">
-                  ✅ {createdWasEdit ? 'Saved' : 'Launched'} {created.web3Id} — live on the node.
+                  {createdWasEdit ? 'Saved' : 'Launched'} {created.web3Id} — live on the node.
                 </p>
                 <label className="field-lbl" htmlFor="gc-endpoint">
                   Public endpoint

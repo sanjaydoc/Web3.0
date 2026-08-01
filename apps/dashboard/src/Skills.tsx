@@ -137,7 +137,7 @@ export function Skills({ agents }: { agents: AgentCard[] }) {
                 Suggested agent system prompt (paste into Genesis when you launch an agent for this
                 skill):
               </div>
-              <code style={{ whiteSpace: 'pre-wrap', display: 'block' }}>{tplSystem}</code>
+              <pre style={{ whiteSpace: 'pre-wrap' }}>{tplSystem}</pre>
             </div>
           )}
         </div>

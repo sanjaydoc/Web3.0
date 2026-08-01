@@ -582,7 +582,7 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
                 )}
                 {c.headers && c.headers.length > 0 && (
                   <div className="hint" style={{ marginTop: 4 }}>
-                    auth: {c.headers.map((h) => h.key).join(', ')} 🔒
+                    auth: {c.headers.map((h) => h.key).join(', ')} 
                   </div>
                 )}
                 <div className="hint">added by {c.createdBy}</div>

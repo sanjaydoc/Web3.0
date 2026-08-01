@@ -58,7 +58,7 @@ function NodeControl({ online }: { online: boolean }) {
   };
 
   const label = online ? 'Node running' : starting ? 'Starting…' : 'Node stopped';
-  const dotColor = online ? 'var(--ok)' : starting ? 'var(--gold, #f2c14e)' : 'var(--no, #c0392b)';
+  const dotColor = online ? 'var(--ok)' : starting ? 'var(--gold, #f2c14e)' : 'var(--no)';
 
   return (
     <div
@@ -91,12 +91,9 @@ function NodeControl({ online }: { online: boolean }) {
       {desktop && (
         <button
           type="button"
-          className="btn act"
+          className={`btn ${online ? 'danger' : 'act'}`}
           disabled={busy}
           onClick={toggle}
-          style={
-            online ? { background: 'var(--no, #c0392b)', borderColor: 'transparent' } : undefined
-          }
         >
           {busy ? '…' : online ? 'Stop node' : 'Start node'}
         </button>
@@ -597,7 +594,7 @@ function NodeLocationCard() {
       </div>
       <div className="gen-actions">
         <button type="button" className="btn act" disabled={busy} onClick={useGps}>
-          📍 Use my location
+          Use my location
         </button>
         <button
           type="button"

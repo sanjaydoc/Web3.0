@@ -25,7 +25,7 @@ const svgBase = {
 /** Banknote — the x402 "money" section. */
 function MoneyMark() {
   return (
-    <svg {...svgBase}>
+    <svg {...svgBase} aria-hidden="true">
       <rect x="2.5" y="6" width="19" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <circle cx="12" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.6" />
       <path d="M6 9.5v5M18 9.5v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -36,7 +36,7 @@ function MoneyMark() {
 /** Erlenmeyer flask — the sandbox (testnet) settlement mode. */
 function FlaskMark({ size = 15 }: { size?: number }) {
   return (
-    <svg {...svgBase} width={size} height={size}>
+    <svg {...svgBase} aria-hidden="true" width={size} height={size}>
       <path
         d="M9.5 3h5M10.5 3v5.5L5.8 16.5A1.8 1.8 0 0 0 7.4 19.2h9.2a1.8 1.8 0 0 0 1.6-2.7L13.5 8.5V3"
         stroke="currentColor"
@@ -52,7 +52,7 @@ function FlaskMark({ size = 15 }: { size?: number }) {
 /** Shield with a check — the ERC-8004 identity & reputation (verified trust) section. */
 function IdMark() {
   return (
-    <svg {...svgBase}>
+    <svg {...svgBase} aria-hidden="true">
       <path
         d="M12 3 5 5.8v5.2c0 4.3 3 7.5 7 8.9 4-1.4 7-4.6 7-8.9V5.8L12 3Z"
         stroke="currentColor"
@@ -73,7 +73,7 @@ function IdMark() {
 /** Lightning bolt — the Oxygen "Connect" action. */
 function BoltMark() {
   return (
-    <svg {...svgBase} width={14} height={14}>
+    <svg {...svgBase} aria-hidden="true" width={14} height={14}>
       <path
         d="M13 2 4.5 13.5H10l-1 8.5L19.5 10H13l0-8Z"
         stroke="currentColor"
@@ -102,7 +102,7 @@ const short = (s: string, head = 6, tail = 4) =>
 
 /** A 0–100 reputation meter with a score-graded colour. */
 function Meter({ score }: { score: number }) {
-  const color = score >= 75 ? 'var(--ok, #1f9d55)' : score >= 40 ? '#c98a00' : 'var(--no, #c0392b)';
+  const color = score >= 75 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--no)';
   return (
     <div className="rep-meter" title={`${score}/100`}>
       <div
@@ -134,7 +134,7 @@ function CopyBlock({ text, label = 'Copy' }: { text: string; label?: string }) {
   return (
     <div className="copy-block">
       <button type="button" className="btn btn-sm copy-btn" onClick={copy}>
-        {copied ? 'Copied ✓' : label}
+        {copied ? 'Copied' : label}
       </button>
       <pre className="copy-pre">
         <code>{text}</code>
@@ -217,7 +217,7 @@ function OxygenPanel() {
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           {copiedCli ? (
-            'Command copied ✓ — paste in your terminal'
+            'Command Copied — paste in your terminal'
           ) : (
             <>
               <BoltMark /> Connect to Claude Code
@@ -374,7 +374,7 @@ export function Web4({
       <div className="section-title">
         {scope === 'agent' ? 'x402 · ERC-8004' : 'x402 & ERC-8004'}
       </div>
-      <p className="muted" style={{ marginTop: -6, marginBottom: 20, maxWidth: 640 }}>
+      <p className="muted" style={{ marginTop: -6, marginBottom: 20 }}>
         The two Web 4.0 standards Web3.0 speaks: <b>x402</b> for money (agents pay per request in
         USDC) and <b>ERC-8004</b> for identity &amp; reputation (agents are discoverable and
         trustable).{' '}
@@ -386,7 +386,7 @@ export function Web4({
       {error && (
         <div
           className="card"
-          style={{ borderLeft: '3px solid var(--no,#c0392b)', marginBottom: 18 }}
+          style={{ borderLeft: '3px solid var(--no)', marginBottom: 18 }}
         >
           <b>Couldn’t reach the node.</b> <span className="muted">{error}</span>
         </div>

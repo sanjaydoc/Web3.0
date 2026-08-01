@@ -168,7 +168,7 @@ function DesktopApp() {
     {
       label: 'Windows (MSI)',
       sub: `.msi · v${DESKTOP_VERSION}`,
-      accent: '#7c5cff',
+      accent: '#a0a0a0',
       icon: <WindowsLogo />,
       href: DESKTOP_MSI,
     },

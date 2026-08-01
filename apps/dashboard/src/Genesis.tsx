@@ -653,7 +653,7 @@ while True:
                     }}
                   >
                     {copiedId === h.web3Id
-                      ? 'Copied ✓'
+                      ? 'Copied'
                       : h.price > 0
                         ? 'Copy paid endpoint'
                         : 'Copy endpoint'}
@@ -669,12 +669,12 @@ while True:
                   )}
                   <button
                     type="button"
-                    className="btn ghost btn-sm btn-trash"
+                    className="btn-delete"
                     onClick={() => deleteHosted(h.handle)}
                     title="Delete this agent"
                     aria-label={`Delete ${h.handle}`}
                   >
-                    🗑
+                    Delete
                   </button>
                 </span>
               </li>
@@ -689,7 +689,7 @@ while True:
           <button type="button" className="btn btn-sm" onClick={copy}>
             Copy script
           </button>
-          {copied && <span className="copied">copied ✓</span>}
+          {copied && <span className="copied">Copied</span>}
         </div>
         <pre>
           <code>{script}</code>
@@ -709,7 +709,7 @@ while True:
           <li>
             Activate the venv and run it: <code>python {handle}_agent.py</code>
           </li>
-          <li>Your agent registers, connects, and appears live in Agents & Live traffic. 🎉</li>
+          <li>Your agent registers, connects, and appears live in Agents & Live traffic.</li>
         </ol>
         <p className="hint" style={{ marginTop: 10 }}>
           Your provider key stays on your machine — it is never sent to the Web3.0 node or the

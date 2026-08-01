@@ -360,7 +360,7 @@ export function Account() {
                       className={`copy ${copied ? 'copied' : ''}`}
                       onClick={() => copyToken(token)}
                     >
-                      {copied ? 'copied ✓' : 'Copy'}
+                      {copied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export function Account() {
                         );
                       }}
                     >
-                      {copied ? 'copied ✓' : 'Copy'}
+                      {copied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
                 </div>

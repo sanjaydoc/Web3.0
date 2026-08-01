@@ -213,7 +213,7 @@ function LocationStep({ onDone }: { onDone: (label: string) => void }) {
         Put your node on the world map so the network can see where you're contributing from.
       </p>
       <button type="button" className="btn act" disabled={busy} onClick={useMyLocation}>
-        {busy ? 'Locating…' : '📍 Use my location'}
+        {busy ? 'Locating…' : 'Use my location'}
       </button>
       <div className="form-grid" style={{ marginTop: 12 }}>
         <div className="field">
@@ -413,7 +413,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
                   className={`copy ${addrCopied ? 'copied' : ''}`}
                   onClick={copyAddress}
                 >
-                  {addrCopied ? 'copied ✓' : 'Copy address'}
+                  {addrCopied ? 'Copied' : 'Copy address'}
                 </button>
               </div>
             </div>
@@ -429,7 +429,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
               {revealed ? 'Hide' : 'Reveal'}
             </button>
             <button type="button" className={`copy ${copied ? 'copied' : ''}`} onClick={copy}>
-              {copied ? 'copied ✓' : 'Copy'}
+              {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
         </div>
@@ -440,7 +440,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
       </p>
       <div className="onboard-actions">
         <button type="button" className="btn act" onClick={download}>
-          ⬇ Download Your_Key.txt
+          Download Your_Key.txt
         </button>
         <button type="button" className={`btn ${saved ? 'act' : 'ghost'}`} onClick={onDone}>
           I've saved it — enter dashboard →
@@ -544,7 +544,7 @@ function QuickStartFlow({
           <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
             <span className="badge">W</span> Web3.0
           </div>
-          <h1 className="onboard-title">🎉 Your agent is live</h1>
+          <h1 className="onboard-title">Your agent is live</h1>
           {proof ? (
             <p className="muted onboard-sub">
               <b>{agentId}</b> just earned its first <b>${proof.priceUsd}</b> — a real x402 payment
@@ -568,7 +568,7 @@ function QuickStartFlow({
                 style={{ flex: 1, fontFamily: 'var(--mono, monospace)' }}
               />
               <button type="button" className="btn" onClick={copyEndpoint}>
-                {copied ? 'Copied ✓' : 'Copy'}
+                {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
             {faucetUrl && (
@@ -626,7 +626,7 @@ function QuickStartFlow({
               onClick={launch}
               disabled={phase === 'launching' || !name.trim()}
             >
-              {phase === 'launching' ? 'Launching…' : 'Launch my paid agent 🚀'}
+              {phase === 'launching' ? 'Launching…' : 'Launch my paid agent'}
             </button>
           </div>
           {err && <div className="note note-err">{err}</div>}
@@ -731,7 +731,7 @@ function PersonaStep({
         </button>
       </div>
       <p className="hint" style={{ margin: '10px 0 0', textAlign: 'center' }}>
-        🧠 <b>Autonomous agent-owners</b> — agents that own and pay for other agents — coming soon.
+        <b>Autonomous agent-owners</b> — agents that own and pay for other agents — coming soon.
       </p>
       <div className="onboard-actions">
         <button type="button" className="btn ghost" onClick={onSignInInstead}>

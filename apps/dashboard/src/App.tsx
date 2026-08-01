@@ -725,7 +725,7 @@ function MainNodeNotice({ go, onDownload }: { go: () => void; onDownload: boolea
   return (
     <div
       className="card"
-      style={{ marginBottom: 18, borderLeft: '3px solid var(--accent, #6a5cff)' }}
+      style={{ marginBottom: 18, borderLeft: '3px solid var(--accent)' }}
     >
       <div className="section-title">This is the network's main node</div>
       <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -1002,7 +1002,7 @@ function Agents({
                             }}
                           >
                             {copiedId === a.web3Id
-                              ? 'Copied ✓'
+                              ? 'Copied'
                               : (a.pricing?.perTask ?? 0) > 0
                                 ? 'Copy paid endpoint'
                                 : 'Copy endpoint'}
@@ -1038,7 +1038,7 @@ function Agents({
                           <span className="muted">this node</span>
                         ) : h.placement === 'pending' ? (
                           <span
-                            className="pill"
+                            className="chip"
                             title="No operator has free capacity yet — the network keeps retrying"
                           >
                             pending · waiting for a host
@@ -1053,7 +1053,7 @@ function Agents({
                             }}
                           >
                             <span
-                              className="pill ok"
+                              className="chip allow"
                               title={`Body placed on operator ${h.placement}`}
                             >
                               operator{' '}
@@ -1138,11 +1138,11 @@ function AgentChat({ agent, onClose }: { agent: HostedAgent; onClose: () => void
         typeof output.answer === 'string'
           ? output.answer
           : typeof output.error === 'string'
-            ? `⚠️ ${output.error}`
+            ? `${output.error}`
             : JSON.stringify(output, null, 2);
       push('agent', text);
     } catch (e) {
-      push('agent', `⚠️ ${e instanceof Error ? e.message : String(e)}`);
+      push('agent', `${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }

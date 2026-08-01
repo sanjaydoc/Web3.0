@@ -333,7 +333,7 @@ export function Hosting() {
       {!IS_NATIVE_HOST && (
         <div
           className="card"
-          style={{ marginBottom: 18, borderLeft: '3px solid var(--no, #c0392b)' }}
+          style={{ marginBottom: 18, borderLeft: '3px solid var(--no)' }}
         >
           <div className="section-title">Available in the desktop &amp; mobile app</div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -495,7 +495,7 @@ export function Hosting() {
                           // The dashboard is connected to a node OTHER than the physical host (e.g. a
                           // seed node), so the live body isn't visible here — but the ledger proves it.
                           <span
-                            className="pill"
+                            className="chip"
                             title="hosted on your node; connect to it for live status"
                           >
                             hosted

@@ -149,7 +149,7 @@ export function LlmTunnel() {
       {!IS_NATIVE_HOST && (
         <div
           className="card"
-          style={{ marginBottom: 18, borderLeft: '3px solid var(--no, #c0392b)' }}
+          style={{ marginBottom: 18, borderLeft: '3px solid var(--no)' }}
         >
           <div className="section-title">Available in the desktop &amp; mobile app</div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
@@ -487,7 +487,7 @@ function ModelChat({ model, onClose }: { model: string; onClose: () => void }) {
         {
           id: nextId.current++,
           role: 'model',
-          text: `⚠️ ${e instanceof Error ? e.message : String(e)}`,
+          text: `${e instanceof Error ? e.message : String(e)}`,
         },
       ]);
     } finally {
@@ -528,7 +528,7 @@ function ModelChat({ model, onClose }: { model: string; onClose: () => void }) {
             style={{
               alignSelf: m.role === 'you' ? 'flex-end' : 'flex-start',
               maxWidth: '82%',
-              background: m.role === 'you' ? 'var(--accent, #6a5cff)' : 'var(--hair, #eef0f4)',
+              background: m.role === 'you' ? 'var(--accent)' : 'var(--hair)',
               color: m.role === 'you' ? '#fff' : 'inherit',
               padding: '8px 12px',
               borderRadius: 12,

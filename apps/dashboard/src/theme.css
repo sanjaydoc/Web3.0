@@ -19,6 +19,11 @@
   --ok-bg: #e8f2ec;
   --no: #e0332d; /* bright red (DENY) */
   --no-bg: #f6ebe9;
+  --warn: #c98a00; /* amber — "starting", mid-reputation */
+  --gold: #c98a00; /* alias of --warn */
+
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-small: 0.8rem; /* alias of --fs-sm for inline callers */
 
   /* small layer-accent dots for wayfinding (kept subtle) */
   --okta: #635bff;
@@ -173,6 +178,16 @@ p {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+/* Destructive action pill (Stop, delete) — red, inherits the neumorphic feel. */
+.btn.danger {
+  background: var(--no);
+  color: #fff;
+  border-color: var(--no);
+}
+.btn.danger:hover {
+  background: var(--no);
+  border-color: var(--no);
 }
 .btn-sm {
   padding: .46rem 1.05rem;

@@ -351,10 +351,10 @@ export function Network() {
 
         <div className="net-hud net-bl net-legend">
           <span>
-            <i style={{ background: '#ff3a54' }} /> active node
+            <i style={{ background: 'var(--no)' }} /> active node
           </span>
           <span>
-            <i style={{ background: '#42ff96' }} /> agent
+            <i style={{ background: 'var(--ok)' }} /> agent
           </span>
           <span className={stats?.ledgerVerified ? 'v-ok' : 'v-bad'}>
             chain {stats?.ledgerVerified ? 'verified ✓' : '—'}
