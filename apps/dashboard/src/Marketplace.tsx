@@ -225,6 +225,7 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                 <tr>
                   <th>Agent</th>
                   <th>Host</th>
+                  <th>IP address</th>
                   <th>Rent / hour</th>
                   <th>Epochs</th>
                   <th>Total rent</th>
@@ -237,6 +238,11 @@ export function Marketplace({ go }: { go?: (v: string) => void } = {}) {
                       <strong>{l.agentId}</strong>
                     </td>
                     <td className="mono-hash">{l.host}</td>
+                    {/* The operator's advertised endpoint when they opted in (WEB3_PUBLIC_URL); most
+                        nodes are NAT'd and reach the mesh only over the relay, shown as "relay-only". */}
+                    <td className="mono-hash">
+                      {l.endpoint ?? <span className="muted">relay-only</span>}
+                    </td>
                     <td>
                       {l.pricePerEpoch > 0 ? ratePerHour(l.pricePerEpoch, ramEpochMs) : 'free'}
                     </td>

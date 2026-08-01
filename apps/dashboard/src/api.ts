@@ -126,6 +126,113 @@ export interface HostedLaunchConfig {
   connectors?: string[];
 }
 
+/** One message in a Genesis-chat conversation. */
+export interface GenesisTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/** A selectable choice the brain offers for the next answer. */
+export interface GenesisAsk {
+  field: string;
+  multi?: boolean;
+  options?: { value: string; label: string }[];
+}
+
+/** A compact view of one of the owner's agents, sent so the brain can edit/test/FAQ against them. */
+export interface GenesisAgentBrief {
+  handle: string;
+  name?: string;
+  web3Id?: string;
+  description?: string;
+  skill?: string;
+  priceUsd?: number;
+  provider?: string;
+  model?: string;
+  connectors?: string[];
+  running?: boolean;
+  // Present only for the agent currently being edited (fetched owner-only) so the brain preserves it.
+  skillName?: string;
+  skillDesc?: string;
+  system?: string;
+}
+
+/** An action the brain asks the client to run mid-conversation (today: test an existing agent). */
+export interface GenesisAction {
+  type: 'test';
+  handle: string;
+  question: string;
+}
+
+/** The launch config the interview accumulates (mirrors HostedLaunchConfig, priced in USD). */
+export interface GenesisConfig {
+  handle?: string;
+  name?: string;
+  description?: string;
+  skillId?: string;
+  skillName?: string;
+  skillDesc?: string;
+  provider?: string;
+  model?: string;
+  priceUsd?: number;
+  connectors?: string[];
+  system?: string;
+}
+
+/** One turn's parsed reply from POST /genesis/chat. */
+export interface GenesisChatReply {
+  reply: string;
+  ask?: GenesisAsk | null;
+  config: GenesisConfig;
+  done: boolean;
+  action?: GenesisAction | null;
+}
+
+/** The admin-configured brain that powers Genesis chat — read view never leaks the key. */
+export interface GenesisBrain {
+  configured: boolean;
+  provider: string;
+  model: string;
+  baseUrl: string;
+  hasKey: boolean;
+  /** Connectors the Genesis assistant itself may call mid-interview (admin-set, names). */
+  connectors: string[];
+}
+
+/** The full editable config for one agent (from GET /hosted/config/:handle) — no secrets. */
+export interface HostedFullConfig {
+  handle: string;
+  name: string;
+  description: string;
+  skillId: string;
+  skillName: string;
+  skillDesc: string;
+  price: number; // minor units
+  provider: string;
+  model: string;
+  system?: string;
+  connectors?: string[];
+  createdBy?: string;
+  webhookUrl?: string;
+}
+
+/** A document/link attached to an agent's RAG knowledge base. */
+export interface KnowledgeSource {
+  id: string;
+  kind: 'text' | 'url' | 'file';
+  title: string;
+  ref?: string;
+  chars: number;
+  chunkCount: number;
+  addedAt: string;
+}
+/** One retrieved chunk from a knowledge-base query preview. */
+export interface KnowledgeHit {
+  title: string;
+  text: string;
+  score: number;
+}
+
 export interface NodeInfo {
   name: string;
   description: string;
@@ -224,6 +331,9 @@ export interface Lease {
   createdAt: string;
   epochsBilled: number;
   paidTotal: number;
+  /** The host operator's advertised public endpoint (host:port / URL), or undefined when the operator
+   *  is relay-only or offline. Resolved server-side from the live heartbeat by the lease's host account. */
+  endpoint?: string;
 }
 export interface SkillDef {
   id: string;
@@ -667,11 +777,17 @@ export const api = {
   /** Chat/test a hosted agent — relay a question to it and get its reply (owner/admin only). */
   askHosted: (handle: string, question: string) =>
     post<{ output: Record<string, unknown> }>('/hosted/ask', { handle, question }),
+  /** The full editable config for one agent (skill fields + system prompt, no secrets) — owner/admin. */
+  hostedConfig: (handle: string) =>
+    get<{ config: HostedFullConfig }>(`/hosted/config/${encodeURIComponent(handle)}`),
   // Hosting marketplace — hosts sell RAM capacity; agent-owners rent it for their agents.
   hostingMarket: () => get<{ hosts: MarketHost[] }>('/hosting/market'),
   hostingOffer: () => get<{ host: string | null; pricePerEpoch: number }>('/hosting/offer'),
   setHostingOffer: (pricePerEpoch: number) =>
     post<{ host: string; pricePerEpoch: number }>('/hosting/offer', { pricePerEpoch }),
+  hostingEndpoint: () => get<{ endpoint: string }>('/hosting/endpoint'),
+  setHostingEndpoint: (endpoint: string) =>
+    post<{ endpoint: string }>('/hosting/endpoint', { endpoint }),
   rentHost: (agentId: string, mandate?: unknown) =>
     post<Lease>('/hosting/rent', { agentId, mandate }),
   hostingLeases: () => get<{ leases: Lease[]; epochMs: number }>('/hosting/leases'),
@@ -681,7 +797,7 @@ export const api = {
     get<{
       host: string;
       total: number;
-      agents: { agentId: string; owner: string; total: number; payments: number }[];
+      agents: { agentId: string; owner: string; total: number; payments: number; since: number }[];
     }>('/hosting/earned'),
   /** Attach an owner-signed lease mandate authorizing recurring hosting rent for a placed agent. */
   hostingMandate: (agentId: string, mandate: unknown) =>
@@ -767,6 +883,49 @@ export const api = {
   node: () => get<NodeOperator>('/node'),
   nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
     post<NodeLimits>('/node/limits', patch, adminToken),
+
+  // Genesis chat — conversational agent create/edit/test/FAQ (agent-owners), admin-configured brain.
+  genesisBrain: () => get<GenesisBrain>('/genesis/brain'),
+  setGenesisBrain: (
+    patch: {
+      provider: string;
+      model: string;
+      apiKey?: string;
+      baseUrl?: string;
+      connectors?: string[];
+    },
+    adminToken?: string,
+  ) =>
+    post<{ configured: boolean; provider: string; model: string; connectors: string[] }>(
+      '/genesis/brain',
+      patch,
+      adminToken,
+    ),
+  genesisChat: (messages: GenesisTurn[], agents?: GenesisAgentBrief[]) =>
+    post<GenesisChatReply>('/genesis/chat', { messages, agents }),
+
+  // Knowledge base (RAG) — attach docs + links to an agent so it answers from the owner's data.
+  knowledgeSources: (web3Id: string) =>
+    get<{ sources: KnowledgeSource[]; embedder?: string }>(
+      `/knowledge/${encodeURIComponent(web3Id)}`,
+    ),
+  addKnowledge: (
+    web3Id: string,
+    body: {
+      kind?: 'text' | 'url' | 'file';
+      title?: string;
+      text?: string;
+      url?: string;
+      filename?: string;
+    },
+  ) => post<{ source: KnowledgeSource }>(`/knowledge/${encodeURIComponent(web3Id)}/source`, body),
+  removeKnowledge: (web3Id: string, sourceId: string) =>
+    send<{ removed: boolean }>(
+      'DELETE',
+      `/knowledge/${encodeURIComponent(web3Id)}/source/${encodeURIComponent(sourceId)}`,
+    ),
+  queryKnowledge: (web3Id: string, question: string) =>
+    post<{ hits: KnowledgeHit[] }>(`/knowledge/${encodeURIComponent(web3Id)}/query`, { question }),
 };
 
 export function formatAmount(minor: number, currency = 'USDC'): string {

@@ -169,6 +169,9 @@ export function Hosting() {
   const [revenue, setRevenue] = useState(0);
   const [price, setPrice] = useState<number | null>(null); // the operator's set per-epoch rent price
   const [priceInput, setPriceInput] = useState('');
+  const [endpoint, setEndpoint] = useState(''); // the operator's advertised public endpoint (opt-in)
+  const [endpointInput, setEndpointInput] = useState('');
+  const [savingEndpoint, setSavingEndpoint] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -179,28 +182,29 @@ export function Hosting() {
   // (the lease list lives only on the owner's node; the ledger is replicated everywhere).
   const [earned, setEarned] = useState<{
     total: number;
-    agents: { agentId: string; owner: string; total: number; payments: number }[];
+    agents: { agentId: string; owner: string; total: number; payments: number; since: number }[];
   } | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const [s, rev, offer, network, earn] = await Promise.all([
-        api.hostingSummary(),
-        api.hostingRevenue().catch(() => null),
-        api.hostingOffer().catch(() => null),
-        api.hostingNetwork().catch(() => null),
-        api.hostingEarned().catch(() => null),
-      ]);
-      setSummary(s);
-      if (rev) setRevenue(rev.revenue);
-      setEarned(earn);
-      if (offer) setPrice(offer.pricePerEpoch);
-      if (network) {
-        setNet(network.totals);
-        setEpochMs(network.epochMs || 0);
-      }
-    } catch {
-      /* offline / not signed in — keep last */
+    // Fetch each independently — a failure in one (e.g. /hosted/hosting) must NOT drop the others.
+    // "Agents you're hosting" is driven by `earned` (the shared ledger), so it has to render on its
+    // own regardless of whether the capacity/offer/network calls succeed.
+    const [s, rev, offer, network, earn, ep] = await Promise.all([
+      api.hostingSummary().catch(() => null),
+      api.hostingRevenue().catch(() => null),
+      api.hostingOffer().catch(() => null),
+      api.hostingNetwork().catch(() => null),
+      api.hostingEarned().catch(() => null),
+      api.hostingEndpoint().catch(() => null),
+    ]);
+    if (s) setSummary(s);
+    if (rev) setRevenue(rev.revenue);
+    if (earn) setEarned(earn);
+    if (offer) setPrice(offer.pricePerEpoch);
+    if (ep) setEndpoint(ep.endpoint);
+    if (network) {
+      setNet(network.totals);
+      setEpochMs(network.epochMs || 0);
     }
   }, []);
 
@@ -225,6 +229,27 @@ export function Hosting() {
     }
   };
 
+  // Save (or clear, with an empty field) the operator's advertised public endpoint. It rides this
+  // node's signed heartbeat and shows to renters in "Your rentals"; unset stays "relay-only".
+  const saveEndpoint = async () => {
+    setSavingEndpoint(true);
+    setMsg(null);
+    try {
+      const res = await api.setHostingEndpoint(endpointInput.trim());
+      setEndpoint(res.endpoint);
+      setEndpointInput('');
+      setMsg({
+        kind: 'ok',
+        text: res.endpoint ? 'Public endpoint updated.' : 'Public endpoint cleared (relay-only).',
+      });
+      await load();
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setSavingEndpoint(false);
+    }
+  };
+
   useEffect(() => {
     if (!IS_NATIVE_HOST) return; // don't poll a shared node's data on the website
     load();
@@ -241,22 +266,62 @@ export function Hosting() {
         : 'not contributing RAM yet';
   const freeLabel = cap == null ? '—' : cap.free === null ? 'unlimited' : `${cap.free} slots free`;
   const hosted = summary?.hosted ?? [];
-  // The authoritative "who am I hosting + earning" comes from the ledger (earned.agents). Merge the
-  // local body (model/status) when the dashboard IS connected to the physical hosting node.
+  // "Who am I hosting + earning" unions TWO sources so a row shows if EITHER is true:
+  //   • the shared ledger (earned.agents) — rent income, correct on any node; and
+  //   • the local bodies this node physically runs for others (summary.hosted) — live model/status.
+  // Neither alone is complete: a freshly-placed body earns nothing yet (ledger empty), and a node that
+  // only seeds/relays sees rent on the ledger without running the body. Keyed by agentId (web3Id).
   const earnedTotal = earned?.total ?? revenue;
-  const hostRows = (earned?.agents ?? []).map((e) => {
-    const local = hosted.find((h) => h.web3Id === e.agentId);
-    return {
+  const byId = new Map<
+    string,
+    {
+      agentId: string;
+      name: string;
+      owner: string;
+      model?: string;
+      running?: boolean;
+      hasLocal: boolean;
+      earned: number;
+      payments: number;
+      /** When this rental started (ms): ledger's earliest hosting-fee, else the local body's createdAt. */
+      since: number;
+    }
+  >();
+  for (const e of earned?.agents ?? []) {
+    byId.set(e.agentId, {
       agentId: e.agentId,
-      name: local?.name || local?.handle || e.agentId,
+      name: e.agentId,
       owner: e.owner,
-      model: local?.model,
-      running: local?.running,
-      hasLocal: Boolean(local),
+      hasLocal: false,
       earned: e.total,
       payments: e.payments,
+      since: e.since ?? 0,
+    });
+  }
+  for (const h of hosted) {
+    const row = byId.get(h.web3Id) ?? {
+      agentId: h.web3Id,
+      name: h.web3Id,
+      owner: h.hostedForOwner || h.createdBy,
+      hasLocal: false,
+      earned: 0,
+      payments: 0,
+      since: 0,
     };
-  });
+    row.name = h.name || h.handle || row.name;
+    row.model = h.model;
+    row.running = h.running;
+    row.hasLocal = true;
+    if (h.hostedForOwner) row.owner = h.hostedForOwner;
+    // A freshly-placed body has no ledger rent yet; fall back to its createdAt so it still sorts by recency.
+    if (!row.since) {
+      const created = Date.parse(h.createdAt);
+      if (Number.isFinite(created)) row.since = created;
+    }
+    byId.set(h.web3Id, row);
+  }
+  // Most recent rental on top (largest `since`), tie-broken by rent earned.
+  const hostRows = [...byId.values()].sort((a, b) => b.since - a.since || b.earned - a.earned);
 
   return (
     <>
@@ -353,6 +418,34 @@ export function Hosting() {
                 : ''}{' '}
               · billed each epoch, shown to renters per hour · you keep the operator share, the
               platform takes its commission
+            </span>
+          </div>
+
+          {/* Optional public endpoint advertised to renters (shown in their "Your rentals" IP column).
+              Leave blank if this node is NAT'd / relay-only — renters then see "relay-only". */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              marginTop: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <input
+              type="text"
+              placeholder={endpoint || 'https://your-node.example.com  (blank = relay-only)'}
+              value={endpointInput}
+              onChange={(e) => setEndpointInput(e.target.value)}
+              style={{ maxWidth: 320 }}
+            />
+            <button type="button" className="btn" disabled={savingEndpoint} onClick={saveEndpoint}>
+              {savingEndpoint ? 'Saving…' : 'Set public endpoint'}
+            </button>
+            <span className="muted" style={{ fontSize: 12 }}>
+              {endpoint
+                ? `renters see ${endpoint}`
+                : 'optional · renters see "relay-only" until set · clear the field to reset'}
             </span>
           </div>
           {msg && (

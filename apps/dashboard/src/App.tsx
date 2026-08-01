@@ -4,6 +4,7 @@ import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
+import { GenesisChat } from './GenesisChat.js';
 import { HostedDapps } from './HostedDapps.js';
 import { Hosting } from './Hosting.js';
 import { InstallBanner } from './InstallBanner.js';
@@ -45,6 +46,7 @@ type View =
   | 'ledger'
   | 'guardrails'
   | 'genesis'
+  | 'genesischat'
   | 'hosteddapps'
   | 'telegram'
   | 'developers'
@@ -84,6 +86,7 @@ const NAV: {
   { id: 'ledger', label: 'Payments & ledger', badge: 'entries' },
   { id: 'telegram', label: 'Telegram bot' },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
+  { id: 'genesischat', label: 'Genesis chat', operator: true },
   { id: 'marketplace', label: 'Marketplace', operator: true },
   { id: 'developers', label: 'Developers', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
@@ -100,7 +103,13 @@ const OPERATOR_HOME: View = 'mynode';
  * the admin, so a non-admin viewer never mounts them — they're pointed at "Run a node" to do this on
  * their own node instead. (On a normal node, nothing is locked and these stay available.)
  */
-const LOCKED_ON_MAIN = new Set<View>(['genesis', 'developers', 'hosteddapps', 'llmtunnel']);
+const LOCKED_ON_MAIN = new Set<View>([
+  'genesis',
+  'genesischat',
+  'developers',
+  'hosteddapps',
+  'llmtunnel',
+]);
 
 /**
  * Exactly which views each non-admin persona sees (an admin always sees everything). The two are
@@ -125,6 +134,7 @@ const AGENT_OWNER_NAV = new Set<View>([
   'overview',
   'account',
   'genesis',
+  'genesischat',
   'marketplace',
   'developers',
   'hosteddapps',
@@ -151,7 +161,7 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
   { items: ['account', 'overview', 'ledger'] },
   {
     title: 'Launch agents',
-    items: ['agentweb4', 'connectors', 'skills', 'telegram', 'genesis', 'agents'],
+    items: ['genesischat', 'genesis', 'agentweb4', 'connectors', 'skills', 'telegram', 'agents'],
   },
   { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
   { items: ['marketplace'] },
@@ -168,6 +178,7 @@ const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
   {
     title: 'Agents',
     items: [
+      'genesischat',
       'genesis',
       'agents',
       'marketplace',
@@ -688,6 +699,7 @@ export function App() {
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
+        {view === 'genesischat' && <GenesisChat isAdmin={isAdmin} />}
         {view === 'marketplace' && <Marketplace go={(v) => setView(v as View)} />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}

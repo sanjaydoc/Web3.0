@@ -2160,3 +2160,217 @@ button.connector:not(:disabled):hover {
 .switch input:checked + .slider::before {
   transform: translateX(18px);
 }
+
+/* --- Genesis chat (conversational agent studio) --------------------------- */
+.genesis-chat .gchat-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+.gchat-thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  max-height: 72vh;
+  padding: 0;
+  overflow: hidden;
+}
+.gchat-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gchat-empty {
+  margin: auto 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.gchat-msg {
+  display: flex;
+}
+.gchat-msg.gchat-user {
+  justify-content: flex-end;
+}
+.gchat-bubble {
+  max-width: 82%;
+  padding: 0.55rem 0.8rem;
+  border-radius: 14px;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--hair);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.gchat-user .gchat-bubble {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  border-bottom-right-radius: 4px;
+}
+.gchat-bot .gchat-bubble {
+  border-bottom-left-radius: 4px;
+}
+.gchat-asks {
+  padding: 10px 16px;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gchat-composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--hair);
+}
+.gchat-composer input {
+  flex: 1 1 auto;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.gchat-config {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gchat-tip {
+  font-size: var(--fs-sm);
+}
+.gchat-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gchat-endpoint code {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding: 0.35rem 0.5rem;
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.gchat-created,
+.gchat-launch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--hair);
+  padding-top: 12px;
+}
+.gchat-admin {
+  margin-bottom: 16px;
+}
+.gchat-admin summary {
+  cursor: pointer;
+}
+.hint.ok {
+  color: #15803d;
+}
+.hint.err {
+  color: #b91c1c;
+}
+@media (max-width: 860px) {
+  .genesis-chat .gchat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gchat-config {
+    position: static;
+  }
+}
+
+/* --- Genesis chat · knowledge base (RAG) --------------------------------- */
+.gchat-kb {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gchat-kb textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.gchat-kb-tabs {
+  margin-bottom: 4px;
+}
+.gchat-kb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gchat-kb-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+  font-size: var(--fs-sm);
+}
+.gchat-kb-src {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gchat-kb-testrow {
+  display: flex;
+  gap: 6px;
+}
+.gchat-kb-testrow input {
+  flex: 1 1 auto;
+}
+.gchat-kb-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.gchat-kb-hit {
+  padding: 0.4rem 0.55rem;
+  border-left: 3px solid var(--hair);
+  background: var(--paper-2);
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+.gchat-kb-hit p {
+  margin: 2px 0 0;
+}
+
+/* --- Connector quick-start templates ------------------------------------- */
+.conn-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px dashed var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+}

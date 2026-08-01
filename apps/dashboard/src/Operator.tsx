@@ -3,7 +3,6 @@ import {
   type Account as Acct,
   type AuthorityRequest,
   type Economics,
-  type Lease,
   type MyEarnings,
   type NodeLocation,
   type NodeOperator,
@@ -437,8 +436,6 @@ function AuthorityCard({ role }: { role: NodeRole }) {
   );
 }
 
-const ADMIN_KEY = 'web3.adminToken';
-
 /** Set / update the operator's position on the Network map — browser GPS or typed manually. */
 function NodeLocationCard() {
   const [mine, setMine] = useState<NodeLocation | null>(null);
@@ -630,127 +627,6 @@ function uptime(sec: number): string {
   return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m ${sec % 60}s`;
 }
 
-/**
- * HostingCard — the host side of the compute marketplace. Set the per-epoch price you charge to run
- * one agent, see your net hosting revenue, and view who's renting your capacity. Selling your
- * contributed RAM earns USDC here (minus the platform commission).
- */
-function HostingCard() {
-  const [price, setPrice] = useState('');
-  const [offerPrice, setOfferPrice] = useState(0);
-  const [revenue, setRevenue] = useState(0);
-  const [leases, setLeases] = useState<Lease[]>([]);
-  const [me, setMe] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const [offer, rev, ls, acct] = await Promise.all([
-        api.hostingOffer(),
-        api.hostingRevenue(),
-        api.hostingLeases(),
-        api.me(),
-      ]);
-      setOfferPrice(offer.pricePerEpoch);
-      setRevenue(rev.revenue);
-      setMe(acct.address);
-      setLeases(ls.leases);
-    } catch {
-      /* offline — keep last */
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, [load]);
-
-  const save = async () => {
-    const v = Math.round(Number(price));
-    if (!Number.isFinite(v) || v < 0) {
-      setMsg({ kind: 'err', text: 'Enter a price in USDC minor units (0 to stop offering).' });
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      await api.setHostingOffer(v);
-      setPrice('');
-      setMsg({ kind: 'ok', text: 'Hosting price updated.' });
-      await load();
-    } catch (e) {
-      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const hosted = leases.filter((l) => l.active && l.host === me);
-
-  return (
-    <div className="card">
-      <div className="section-title">Hosting · sell your RAM</div>
-      <p className="muted" style={{ margin: '2px 0 12px' }}>
-        Set what you charge to run one agent per epoch. Renters pay from their wallet each epoch;
-        you keep the fee minus the platform commission.
-      </p>
-      <dl className="kv">
-        <dt>Current price / epoch</dt>
-        <dd>{offerPrice > 0 ? formatAmount(offerPrice) : 'not offering'}</dd>
-        <dt>Net hosting revenue</dt>
-        <dd>{formatAmount(revenue)}</dd>
-        <dt>Agents hosted</dt>
-        <dd>{hosted.length}</dd>
-      </dl>
-      <div className="field" style={{ maxWidth: 300, marginTop: 10 }}>
-        <label htmlFor="host-price">New price / epoch (USDC minor units)</label>
-        <input
-          id="host-price"
-          type="number"
-          min={0}
-          value={price}
-          placeholder={String(offerPrice)}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-      </div>
-      {msg && (
-        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
-      )}
-      <div style={{ marginTop: 10 }}>
-        <button type="button" className="btn act" disabled={busy} onClick={save}>
-          {busy ? 'Saving…' : 'Update price'}
-        </button>
-      </div>
-      {hosted.length > 0 && (
-        <div className="hscroll" style={{ marginTop: 14 }}>
-          <table>
-            <thead>
-              <tr>
-                <th>Agent</th>
-                <th>Renter</th>
-                <th>Price / epoch</th>
-                <th>Epochs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hosted.map((l) => (
-                <tr key={l.id}>
-                  <td>{l.agentId}</td>
-                  <td>{l.owner}</td>
-                  <td>{formatAmount(l.pricePerEpoch)}</td>
-                  <td>{l.epochsBilled}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function Operator() {
   const [node, setNode] = useState<NodeOperator | null>(null);
   // The signed-in account's role decides what this page shows: an admin sees the node OWNER's
@@ -758,20 +634,13 @@ export function Operator() {
   const [me, setMe] = useState<Acct | null>(null);
   const [mine, setMine] = useState<MyEarnings | null>(null);
   const isAdmin = me?.role === 'admin';
-  const [admin, setAdmin] = useState(() => localStorage.getItem(ADMIN_KEY) ?? '');
-  // Who sees the node-OWNER console (load, contribution, authority, location, treasury)? Anyone
-  // running THIS node: an admin on any node, OR any operator on a node that isn't the reserved
-  // admin-only MAIN node — i.e. their own desktop/self-hosted node. On the main node a plain
-  // operator still sees only their personal earnings (that node isn't theirs). Network-policy cards
-  // (Economics, Storage) stay admin-only.
+  // Who sees the node-OWNER console (load, authority, location, treasury)? Anyone running THIS node:
+  // an admin on any node, OR any operator on a node that isn't the reserved admin-only MAIN node —
+  // i.e. their own desktop/self-hosted node. On the main node a plain operator still sees only their
+  // personal earnings (that node isn't theirs). Network-policy cards (Economics, Storage) stay
+  // admin-only. Contribution + "Hosting · sell your RAM" now live on the dedicated Hosting page.
   const ownsNode = isAdmin || !node?.auth?.adminOnly;
-  const [adminReq, setAdminReq] = useState(false);
-  const [contribute, setContribute] = useState(true);
-  const [maxRamGb, setMaxRamGb] = useState('0');
-  const [maxAgents, setMaxAgents] = useState('0');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-  const [touched, setTouched] = useState(false);
   // Whether the node is reachable right now — drives the green on/off light.
   const [online, setOnline] = useState(false);
 
@@ -780,18 +649,9 @@ export function Operator() {
       const n = await api.node();
       setNode(n);
       setOnline(true);
-      if (!touched) {
-        setContribute(n.limits.contribute);
-        setMaxRamGb((n.limits.maxRamMb / 1024).toFixed(1).replace(/\.0$/, ''));
-        setMaxAgents(String(n.limits.maxAgents));
-      }
     } catch {
       setOnline(false); // node offline / unreachable
     }
-    api
-      .telegram()
-      .then((t) => setAdminReq(t.adminRequired))
-      .catch(() => undefined);
     api
       .me()
       .then(setMe)
@@ -800,43 +660,13 @@ export function Operator() {
       .myEarnings()
       .then(setMine)
       .catch(() => undefined);
-  }, [touched]);
+  }, []);
 
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, 4000);
     return () => clearInterval(t);
   }, [refresh]);
-
-  const rememberAdmin = (v: string) => {
-    setAdmin(v);
-    localStorage.setItem(ADMIN_KEY, v);
-  };
-
-  async function save() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await api.nodeLimits(
-        {
-          contribute,
-          maxRamMb: Math.round(Number.parseFloat(maxRamGb || '0') * 1024),
-          maxAgents: Math.max(0, Math.round(Number.parseFloat(maxAgents || '0'))),
-        },
-        admin,
-      );
-      setMsg({ kind: 'ok', text: 'Contribution saved.' });
-      setTouched(false);
-      refresh();
-      // On the desktop app, changing contributed RAM may unlock a new local-model tier — kick off a
-      // background re-pull so the node can host it over the tunnel (best-effort, never blocks the UI).
-      desktop?.ensureModel?.().catch(() => undefined);
-    } catch (err) {
-      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const [collectMsg, setCollectMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -1007,81 +837,8 @@ export function Operator() {
             )}
           </div>
 
-          {ownsNode && (
-            <div className="card" style={{ marginBottom: 18 }}>
-              <div className="section-title">Contribution</div>
-              <p className="muted" style={{ margin: '2px 0 12px' }}>
-                Choose how much of this machine you lend to the network. Limits are enforced — the
-                node won't host past your caps.
-              </p>
-              {adminReq && (
-                <div className="field wide">
-                  <label htmlFor="o-admin">Admin token</label>
-                  <input
-                    id="o-admin"
-                    type="password"
-                    value={admin}
-                    onChange={(ev) => rememberAdmin(ev.target.value)}
-                    placeholder="required to change limits"
-                  />
-                </div>
-              )}
-              <div className="form-grid">
-                <div className="field">
-                  <label htmlFor="o-ram">Max RAM to contribute (GB)</label>
-                  <input
-                    id="o-ram"
-                    value={maxRamGb}
-                    onChange={(ev) => {
-                      setMaxRamGb(ev.target.value);
-                      setTouched(true);
-                    }}
-                  />
-                  <span className="hint">0 = no cap</span>
-                </div>
-                <div className="field">
-                  <label htmlFor="o-agents">Max agents to host</label>
-                  <input
-                    id="o-agents"
-                    value={maxAgents}
-                    onChange={(ev) => {
-                      setMaxAgents(ev.target.value);
-                      setTouched(true);
-                    }}
-                  />
-                  <span className="hint">0 = no cap</span>
-                </div>
-                <div className="field">
-                  <label htmlFor="o-contrib">Offer spare compute</label>
-                  <select
-                    id="o-contrib"
-                    value={contribute ? 'yes' : 'no'}
-                    onChange={(ev) => {
-                      setContribute(ev.target.value === 'yes');
-                      setTouched(true);
-                    }}
-                  >
-                    <option value="yes">Yes — host others' agents</option>
-                    <option value="no">No — my agents only</option>
-                  </select>
-                </div>
-              </div>
-              <div className="gen-actions">
-                <button type="button" className="btn act" disabled={busy} onClick={save}>
-                  {busy ? 'Saving…' : 'Save contribution'}
-                </button>
-              </div>
-              {msg && (
-                <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
-                  {msg.text}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Node-owner cards — shown to whoever RUNS this node. Economics + Storage stay admin-only
-              (network monetary policy + node persistence config, not per-operator). */}
-          {ownsNode && <HostingCard />}
+          {/* Contribution + "Hosting · sell your RAM" now live on the dedicated Hosting page.
+              Node-owner cards below (Economics + Storage) stay admin-only. */}
 
           {ownsNode && <AuthorityCard role={node.role} />}
 

@@ -105,6 +105,59 @@ const total = CATALOGUE.reduce((n, g) => n + g.items.length, 0);
 /** Flat list of built-in connector names, for pickers elsewhere (e.g. Genesis). */
 export const BUILTIN_CONNECTORS: string[] = CATALOGUE.flatMap((g) => g.items.map((i) => i.name));
 
+/**
+ * One-click prefills for the custom-connector form. Each fills a working web-search endpoint that uses
+ * `{{query}}` (the node injects the live question) — the admin just drops in their API key where a
+ * `YOUR_…_KEY` placeholder appears. Wire one of these, then attach it to the Genesis brain so the
+ * assistant can research a company and design a matching agent ("build me an agent like X uses").
+ */
+interface ConnectorTemplate {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  endpoint: string;
+  method: 'GET' | 'POST';
+  headers: string;
+  body: string;
+  needsKey: boolean;
+}
+const TEMPLATES: ConnectorTemplate[] = [
+  {
+    id: 'duckduckgo-search',
+    name: 'DuckDuckGo Search',
+    category: 'Search & web',
+    description: 'Free web search (Instant Answer API) — no API key.',
+    endpoint: 'https://api.duckduckgo.com/?q={{query}}&format=json&no_html=1&skip_disambig=1',
+    method: 'GET',
+    headers: '',
+    body: '',
+    needsKey: false,
+  },
+  {
+    id: 'brave-search',
+    name: 'Brave Search',
+    category: 'Search & web',
+    description: 'Brave Web Search API — paste your subscription token.',
+    endpoint: 'https://api.search.brave.com/res/v1/web/search?q={{query}}&count=5',
+    method: 'GET',
+    headers: 'Accept: application/json\nX-Subscription-Token: YOUR_BRAVE_API_KEY',
+    body: '',
+    needsKey: true,
+  },
+  {
+    id: 'tavily-search',
+    name: 'Tavily Search',
+    category: 'Search & web',
+    description: 'Tavily search built for agents — paste your API key.',
+    endpoint: 'https://api.tavily.com/search',
+    method: 'POST',
+    headers: 'Authorization: Bearer YOUR_TAVILY_API_KEY\nContent-Type: application/json',
+    body: '{"query": "{{query}}", "max_results": 5, "search_depth": "basic"}',
+    needsKey: true,
+  },
+];
+
 export function Connectors({ go }: { go?: (view: string) => void }) {
   const [tg, setTg] = useState<TelegramStatus | null>(null);
   const [settle, setSettle] = useState<SettlementInfo | null>(null);
@@ -121,6 +174,23 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
   const [reqBody, setReqBody] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Prefill the whole create form from a one-click template (the admin edits the key, then saves).
+  function applyTemplate(t: ConnectorTemplate) {
+    setId(t.id);
+    setName(t.name);
+    setCategory(t.category);
+    setDescription(t.description);
+    setEndpoint(t.endpoint);
+    setMethod(t.method);
+    setHeadersText(t.headers);
+    setReqBody(t.body);
+    setMsg(
+      t.needsKey
+        ? { kind: 'ok', text: `Loaded ${t.name} — replace YOUR_…_KEY in Headers, then Add.` }
+        : { kind: 'ok', text: `Loaded ${t.name} — no key needed, just Add.` },
+    );
+  }
 
   // Parse the headers textarea ("Key: Value" per line) into the {key,value}[] the node expects.
   function parseHeaders(text: string): { key: string; value: string }[] {
@@ -267,6 +337,27 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
         <p className="muted" style={{ margin: '0 0 12px' }}>
           Register any integration not in the catalogue — point it at a webhook or API endpoint.
         </p>
+        <div className="conn-templates">
+          <span className="hint">Quick start · web search:</span>
+          <div className="chip-pick">
+            {TEMPLATES.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className="chip-toggle"
+                onClick={() => applyTemplate(t)}
+                title={t.description}
+              >
+                {t.name}
+                {t.needsKey ? '' : ' · no key'}
+              </button>
+            ))}
+          </div>
+          <span className="hint">
+            Fills the form below — then attach it to the Genesis brain so the assistant can research
+            and design agents.
+          </span>
+        </div>
         <div className="form-grid">
           <div className="field">
             <label htmlFor="c-id">Connector id</label>
