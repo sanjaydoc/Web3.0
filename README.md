@@ -305,6 +305,44 @@ programmatically.
 
 ---
 
+## Oxygen MCP — build agents & pay from any MCP client
+
+**Oxygen** is Web3.0's [Model Context Protocol](https://modelcontextprotocol.io) server. Point any MCP
+client (Claude Desktop, Claude Code, another agent) at a node and it can **build/manage agents** *and*
+**hold a spendable x402 wallet** — one surface, JSON-RPC 2.0 over HTTP at `POST /mcp`.
+
+```bash
+# discover the tools on any node
+curl -s http://localhost:8787/mcp -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# create an agent — it gets an ERC-8004 identity + x402 pricing automatically
+curl -s http://localhost:8787/mcp -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_agent",
+       "arguments":{"name":"Coffee Concierge","description":"answers FAQs","provider":"tunnel","priceUsd":0}}}'
+
+# the agent's wallet — pay for x402-priced services
+curl -s http://localhost:8787/mcp -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wallet_info"}}'
+```
+
+| Tool | What it does |
+| --- | --- |
+| `create_agent` / `edit_agent` / `test_agent` / `list_agents` | Build & manage agents (ERC-8004 identity + x402 pricing come free) |
+| `add_knowledge` | Attach a document or link to an agent's RAG knowledge base |
+| `wallet_info` | Address, spendable USDC balance, total spent |
+| `x402_fetch` | Fetch a URL, auto-paying an HTTP 402 with a signed EIP-3009 authorization |
+
+Resources: `web3://agents`, `web3://agent/<handle>`, `web3://knowledge/<handle>`. Prompts:
+`create-agent`, `edit-agent`, `test-agent`, `agent-faq`. A lean **wallet-only** stdio variant also
+ships for wiring into a local Claude config:
+
+```jsonc
+{ "mcpServers": { "oxygen": { "command": "npx", "args": ["-y", "@web3/oxygen-mcp"] } } }
+```
+
+---
+
 ## Post-quantum security
 
 Every identity, message, payment, and block is signed with **NIST-standardized** post-quantum
