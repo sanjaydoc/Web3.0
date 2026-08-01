@@ -134,6 +134,10 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
     { name: string; text?: string; dataBase64?: string }[]
   >([]);
   const [kbNote, setKbNote] = useState('');
+  // The price the agent will launch with, in USD. Editable in the config panel so the user isn't at
+  // the mercy of the (small) brain model reliably emitting priceUsd — it seeds from the brain's value
+  // but the user can fix it before creating. '' = fall back to the brain's config; '0' = free.
+  const [priceInput, setPriceInput] = useState('');
 
   // The owner's own agents — powers edit/test/FAQ (the brain gets a compact brief of these).
   const [agents, setAgents] = useState<HostedAgent[]>([]);
@@ -181,6 +185,12 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
       /* ignore quota / unavailable storage */
     }
   }, [messages, storageKey]);
+
+  // Seed the editable price from whatever the brain managed to put in config.priceUsd (it often
+  // states the price in prose but forgets the field). User edits then win until the brain updates it.
+  useEffect(() => {
+    if (config.priceUsd !== undefined) setPriceInput(String(config.priceUsd));
+  }, [config.priceUsd]);
 
   const needsAgentKey = useMemo(
     () => Boolean(config.provider && KEYED_AGENT_PROVIDERS.has(config.provider)),
@@ -254,8 +264,11 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
       if (r.done === true && !created && !launching) {
         const merged = { ...config, ...(r.config ?? {}) };
         const keyed = Boolean(merged.provider && KEYED_AGENT_PROVIDERS.has(merged.provider));
+        // Honour the editable price field (the brain doesn't always land priceUsd in the config).
+        const p = priceInput.trim();
+        const priceUsd = p === '' ? merged.priceUsd : Math.max(0, Number(p) || 0);
         if (merged.handle && (!keyed || agentKey.trim())) {
-          await launch(merged);
+          await launch({ ...merged, priceUsd });
         }
       }
     } catch (err) {
@@ -582,8 +595,16 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
                 Send
               </button>
             </form>
-            {kbNote && <p className="hint ok">{kbNote}</p>}
-            {error && <p className="hint err">{error}</p>}
+            {kbNote && (
+              <p className="hint ok" style={{ textAlign: 'center', margin: '8px 0 0' }}>
+                {kbNote}
+              </p>
+            )}
+            {error && (
+              <p className="hint err" style={{ textAlign: 'center', margin: '8px 0 0' }}>
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="card gchat-config">
@@ -615,7 +636,10 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
                   Create another
                 </button>
               </div>
-            ) : done ? (
+            ) : config.handle ? (
+              // Ready to create as soon as we have a handle — NOT gated on the brain's `done` flag
+              // (the small model sets it unreliably, which left users unable to create). Price is
+              // editable here so it's correct even when the brain forgets to emit priceUsd.
               <div className="gchat-launch">
                 {needsAgentKey && (
                   <div className="field">
@@ -632,11 +656,29 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
                     />
                   </div>
                 )}
+                <div className="field">
+                  <label className="field-lbl" htmlFor="gc-price">
+                    Price per call (USD)
+                  </label>
+                  <input
+                    id="gc-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0 = free"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                  />
+                </div>
                 <button
                   type="button"
                   className="btn act"
                   disabled={launching || !config.handle || (needsAgentKey && !agentKey.trim())}
-                  onClick={launch}
+                  onClick={() => {
+                    const p = priceInput.trim();
+                    const priceUsd = p === '' ? config.priceUsd : Math.max(0, Number(p) || 0);
+                    void launch({ ...config, priceUsd });
+                  }}
                 >
                   {launching
                     ? isEdit
@@ -647,7 +689,7 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
               </div>
             ) : (
               <p className="muted gchat-tip">
-                Keep chatting — when the agent is fully specified, a <strong>Create / Save</strong>{' '}
+                Keep chatting — once your agent has a name/handle, a <strong>Create / Save</strong>{' '}
                 button appears here. You can also ask me to test or answer questions about your
                 agents.
               </p>
