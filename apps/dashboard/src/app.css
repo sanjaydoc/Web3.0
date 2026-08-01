@@ -2472,13 +2472,18 @@ button.connector:not(:disabled):hover {
   border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
   background: var(--paper);
+  color: var(--ink-2);
   cursor: pointer;
-  font-size: 1.05rem;
   line-height: 1;
   user-select: none;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
 }
 .gchat-attach:hover {
   border-color: var(--ink);
+  color: var(--ink);
+}
+.gchat-attach svg {
+  display: block;
 }
 .gchat-attachments {
   display: flex;
