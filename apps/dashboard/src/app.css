@@ -1909,12 +1909,13 @@ button.connector:not(:disabled):hover {
 }
 .gchat-created .hint.ok {
   position: relative;
+  padding-left: 18px; /* hanging indent so wrapped lines align under the text, not under the dot */
 }
 .gchat-created .hint.ok::before {
   content: "";
   position: absolute;
-  left: -3px;
-  top: 50%;
+  left: 3px;
+  top: 0.55em; /* align the dot to the FIRST line, not the vertical centre of a 2-line block */
   width: 8px;
   height: 8px;
   margin-top: -4px;
