@@ -256,9 +256,11 @@ pre,
 .mono {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+/* Command / code canvases: terminal look — near-black ground, green mono text. */
 pre {
-  background: #0d0d0f;
-  color: #f4f4f5;
+  background: #0b0d0e;
+  color: #3ddc84;
+  border: 1px solid #23262c;
   border-radius: var(--radius-sm);
   padding: 16px 18px;
   overflow-x: auto;
