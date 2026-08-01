@@ -106,10 +106,15 @@ const total = CATALOGUE.reduce((n, g) => n + g.items.length, 0);
 export const BUILTIN_CONNECTORS: string[] = CATALOGUE.flatMap((g) => g.items.map((i) => i.name));
 
 /**
- * One-click prefills for the custom-connector form. Each fills a working web-search endpoint that uses
- * `{{query}}` (the node injects the live question) — the admin just drops in their API key where a
- * `YOUR_…_KEY` placeholder appears. Wire one of these, then attach it to the Genesis brain so the
- * assistant can research a company and design a matching agent ("build me an agent like X uses").
+ * One-click prefills for the custom-connector form — the tools an agent (or the Genesis assistant
+ * itself) actually needs. Each fills a working endpoint that uses `{{query}}` (the node injects the
+ * live question/text); the admin just drops in their key where a `YOUR_…` placeholder appears (it may
+ * live in the URL, the headers, or the body). Two uses:
+ *   • Attach the SEARCH/DATA ones (DuckDuckGo, Wikipedia, News, Weather…) to the Genesis brain so it
+ *     can research a company and design a matching agent ("build me an agent like X uses").
+ *   • Attach the ACTION ones (Gmail, Calendar, Slack, Telegram) to a CREATED agent so it can read a
+ *     user's inbox/calendar or post messages.
+ * Curated to 10 relevant integrations — no demo/placeholder connectors.
  */
 interface ConnectorTemplate {
   id: string;
@@ -123,6 +128,7 @@ interface ConnectorTemplate {
   needsKey: boolean;
 }
 const TEMPLATES: ConnectorTemplate[] = [
+  // ── Search & web (research the brain uses to design agents) ──────────────────────────────────
   {
     id: 'duckduckgo-search',
     name: 'DuckDuckGo Search',
@@ -154,6 +160,91 @@ const TEMPLATES: ConnectorTemplate[] = [
     method: 'POST',
     headers: 'Authorization: Bearer YOUR_TAVILY_API_KEY\nContent-Type: application/json',
     body: '{"query": "{{query}}", "max_results": 5, "search_depth": "basic"}',
+    needsKey: true,
+  },
+  {
+    id: 'wikipedia-search',
+    name: 'Wikipedia',
+    category: 'Search & web',
+    description: 'Free knowledge lookup (MediaWiki search API) — no API key.',
+    endpoint:
+      'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={{query}}&srlimit=5&format=json',
+    method: 'GET',
+    headers: '',
+    body: '',
+    needsKey: false,
+  },
+  // ── Data & knowledge ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'openweather',
+    name: 'Weather (OpenWeatherMap)',
+    category: 'Data & knowledge',
+    description: 'Current weather by city — paste your OpenWeatherMap key (in the URL).',
+    endpoint:
+      'https://api.openweathermap.org/data/2.5/weather?q={{query}}&appid=YOUR_OPENWEATHER_API_KEY&units=metric',
+    method: 'GET',
+    headers: '',
+    body: '',
+    needsKey: true,
+  },
+  {
+    id: 'newsapi',
+    name: 'News (NewsAPI)',
+    category: 'Data & knowledge',
+    description: 'Latest news headlines matching a topic — paste your NewsAPI key.',
+    endpoint: 'https://newsapi.org/v2/everything?q={{query}}&pageSize=5&sortBy=publishedAt',
+    method: 'GET',
+    headers: 'X-Api-Key: YOUR_NEWSAPI_KEY',
+    body: '',
+    needsKey: true,
+  },
+  // ── Productivity (actions a created agent performs) ──────────────────────────────────────────
+  {
+    id: 'gmail-search',
+    name: 'Gmail (search inbox)',
+    category: 'Productivity',
+    description:
+      'Search the user’s Gmail — paste a Google OAuth token (gmail.readonly scope) as the Bearer.',
+    endpoint: 'https://gmail.googleapis.com/gmail/v1/users/me/messages?q={{query}}&maxResults=5',
+    method: 'GET',
+    headers: 'Authorization: Bearer YOUR_GMAIL_OAUTH_TOKEN',
+    body: '',
+    needsKey: true,
+  },
+  {
+    id: 'gcal-events',
+    name: 'Google Calendar (events)',
+    category: 'Productivity',
+    description: 'List calendar events matching a term — paste a Google OAuth token as the Bearer.',
+    endpoint:
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events?q={{query}}&maxResults=5&singleEvents=true&orderBy=startTime',
+    method: 'GET',
+    headers: 'Authorization: Bearer YOUR_GOOGLE_OAUTH_TOKEN',
+    body: '',
+    needsKey: true,
+  },
+  // ── Messaging (an agent posts/notifies) ──────────────────────────────────────────────────────
+  {
+    id: 'slack-post',
+    name: 'Slack (post message)',
+    category: 'Messaging',
+    description: 'Post to a Slack channel via an Incoming Webhook — paste your webhook URL below.',
+    endpoint: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK',
+    method: 'POST',
+    headers: 'Content-Type: application/json',
+    body: '{"text": "{{query}}"}',
+    needsKey: true,
+  },
+  {
+    id: 'telegram-send',
+    name: 'Telegram (send message)',
+    category: 'Messaging',
+    description:
+      'Send a Telegram message — put your bot token in the URL and a chat id in the body.',
+    endpoint: 'https://api.telegram.org/botYOUR_BOT_TOKEN/sendMessage',
+    method: 'POST',
+    headers: 'Content-Type: application/json',
+    body: '{"chat_id": "YOUR_CHAT_ID", "text": "{{query}}"}',
     needsKey: true,
   },
 ];
