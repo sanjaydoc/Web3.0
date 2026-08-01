@@ -616,7 +616,7 @@ while True:
         )}
         <div className="gen-actions">
           <button type="button" className="btn act" disabled={launching} onClick={launch}>
-            {launching ? 'Launching…' : 'Launch on node'}
+            {launching ? 'Launching…' : 'Launch'}
           </button>
         </div>
         {launchMsg && (
