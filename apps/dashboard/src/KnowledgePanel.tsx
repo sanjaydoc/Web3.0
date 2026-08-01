@@ -4,7 +4,7 @@ import { type KnowledgeHit, type KnowledgeSource, api, fileToBase64 } from './ap
 // Text-like files we read client-side and post as text; PDF/Word are sent as base64 bytes and the
 // node extracts their text (see docparse on the server).
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
-const DOC_EXT = /\.(pdf|docx)$/i;
+const DOC_EXT = /\.(pdf|docx|xlsx)$/i;
 
 /**
  * KnowledgePanel — attach a RAG knowledge base to one agent (Genesis chat Phase 2). The owner pastes
@@ -65,7 +65,7 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
     }
     setMsg({
       kind: 'err',
-      text: `"${file.name}" isn't supported — upload a PDF, a .docx, or a text file (.txt/.md/.csv…).`,
+      text: `"${file.name}" isn't supported — upload a PDF, a .docx, a spreadsheet (.xlsx), or a text file (.txt/.md/.csv…).`,
     });
   }
 
@@ -167,7 +167,7 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
         <div className="field">
           <input
             type="file"
-            accept=".pdf,.docx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf"
+            accept=".pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void onFile(f);
@@ -175,8 +175,8 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
             }}
           />
           <p className="hint">
-            PDF, Word (.docx), or text files (.txt .md .csv .json …). Scanned/image-only PDFs have no
-            extractable text.
+            PDF, Word (.docx), Excel (.xlsx), or text files (.txt .md .csv .json …).
+            Scanned/image-only PDFs have no extractable text.
           </p>
         </div>
       )}

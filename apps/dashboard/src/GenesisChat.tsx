@@ -14,6 +14,7 @@ import {
   api,
   fileToBase64,
 } from './api.js';
+import { uiConfirm } from './dialog.js';
 
 const ADMIN_KEY = 'web3.adminToken';
 
@@ -67,9 +68,9 @@ function toBrief(a: HostedAgent, full?: HostedFullConfig): GenesisAgentBrief {
 // Files we can stage into a new agent's RAG: text-like ones read as text client-side; PDF/Word sent
 // as base64 bytes for the node to extract (see docparse on the server).
 const KB_TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
-const KB_DOC_EXT = /\.(pdf|docx)$/i;
+const KB_DOC_EXT = /\.(pdf|docx|xlsx)$/i;
 const KB_ACCEPT =
-  '.pdf,.docx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
+  '.pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
 
 /** Best-effort human text from a hosted agent's ask output (shape varies by skill). */
 function formatTestOutput(output: Record<string, unknown>): string {
@@ -89,9 +90,21 @@ function formatTestOutput(output: Record<string, unknown>): string {
  * identity/reputation automatically. Scope is locked to create/edit/test/FAQ about agents. The brain
  * itself is set only by the admin (sanjay@web3.0).
  */
+// localStorage key for the persisted chat transcript. Bump the suffix if GenesisTurn's shape changes.
+const CHAT_STORAGE_KEY = 'web3.genesis.chat.v1';
+
 export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   const [brain, setBrain] = useState<GenesisBrain | null>(null);
-  const [messages, setMessages] = useState<GenesisTurn[]>([]);
+  // The transcript persists across navigation AND app restarts (localStorage) so a testing session
+  // isn't wiped when you leave the section. Restored lazily on mount; written back on every change.
+  const [messages, setMessages] = useState<GenesisTurn[]>(() => {
+    try {
+      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as GenesisTurn[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [config, setConfig] = useState<GenesisConfig>({});
   const [ask, setAsk] = useState<GenesisAsk | null>(null);
   const [done, setDone] = useState(false);
@@ -141,6 +154,17 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' });
   }, []);
+
+  // Mirror the transcript to localStorage on every change so it survives unmount/reload. Empty →
+  // remove the key so a cleared history stays cleared. Wrapped: storage can be full or disabled.
+  useEffect(() => {
+    try {
+      if (messages.length) localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+      else localStorage.removeItem(CHAT_STORAGE_KEY);
+    } catch {
+      /* ignore quota / unavailable storage */
+    }
+  }, [messages]);
 
   const needsAgentKey = useMemo(
     () => Boolean(config.provider && KEYED_AGENT_PROVIDERS.has(config.provider)),
@@ -254,7 +278,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     if (accepted.length) setPendingFiles((p) => [...p, ...accepted]);
     setKbNote(
       rejected.length
-        ? `Attached ${accepted.length} file(s). Skipped ${rejected.join(', ')} — upload PDF, Word (.docx), or text files (.txt .md .csv …).`
+        ? `Attached ${accepted.length} file(s). Skipped ${rejected.join(', ')} — upload PDF, Word (.docx), Excel (.xlsx), or text files (.txt .md .csv …).`
         : `Attached ${accepted.length} file(s) — I'll add these to the agent's knowledge when you create it.`,
     );
   }
@@ -333,6 +357,26 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     setKbNote('');
   }
 
+  // Delete the saved transcript and start a fresh chat. reset() empties `messages`, which the persist
+  // effect then flushes from localStorage — the explicit remove is a belt-and-braces guard.
+  async function clearHistory() {
+    if (
+      messages.length &&
+      !(await uiConfirm('Delete this chat history? This can’t be undone.', {
+        title: 'Clear chat history',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return;
+    reset();
+    try {
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+    } catch {
+      /* ignore unavailable storage */
+    }
+  }
+
   const brainReady = Boolean(brain?.configured);
 
   return (
@@ -345,6 +389,17 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
           Start / Stop / Test / Copy-endpoint, rides the billing cycle, and gets x402 pricing +
           ERC-8004 identity automatically.
         </p>
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="btn"
+            style={{ alignSelf: 'flex-start', fontSize: 12 }}
+            onClick={clearHistory}
+            title="Delete the saved chat transcript and start fresh"
+          >
+            Clear chat history
+          </button>
+        )}
       </div>
 
       {isAdmin && <BrainSettings brain={brain} onSaved={loadBrain} />}
@@ -458,11 +513,14 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
                 send(input);
               }}
             >
-              <label
-                className="gchat-attach"
-                title="Attach files for the agent's knowledge (RAG)"
-              >
-                <svg viewBox="0 0 448 512" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <label className="gchat-attach" title="Attach files for the agent's knowledge (RAG)">
+                <svg
+                  viewBox="0 0 448 512"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M364.2 83.8c-24.4-24.4-64-24.4-88.4 0l-184 184c-42.1 42.1-42.1 110.3 0 152.4s110.3 42.1 152.4 0l152-152c10.9-10.9 28.7-10.9 39.6 0s10.9 28.7 0 39.6l-152 152c-64 64-167.6 64-231.6 0s-64-167.6 0-231.6l184-184c46.3-46.3 121.3-46.3 167.6 0s46.3 121.3 0 167.6l-176 176c-28.6 28.6-75 28.6-103.6 0s-28.6-75 0-103.6l144-144c10.9-10.9 28.7-10.9 39.6 0s10.9 28.7 0 39.6l-144 144c-6.7 6.7-6.7 17.7 0 24.4s17.7 6.7 24.4 0l176-176c24.4-24.4 24.4-64 0-88.4z" />
                 </svg>
                 <input
