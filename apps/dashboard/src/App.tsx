@@ -163,13 +163,12 @@ const AGENT_OWNER_NAV = new Set<View>([
  * never widens access beyond AGENT_OWNER_NAV.
  */
 const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
-  { items: ['account', 'overview', 'ledger'] },
+  { items: ['account', 'overview', 'ledger', 'marketplace'] },
   {
     title: 'Launch agents',
     items: ['genesischat', 'genesis', 'connectmcp', 'agentweb4', 'connectors', 'skills', 'telegram', 'agents'],
   },
   { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
-  { items: ['marketplace'] },
   { title: 'Run a node', items: ['download'] },
 ];
 
@@ -179,7 +178,7 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
  * still renders (appended by the fallback below), so nothing is ever hidden from the admin.
  */
 const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
-  { items: ['overview', 'account', 'ledger'] },
+  { items: ['overview', 'account', 'ledger', 'marketplace'] },
   {
     title: 'Agents',
     items: [
@@ -187,7 +186,6 @@ const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
       'genesis',
       'connectmcp',
       'agents',
-      'marketplace',
       'skills',
       'connectors',
       'telegram',
