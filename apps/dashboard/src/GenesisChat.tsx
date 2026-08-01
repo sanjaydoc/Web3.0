@@ -12,6 +12,7 @@ import {
   type HostedFullConfig,
   NODE_URL,
   api,
+  fileToBase64,
 } from './api.js';
 
 const ADMIN_KEY = 'web3.adminToken';
@@ -63,10 +64,12 @@ function toBrief(a: HostedAgent, full?: HostedFullConfig): GenesisAgentBrief {
   };
 }
 
-// Text-like files we can read client-side and stage into a new agent's RAG (mirrors KnowledgePanel;
-// PDF/Word import is a server-side follow-on).
+// Files we can stage into a new agent's RAG: text-like ones read as text client-side; PDF/Word sent
+// as base64 bytes for the node to extract (see docparse on the server).
 const KB_TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
-const KB_ACCEPT = '.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
+const KB_DOC_EXT = /\.(pdf|docx)$/i;
+const KB_ACCEPT =
+  '.pdf,.docx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
 
 /** Best-effort human text from a hosted agent's ask output (shape varies by skill). */
 function formatTestOutput(output: Record<string, unknown>): string {
@@ -105,7 +108,9 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   const [copied, setCopied] = useState(false);
   // Files the owner attaches DURING the interview, before the agent exists. Staged here (read as text
   // client-side), then flushed into the new agent's RAG knowledge base the moment it's created.
-  const [pendingFiles, setPendingFiles] = useState<{ name: string; text: string }[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<
+    { name: string; text?: string; dataBase64?: string }[]
+  >([]);
   const [kbNote, setKbNote] = useState('');
 
   // The owner's own agents — powers edit/test/FAQ (the brain gets a compact brief of these).
@@ -232,21 +237,24 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     send(chosen.length ? chosen.map((o) => o.label).join(', ') : 'none');
   }
 
-  // Stage text-like files during the interview; they're indexed into the agent's RAG on create.
+  // Stage files during the interview; they're indexed into the agent's RAG on create. Text-like files
+  // read as text here; PDF/Word are carried as base64 for the node to extract.
   async function attachFiles(files: FileList) {
-    const accepted: { name: string; text: string }[] = [];
+    const accepted: { name: string; text?: string; dataBase64?: string }[] = [];
     const rejected: string[] = [];
     for (const file of Array.from(files)) {
-      if (!KB_TEXT_EXT.test(file.name)) {
+      if (KB_DOC_EXT.test(file.name)) {
+        accepted.push({ name: file.name, dataBase64: await fileToBase64(file) });
+      } else if (KB_TEXT_EXT.test(file.name)) {
+        accepted.push({ name: file.name, text: await file.text() });
+      } else {
         rejected.push(file.name);
-        continue;
       }
-      accepted.push({ name: file.name, text: await file.text() });
     }
     if (accepted.length) setPendingFiles((p) => [...p, ...accepted]);
     setKbNote(
       rejected.length
-        ? `Attached ${accepted.length} file(s). Skipped ${rejected.join(', ')} — text files only (.txt .md .csv .json …; PDF/Word coming).`
+        ? `Attached ${accepted.length} file(s). Skipped ${rejected.join(', ')} — upload PDF, Word (.docx), or text files (.txt .md .csv …).`
         : `Attached ${accepted.length} file(s) — I'll add these to the agent's knowledge when you create it.`,
     );
   }
@@ -291,7 +299,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
               kind: 'file',
               filename: f.name,
               title: f.name,
-              text: f.text,
+              ...(f.dataBase64 ? { dataBase64: f.dataBase64 } : { text: f.text }),
             });
             ok++;
           } catch {

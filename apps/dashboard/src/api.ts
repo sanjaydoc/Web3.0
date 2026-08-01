@@ -517,6 +517,18 @@ async function send<T>(method: 'PUT' | 'DELETE', path: string, body?: unknown): 
   return res.json() as Promise<T>;
 }
 
+/** Read a File's bytes as base64 (for binary knowledge uploads — PDF / Word — the node extracts the
+ *  text). Chunked so a large file doesn't blow the argument limit of String.fromCharCode(...). */
+export async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 const isRoutable = (ip: string): boolean => !!ip && !/^(127\.|::1$|0\.0\.0\.0$)/.test(ip);
 
 /**
@@ -917,6 +929,8 @@ export const api = {
       text?: string;
       url?: string;
       filename?: string;
+      // Base64 of a binary document (PDF / Word .docx) — the node decodes + extracts the text.
+      dataBase64?: string;
     },
   ) => post<{ source: KnowledgeSource }>(`/knowledge/${encodeURIComponent(web3Id)}/source`, body),
   removeKnowledge: (web3Id: string, sourceId: string) =>

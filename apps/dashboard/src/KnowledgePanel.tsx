@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { type KnowledgeHit, type KnowledgeSource, api } from './api.js';
+import { type KnowledgeHit, type KnowledgeSource, api, fileToBase64 } from './api.js';
 
-// Text-like files we can read client-side (no server-side binary parsing yet — PDFs/Word are a
-// follow-on). We read the file as text and post the extracted text.
+// Text-like files we read client-side and post as text; PDF/Word are sent as base64 bytes and the
+// node extracts their text (see docparse on the server).
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
+const DOC_EXT = /\.(pdf|docx)$/i;
 
 /**
  * KnowledgePanel — attach a RAG knowledge base to one agent (Genesis chat Phase 2). The owner pastes
@@ -52,15 +53,20 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
   }
 
   async function onFile(file: File) {
-    if (!TEXT_EXT.test(file.name)) {
-      setMsg({
-        kind: 'err',
-        text: `"${file.name}" isn't a text file. Paste the text, or export it as .txt/.md/.csv (PDF/Word import is coming).`,
-      });
+    if (DOC_EXT.test(file.name)) {
+      const dataBase64 = await fileToBase64(file);
+      await add({ kind: 'file', filename: file.name, title: file.name, dataBase64 });
       return;
     }
-    const content = await file.text();
-    await add({ kind: 'file', filename: file.name, title: file.name, text: content });
+    if (TEXT_EXT.test(file.name)) {
+      const content = await file.text();
+      await add({ kind: 'file', filename: file.name, title: file.name, text: content });
+      return;
+    }
+    setMsg({
+      kind: 'err',
+      text: `"${file.name}" isn't supported — upload a PDF, a .docx, or a text file (.txt/.md/.csv…).`,
+    });
   }
 
   async function remove(id: string) {
@@ -161,7 +167,7 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
         <div className="field">
           <input
             type="file"
-            accept=".txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf"
+            accept=".pdf,.docx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void onFile(f);
@@ -169,7 +175,8 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
             }}
           />
           <p className="hint">
-            Text-like files (.txt .md .csv .json …). PDF/Word import is coming.
+            PDF, Word (.docx), or text files (.txt .md .csv .json …). Scanned/image-only PDFs have no
+            extractable text.
           </p>
         </div>
       )}
