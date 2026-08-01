@@ -959,6 +959,7 @@ function Agents({
                   <th>Skills</th>
                   <th>Wallet</th>
                   <th>DID</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -1027,17 +1028,6 @@ function Agents({
                                   Test
                                 </button>
                               )}
-                              <button
-                                type="button"
-                                className="btn ghost btn-trash"
-                                style={{ padding: '4px 8px' }}
-                                disabled={busy === a.web3Id}
-                                onClick={() => remove(h)}
-                                title="Delete this agent"
-                                aria-label={`Delete ${h.handle}`}
-                              >
-                                🗑
-                              </button>
                             </>
                           )}
                         </div>
@@ -1093,6 +1083,20 @@ function Agents({
                       </td>
                       <td>{formatAmount(balanceOf(a.web3Id))}</td>
                       <td className="mono-hash">{a.did.slice(0, 22)}…</td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {h && (
+                          <button
+                            type="button"
+                            className="btn-delete"
+                            disabled={busy === a.web3Id}
+                            onClick={() => remove(h)}
+                            title="Delete this agent"
+                            aria-label={`Delete ${h.handle}`}
+                          >
+                            {busy === a.web3Id ? '…' : 'Delete'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

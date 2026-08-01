@@ -1697,6 +1697,42 @@ button.connector:not(:disabled):hover {
   font-weight: 600;
 }
 
+/* Row DELETE button — soft neumorphic pill, monochrome at rest, danger-red on
+   intent; presses in on click. Matches the editorial theme without a loud blob. */
+.btn-delete {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 0.36rem 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(16, 16, 20, 0.06), 0 3px 8px rgba(16, 16, 20, 0.05);
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease,
+    box-shadow 0.14s ease, transform 0.14s ease;
+}
+.btn-delete:hover {
+  color: #fff;
+  background: var(--no, #e0332d);
+  border-color: var(--no, #e0332d);
+  box-shadow: 0 3px 10px rgba(224, 51, 45, 0.28);
+  transform: translateY(-1px);
+}
+.btn-delete:active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 3px rgba(16, 16, 20, 0.18);
+}
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 /* ── Genesis chat polish ───────────────────────────────────────────────────
    Subtle, editorial motion matching the theme: fast eases, the signature
    cubic-bezier(0.16,1,0.3,1) entrance, monochrome + a sparing --ok green. */
