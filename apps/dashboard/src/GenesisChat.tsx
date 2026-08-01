@@ -95,6 +95,9 @@ const CHAT_STORAGE_KEY = 'web3.genesis.chat.v1';
 
 export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   const [brain, setBrain] = useState<GenesisBrain | null>(null);
+  // Distinguishes "still fetching the brain config from the node" from "fetched, but not configured"
+  // — so a slow node shows a Connecting… state instead of the misleading "isn't switched on" card.
+  const [brainLoaded, setBrainLoaded] = useState(false);
   // The transcript persists across navigation AND app restarts (localStorage) so a testing session
   // isn't wiped when you leave the section. Restored lazily on mount; written back on every change.
   const [messages, setMessages] = useState<GenesisTurn[]>(() => {
@@ -137,7 +140,8 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
     api
       .genesisBrain()
       .then(setBrain)
-      .catch(() => setBrain(null));
+      .catch(() => setBrain(null))
+      .finally(() => setBrainLoaded(true));
   };
   const loadAgents = () => {
     api
@@ -404,7 +408,11 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
 
       {isAdmin && <BrainSettings brain={brain} onSaved={loadBrain} />}
 
-      {!brainReady ? (
+      {!brainLoaded ? (
+        <div className="card">
+          <p className="muted">Connecting to the node… loading Genesis.</p>
+        </div>
+      ) : !brainReady ? (
         <div className="card">
           <p className="muted">
             Genesis chat isn’t switched on yet. An admin (<code>sanjay@web3.0</code>) needs to
