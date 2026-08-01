@@ -1663,6 +1663,38 @@ button.connector:not(:disabled):hover {
   border-color: var(--accent, #12a150);
 }
 
+/* Connect via MCP tab */
+.connect-mcp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.mcp-code {
+  background: var(--paper-2, var(--paper));
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.8rem;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 6px 0 8px;
+}
+.mcp-tools {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mcp-tools li {
+  font-size: var(--fs-sm);
+}
+.mcp-tools code {
+  font-weight: 600;
+}
+
 .field-lbl {
   font-size: var(--fs-sm);
   color: var(--muted);

@@ -4,6 +4,7 @@ import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
+import { ConnectMcp } from './ConnectMcp.js';
 import { GenesisChat } from './GenesisChat.js';
 import { HostedDapps } from './HostedDapps.js';
 import { Hosting } from './Hosting.js';
@@ -47,6 +48,7 @@ type View =
   | 'guardrails'
   | 'genesis'
   | 'genesischat'
+  | 'connectmcp'
   | 'hosteddapps'
   | 'telegram'
   | 'developers'
@@ -87,6 +89,7 @@ const NAV: {
   { id: 'telegram', label: 'Telegram bot' },
   { id: 'genesis', label: 'Genesis · new agent', operator: true },
   { id: 'genesischat', label: 'Genesis chat', operator: true },
+  { id: 'connectmcp', label: 'Connect via MCP', operator: true },
   { id: 'marketplace', label: 'Marketplace', operator: true },
   { id: 'developers', label: 'Developers', operator: true },
   { id: 'hosteddapps', label: 'Hosted dApps', operator: true },
@@ -106,6 +109,7 @@ const OPERATOR_HOME: View = 'mynode';
 const LOCKED_ON_MAIN = new Set<View>([
   'genesis',
   'genesischat',
+  'connectmcp',
   'developers',
   'hosteddapps',
   'llmtunnel',
@@ -135,6 +139,7 @@ const AGENT_OWNER_NAV = new Set<View>([
   'account',
   'genesis',
   'genesischat',
+  'connectmcp',
   'marketplace',
   'developers',
   'hosteddapps',
@@ -161,7 +166,7 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
   { items: ['account', 'overview', 'ledger'] },
   {
     title: 'Launch agents',
-    items: ['genesischat', 'genesis', 'agentweb4', 'connectors', 'skills', 'telegram', 'agents'],
+    items: ['genesischat', 'genesis', 'connectmcp', 'agentweb4', 'connectors', 'skills', 'telegram', 'agents'],
   },
   { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
   { items: ['marketplace'] },
@@ -180,6 +185,7 @@ const ADMIN_GROUPS: { title?: string; items: View[] }[] = [
     items: [
       'genesischat',
       'genesis',
+      'connectmcp',
       'agents',
       'marketplace',
       'skills',
@@ -599,7 +605,7 @@ export function App() {
               if (items.length === 0) return null;
               if (!group.title) {
                 return (
-                  <div className="nav-group" key={`top-${gi}`}>
+                  <div className="nav-group" key={`top-${items[0].id}`}>
                     {items.map((n) => renderNavItem(n))}
                   </div>
                 );
@@ -700,6 +706,7 @@ export function App() {
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
         {view === 'genesischat' && <GenesisChat isAdmin={isAdmin} />}
+        {view === 'connectmcp' && <ConnectMcp />}
         {view === 'marketplace' && <Marketplace go={(v) => setView(v as View)} />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
         {view === 'developers' && <Developers />}
