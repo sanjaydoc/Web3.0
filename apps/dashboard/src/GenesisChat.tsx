@@ -337,7 +337,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="genesis-chat">
-      <div className="page-head">
+      <div className="page-head stack">
         <h2 className="section-title">Genesis chat</h2>
         <p className="muted">
           Describe the agent you want in plain language — Genesis interviews you, then creates,

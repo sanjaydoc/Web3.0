@@ -78,7 +78,7 @@ export function ConnectMcp() {
 
   return (
     <div className="connect-mcp">
-      <div className="page-head">
+      <div className="page-head stack">
         <h2 className="section-title">Connect via MCP</h2>
         <p className="muted">
           <strong>Oxygen</strong> is this node’s Model Context Protocol server. Point any MCP client

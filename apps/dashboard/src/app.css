@@ -225,6 +225,15 @@ body {
 .page-head h1 {
   font-size: var(--fs-xl);
 }
+/* Stacked variant: a title with an intro paragraph beneath it (not a right-aligned action). */
+.page-head.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.page-head.stack .muted {
+  max-width: 78ch;
+}
 
 /* --- stat tiles --------------------------------------------------------- */
 .stats {
