@@ -55,9 +55,10 @@ One double-click. Bundles a full node **and** this dashboard into a single windo
 
 | Platform | Download |
 |---|---|
-| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.46/Web3.0.Setup.0.1.46.exe) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.46/Web3.0.0.1.46.msi) |
-| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.46/Web3.0-0.1.46-universal.dmg) |
-| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.46/Web3.0-0.1.46.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.46/web3_0.1.46_amd64.deb) |
+| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.48/Web3.0.Setup.0.1.48.exe) · [`.msi`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.48/Web3.0.0.1.48.msi) |
+| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.48/Web3.0-0.1.48-universal.dmg) |
+| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.48/Web3.0-0.1.48.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web3.0/releases/download/v0.1.48/web3_0.1.48_amd64.deb) |
+| 🤖 **Android** | [`.apk` (sideload — real node on your phone)](https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk) |
 
 The build is unsigned, so the first launch needs one extra click — **Windows:** *More info → Run
 anyway*; **macOS:** right-click → *Open* (or `xattr -cr /Applications/Web3.0.app`); **Linux:**
