@@ -1177,25 +1177,17 @@ function AgentChat({ agent, onClose }: { agent: HostedAgent; onClose: () => void
           <div className="muted">Ask your agent something to test its brain and connectors…</div>
         )}
         {msgs.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              alignSelf: m.role === 'you' ? 'flex-end' : 'flex-start',
-              maxWidth: '82%',
-              background: m.role === 'you' ? 'var(--accent, #6a5cff)' : 'var(--hair, #eef0f4)',
-              color: m.role === 'you' ? '#fff' : 'inherit',
-              padding: '8px 12px',
-              borderRadius: 12,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {m.text}
+          <div key={m.id} className={`gchat-msg ${m.role === 'you' ? 'gchat-user' : 'gchat-bot'}`}>
+            <div className="gchat-bubble">{m.text}</div>
           </div>
         ))}
         {busy && (
-          <div className="muted" style={{ alignSelf: 'flex-start' }}>
-            thinking…
+          <div className="gchat-msg gchat-bot">
+            <div className="gchat-bubble gchat-typing" aria-label="Agent is thinking">
+              <span />
+              <span />
+              <span />
+            </div>
           </div>
         )}
       </div>
