@@ -1645,6 +1645,23 @@ button.connector:not(:disabled):hover {
   color: #fff;
   border-color: var(--ink);
 }
+/* Recommended option (e.g. the Network-model brain — our inference revenue path): make it the
+   obvious pick with an accent ring + tint, so it reads as the default even before selection. */
+.chip-toggle.recommended {
+  border-color: var(--accent, #12a150);
+  color: var(--accent, #12a150);
+  background: color-mix(in srgb, var(--accent, #12a150) 10%, var(--paper));
+  box-shadow: 0 0 0 1px var(--accent, #12a150) inset;
+}
+.chip-toggle.recommended:hover {
+  border-color: var(--accent, #12a150);
+  background: color-mix(in srgb, var(--accent, #12a150) 18%, var(--paper));
+}
+.chip-toggle.recommended.on {
+  background: var(--accent, #12a150);
+  color: #fff;
+  border-color: var(--accent, #12a150);
+}
 
 .field-lbl {
   font-size: var(--fs-sm);

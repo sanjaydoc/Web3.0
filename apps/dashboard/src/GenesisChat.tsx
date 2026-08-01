@@ -342,17 +342,21 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
             {ask?.options?.length ? (
               <div className="gchat-asks">
                 <div className="chip-pick">
-                  {ask.options.map((o) => (
-                    <button
-                      type="button"
-                      key={o.value}
-                      className={`chip-toggle ${ask.multi && multiPick.includes(o.value) ? 'on' : ''}`}
-                      onClick={() => pickOption(o.value, o.label)}
-                    >
-                      {ask.multi && multiPick.includes(o.value) ? '✓ ' : ''}
-                      {o.label}
-                    </button>
-                  ))}
+                  {ask.options.map((o) => {
+                    const recommended = /\(recommended\)/i.test(o.label);
+                    return (
+                      <button
+                        type="button"
+                        key={o.value}
+                        className={`chip-toggle ${ask.multi && multiPick.includes(o.value) ? 'on' : ''} ${recommended ? 'recommended' : ''}`}
+                        onClick={() => pickOption(o.value, o.label)}
+                      >
+                        {ask.multi && multiPick.includes(o.value) ? '✓ ' : ''}
+                        {recommended ? '★ ' : ''}
+                        {o.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 {ask.multi && (
                   <button type="button" className="btn act btn-sm" onClick={submitMulti}>
