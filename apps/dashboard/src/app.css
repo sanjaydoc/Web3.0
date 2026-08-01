@@ -1669,16 +1669,18 @@ button.connector:not(:disabled):hover {
   flex-direction: column;
   gap: 14px;
 }
+/* Copy-paste command canvases: terminal look — black ground, green mono text. */
 .mcp-code {
-  background: var(--paper-2, var(--paper));
-  border: 1px solid var(--hair);
+  background: #0b0d0e;
+  color: #3ddc84;
+  border: 1px solid #23262c;
   border-radius: var(--radius-sm);
-  padding: 0.7rem 0.8rem;
+  padding: 0.9rem 1rem;
   font-size: var(--fs-sm);
-  line-height: 1.45;
+  line-height: 1.55;
   overflow-x: auto;
   white-space: pre;
-  margin: 6px 0 8px;
+  margin: 6px 0 10px;
 }
 .mcp-tools {
   list-style: none;
