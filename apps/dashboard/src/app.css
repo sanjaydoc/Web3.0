@@ -2324,15 +2324,23 @@ button.connector:not(:disabled):hover {
   top: 8px;
   right: 8px;
   z-index: 1;
+  /* Legible on the dark terminal canvas: a subtle translucent chip. */
+  background: rgba(255, 255, 255, 0.07);
+  color: #e7e7ea;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.copy-block .copy-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 .copy-pre {
   margin: 0;
   padding: 14px 16px;
-  /* Subtle code panel that matches the light theme; the leftover dark fallback rendered as
-     invisible faint text on white. Explicit ink color so the command is readable. */
-  background: var(--paper-2, #fafafa);
-  color: var(--ink, #0d0d0f);
-  border: 1px solid var(--hair);
+  /* Terminal look — near-black ground with green mono text (matches every other code canvas). */
+  background: #0b0d0e;
+  color: #3ddc84;
+  border: 1px solid #23262c;
   border-radius: var(--radius-sm, 10px);
   overflow-x: auto;
   font-family: "JetBrains Mono", ui-monospace, monospace;
