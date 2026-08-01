@@ -91,9 +91,15 @@ function formatTestOutput(output: Record<string, unknown>): string {
  * itself is set only by the admin (sanjay@web3.0).
  */
 // localStorage key for the persisted chat transcript. Bump the suffix if GenesisTurn's shape changes.
-const CHAT_STORAGE_KEY = 'web3.genesis.chat.v1';
+// Transcript is stored PER ACCOUNT so a shared browser never leaks one user's chat to the next.
+// The scoped key is `${PREFIX}:${address}` (':anon' when signed out); the legacy unscoped key (a
+// single shared blob — the bug) is purged on mount.
+const CHAT_STORAGE_PREFIX = 'web3.genesis.chat.v1';
+const LEGACY_CHAT_KEY = 'web3.genesis.chat.v1';
 
-export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
+export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: string | null }) {
+  // Scope the persisted transcript to the signed-in account (App remounts this via key on switch).
+  const storageKey = `${CHAT_STORAGE_PREFIX}:${account ?? 'anon'}`;
   const [brain, setBrain] = useState<GenesisBrain | null>(null);
   // Distinguishes "still fetching the brain config from the node" from "fetched, but not configured"
   // — so a slow node shows a Connecting… state instead of the misleading "isn't switched on" card.
@@ -102,7 +108,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   // isn't wiped when you leave the section. Restored lazily on mount; written back on every change.
   const [messages, setMessages] = useState<GenesisTurn[]>(() => {
     try {
-      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey);
       return raw ? (JSON.parse(raw) as GenesisTurn[]) : [];
     } catch {
       return [];
@@ -153,6 +159,12 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   useEffect(() => {
     loadBrain();
     loadAgents();
+    // Purge the legacy unscoped transcript (the cross-account leak) now that keys are per-account.
+    try {
+      localStorage.removeItem(LEGACY_CHAT_KEY);
+    } catch {
+      /* ignore unavailable storage */
+    }
   }, []);
 
   useEffect(() => {
@@ -163,12 +175,12 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
   // remove the key so a cleared history stays cleared. Wrapped: storage can be full or disabled.
   useEffect(() => {
     try {
-      if (messages.length) localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-      else localStorage.removeItem(CHAT_STORAGE_KEY);
+      if (messages.length) localStorage.setItem(storageKey, JSON.stringify(messages));
+      else localStorage.removeItem(storageKey);
     } catch {
       /* ignore quota / unavailable storage */
     }
-  }, [messages]);
+  }, [messages, storageKey]);
 
   const needsAgentKey = useMemo(
     () => Boolean(config.provider && KEYED_AGENT_PROVIDERS.has(config.provider)),
@@ -392,7 +404,7 @@ export function GenesisChat({ isAdmin }: { isAdmin: boolean }) {
       return;
     reset();
     try {
-      localStorage.removeItem(CHAT_STORAGE_KEY);
+      localStorage.removeItem(storageKey);
     } catch {
       /* ignore unavailable storage */
     }

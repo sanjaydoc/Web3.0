@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Account } from './Account.js';
+import { ConnectMcp } from './ConnectMcp.js';
 import { Connectors } from './Connectors.js';
 import { Developers } from './Developers.js';
 import { Download } from './Download.js';
 import { Genesis } from './Genesis.js';
-import { ConnectMcp } from './ConnectMcp.js';
-import { uiAlert, uiConfirm, uiPrompt } from './dialog.js';
 import { GenesisChat } from './GenesisChat.js';
 import { HostedDapps } from './HostedDapps.js';
 import { Hosting } from './Hosting.js';
@@ -34,6 +33,7 @@ import {
   formatAmount,
   getWeb3Token,
 } from './api.js';
+import { uiAlert, uiConfirm, uiPrompt } from './dialog.js';
 import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
 
 type View =
@@ -167,7 +167,16 @@ const AGENT_OWNER_GROUPS: { title?: string; items: View[] }[] = [
   { items: ['account', 'overview', 'ledger', 'marketplace'] },
   {
     title: 'Launch agents',
-    items: ['genesischat', 'genesis', 'connectmcp', 'agentweb4', 'connectors', 'skills', 'telegram', 'agents'],
+    items: [
+      'genesischat',
+      'genesis',
+      'connectmcp',
+      'agentweb4',
+      'connectors',
+      'skills',
+      'telegram',
+      'agents',
+    ],
   },
   { title: 'Settings', items: ['guardrails', 'developers', 'hosteddapps'] },
   { title: 'Run a node', items: ['download'] },
@@ -704,7 +713,15 @@ export function App() {
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
         {view === 'genesis' && <Genesis />}
-        {view === 'genesischat' && <GenesisChat isAdmin={isAdmin} />}
+        {view === 'genesischat' && (
+          // key + account scope the chat transcript to the signed-in account so a shared browser
+          // doesn't leak one user's history to the next; key remounts it cleanly on account switch.
+          <GenesisChat
+            key={account?.address ?? 'anon'}
+            account={account?.address ?? null}
+            isAdmin={isAdmin}
+          />
+        )}
         {view === 'connectmcp' && <ConnectMcp />}
         {view === 'marketplace' && <Marketplace go={(v) => setView(v as View)} />}
         {view === 'hosteddapps' && <HostedDapps admin={role === 'admin'} />}
@@ -724,10 +741,7 @@ export function App() {
 /** Banner shown to a non-admin viewing the network's admin-only main node. */
 function MainNodeNotice({ go, onDownload }: { go: () => void; onDownload: boolean }) {
   return (
-    <div
-      className="card"
-      style={{ marginBottom: 18, borderLeft: '3px solid var(--accent)' }}
-    >
+    <div className="card" style={{ marginBottom: 18, borderLeft: '3px solid var(--accent)' }}>
       <div className="section-title">This is the network's main node</div>
       <p className="muted" style={{ margin: '2px 0 12px' }}>
         The main node is reserved for its admin. You can sign up, hold a wallet, and read the
@@ -887,9 +901,12 @@ function Agents({
   const authorizeRent = async (h: HostedAgent) => {
     const key = loadAccountKey(h.createdBy);
     if (!key) {
-      await uiAlert(`Your signing key for ${h.createdBy} isn't on this device — import it in Account.`, {
-        title: 'Signing key needed',
-      });
+      await uiAlert(
+        `Your signing key for ${h.createdBy} isn't on this device — import it in Account.`,
+        {
+          title: 'Signing key needed',
+        },
+      );
       return;
     }
     const input = await uiPrompt(
@@ -914,9 +931,12 @@ function Agents({
         nonce: mandateNonce(),
       });
       await api.hostingMandate(h.web3Id, mandate);
-      await uiAlert(`Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`, {
-        title: 'Rent authorized',
-      });
+      await uiAlert(
+        `Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`,
+        {
+          title: 'Rent authorized',
+        },
+      );
     } catch (e) {
       await uiAlert(`Could not authorize: ${e instanceof Error ? e.message : String(e)}`, {
         title: 'Authorization failed',
