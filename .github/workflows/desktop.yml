@@ -1,22 +1,22 @@
 name: desktop (free)
 
 # Builds the desktop installers on the PUBLIC repo's FREE Actions minutes, then publishes them to
-# this repo's Releases. The node's source lives in the PRIVATE web3-core repo — this workflow clones
+# this repo's Releases. The node's source lives in the PRIVATE web4-core repo — this workflow clones
 # it into the throwaway runner with a PAT, builds, and discards it (nothing private is committed
 # here). Because Actions billing follows the repo that HOSTS the workflow (this public one), the
 # whole build — including the 10x-cost macOS runner — costs nothing against the private repo's quota.
 #
 # One-time setup: add a repo secret RELEASE_PAT = a classic PAT with the `repo` scope (it needs to
-# READ the private web3-core to check it out AND WRITE releases here). Settings → Secrets and
+# READ the private web4-core to check it out AND WRITE releases here). Settings → Secrets and
 # variables → Actions → New repository secret.
 #
-# Run it: Actions → "desktop (free)" → Run workflow → pick the web3-core branch/tag and, for a full
+# Run it: Actions → "desktop (free)" → Run workflow → pick the web4-core branch/tag and, for a full
 # release, tick all_platforms (adds macOS + Linux; Windows always builds).
 on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: 'web3-core branch or tag to build'
+        description: 'web4-core branch or tag to build'
         default: 'main'
       all_platforms:
         description: 'Also build macOS + Linux (Windows always builds)'
@@ -30,7 +30,7 @@ jobs:
       - name: Check out the private node source
         uses: actions/checkout@v4
         with:
-          repository: sanjaydoc/web3-core
+          repository: sanjaydoc/web4-core
           ref: ${{ inputs.source_ref }}
           token: ${{ secrets.RELEASE_PAT }}
 
@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: sanjaydoc/web3-core
+          repository: sanjaydoc/web4-core
           ref: ${{ inputs.source_ref }}
           token: ${{ secrets.RELEASE_PAT }}
       - uses: pnpm/action-setup@v4
@@ -101,7 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: sanjaydoc/web3-core
+          repository: sanjaydoc/web4-core
           ref: ${{ inputs.source_ref }}
           token: ${{ secrets.RELEASE_PAT }}
       - uses: pnpm/action-setup@v4
