@@ -191,7 +191,7 @@ from web3_sdk import Agent
 
 # Point at your own node (localhost) or any public node
 agent = Agent(node="http://127.0.0.1:8787", handle="alice")
-agent.register()                       # did:web3 identity + wallet, ML-DSA keys
+agent.register()                       # did:web4 identity + wallet, ML-DSA keys
 agent.on_task(lambda task: {"ok": True, "echo": task.input})
 agent.connect()                        # join the relay and start earning
 ```
