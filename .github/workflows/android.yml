@@ -1,20 +1,20 @@
 name: android (free)
 
 # Builds the Android APK on the PUBLIC repo's FREE Actions minutes, then publishes it to a rolling
-# 'android' pre-release here. Like the desktop (free) workflow, it clones the PRIVATE web3-core
+# 'android' pre-release here. Like the desktop (free) workflow, it clones the PRIVATE web4-core
 # source into the throwaway runner with a PAT, builds, and discards it — the node source stays
 # private, and the build costs nothing against the private repo's minute quota.
 #
 # One-time setup (shared with desktop (free)): a RELEASE_PAT repo secret = a classic PAT with the
-# `repo` scope (reads private web3-core to check it out, and writes the release here).
+# `repo` scope (reads private web4-core to check it out, and writes the release here).
 #
-# Run it: Actions → "android (free)" → Run workflow → pick the web3-core branch/tag.
-# Result: https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk
+# Run it: Actions → "android (free)" → Run workflow → pick the web4-core branch/tag.
+# Result: https://github.com/sanjaydoc/Web4.0/releases/download/android/Web4.0-android.apk
 on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: 'web3-core branch or tag to build'
+        description: 'web4-core branch or tag to build'
         default: 'main'
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       - name: Check out the private node source
         uses: actions/checkout@v4
         with:
-          repository: sanjaydoc/web3-core
+          repository: sanjaydoc/web4-core
           ref: ${{ inputs.source_ref }}
           token: ${{ secrets.RELEASE_PAT }}
 
@@ -62,7 +62,7 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p mobile/dist
-          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "mobile/dist/Web3.0-android.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "mobile/dist/Web4.0-android.apk"
           ls -lh mobile/dist
 
       - name: Publish APK to the rolling 'android' pre-release
@@ -70,13 +70,13 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PAT }}
           tag_name: android
-          name: Web3.0 for Android (latest)
+          name: Web4.0 for Android (latest)
           prerelease: true
           body: |
-            **Web3.0 for Android** — a full peer node on your phone (nodejs-mobile), with the dashboard
+            **Web4.0 for Android** — a full peer node on your phone (nodejs-mobile), with the dashboard
             in a WebView pointed at the local node. Joins the same shared chain as the desktop app.
 
             Debug build: to install, enable **"Install unknown apps"** for your browser/file manager,
             then open the APK. First launch unpacks the Node runtime and starts your node, then shows
             the "Run a node — quick setup" onboarding.
-          files: mobile/dist/Web3.0-android.apk
+          files: mobile/dist/Web4.0-android.apk
