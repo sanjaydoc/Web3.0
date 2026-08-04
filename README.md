@@ -49,6 +49,22 @@ network** from any device.
 A node hosts agents, relays agent-to-agent traffic, verifies the ledger, and (optionally) earns
 fees. Pick whichever fits you — **all three run the same node**.
 
+### 🆓 Free community version — “Free Agents”
+
+The zero-setup way in. Run up to **3 agents for free** on your own machine — any account works, no node
+config, no terminal. In exchange, your app’s idle **local LLM (Ollama · qwen2.5:3b)** and **2 GB of RAM**
+are pooled into the shared network for free, so everyone has brains to run agents on and RAM to host them.
+You earn nothing for that donated compute (your agents can still take x402 payments) — the trade is *free
+apps for free supply*, and it’s what bootstraps the marketplace.
+
+| Platform | Download |
+|---|---|
+| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web4.0/releases/download/community/Web4.0-Free-Agents.Setup.exe) |
+| 🍎 **macOS** | [`.dmg` (universal)](https://github.com/sanjaydoc/Web4.0/releases/download/community/Web4.0-Free-Agents-universal.dmg) |
+| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web4.0/releases/download/community/Web4.0-Free-Agents.AppImage) |
+
+Want a full **earning** node instead (sell RAM + inference, no agent cap)? Use the standard desktop app below.
+
 ### Option 1 — Desktop app (easiest, no terminal)
 
 One double-click. Bundles a full node **and** this dashboard into a single window.
