@@ -1,0 +1,108 @@
+name: desktop community (free)
+
+# Builds the Community ("Free Agents") desktop installers on the PUBLIC repo's FREE Actions minutes,
+# then publishes them to a rolling `community` Release. Same private node source as `desktop (free)`
+# (checked out from web4-core with a PAT), but built with the community config: the packaged node ships
+# network.community.json → community mode (run up to 3 free agents; donate idle 3 GB LLM + 2 GB RAM to
+# the network for free). Distinct productName/appId, so it can sit alongside the standard app.
+#
+# Run it: Actions -> "desktop community (free)" -> Run workflow -> pick the web4-core branch/tag and,
+# for a full release, tick all_platforms (adds macOS + Linux; Windows always builds).
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'web4-core branch or tag to build'
+        default: 'main'
+      all_platforms:
+        description: 'Also build macOS + Linux (Windows always builds)'
+        type: boolean
+        default: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out the private node source
+        uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web4-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+      - name: Build community installer
+        working-directory: desktop
+        run: npm run dist:community
+      - name: Publish to the rolling community Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: community
+          name: Community (Free Agents)
+          prerelease: true
+          files: desktop/release/Web4.0-Free-Agents.Setup.exe
+
+  linux:
+    if: ${{ inputs.all_platforms }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web4-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - working-directory: desktop
+        run: npm install
+      - working-directory: desktop
+        run: npm run dist:community:linux
+      - uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: community
+          name: Community (Free Agents)
+          prerelease: true
+          files: desktop/release/Web4.0-Free-Agents.AppImage
+
+  macos:
+    if: ${{ inputs.all_platforms }}
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: sanjaydoc/web4-core
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.RELEASE_PAT }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - working-directory: desktop
+        run: npm install
+      - working-directory: desktop
+        run: npm run dist:community:mac
+      - uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: community
+          name: Community (Free Agents)
+          prerelease: true
+          files: desktop/release/Web4.0-Free-Agents-universal.dmg
