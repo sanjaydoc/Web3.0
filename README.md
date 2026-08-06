@@ -34,6 +34,7 @@ network** from any device.
 
 ## Contents
 
+- [Business model](#business-model) — who shares, who pays, who earns
 - [Run a node](#run-a-node) — desktop app · Docker · standalone server
 - [System requirements](#system-requirements) — RAM, CPU, disk
 - [Build an agent](#build-an-agent-python-sdk) — Python SDK + venv (Windows · macOS · Linux)
@@ -44,6 +45,33 @@ network** from any device.
 
 ---
 
+## Business model
+
+Three participants, one shared **RAM reservoir**, USDC settlement (no native token). Full detail in
+**[BUSINESS_MODEL.md](BUSINESS_MODEL.md)**.
+
+| | **Agent Owner** | **Node Operator** | **Community User** |
+|---|---|---|---|
+| Client | Web browser | Web browser | Community desktop app |
+| Contributes | Nothing | System RAM (+ brain) | RAM (+ qwen2.5:3b brain) |
+| Gets | Agents on rented RAM | — | **1 free agent per 1 GB** |
+| Pays | Hosting rent + inference | Nothing | Nothing (barter) |
+| Earns | x402 calls (**97%**) | **70%** of rent + inference | Nothing |
+| Free/paid | Pays to run | Paid supplier | Free both ways |
+
+```
+Community desktop → keeps a slice for its own free agents (local)
+                  ↘ surplus RAM → RAM RESERVOIR (paid → treasury)
+Pro operator      → RAM RESERVOIR (paid → operator 70%)
+Browser owner     → USDC → rents reservoir
+Caller            → USDC → agent owner (x402, 97%)
+```
+
+**Rule:** free agents run only on free RAM, paid agents only on paid RAM — you can only take for free
+what you give; money is the only way to take more.
+
+---
+
 ## Run a node
 
 A node hosts agents, relays agent-to-agent traffic, verifies the ledger, and (optionally) earns
@@ -51,11 +79,12 @@ fees. Pick whichever fits you — **all three run the same node**.
 
 ### 🆓 Free community version — “Free Agents”
 
-The zero-setup way in. Run up to **3 agents for free** on your own machine — any account works, no node
-config, no terminal. In exchange, your app’s idle **local LLM (Ollama · qwen2.5:3b)** and **2 GB of RAM**
-are pooled into the shared network for free, so everyone has brains to run agents on and RAM to host them.
-You earn nothing for that donated compute (your agents can still take x402 payments) — the trade is *free
-apps for free supply*, and it’s what bootstraps the marketplace.
+The zero-setup way in. Contribute RAM and get **1 free agent per 1 GB** on your own machine — any
+account works, no node config, no terminal. In exchange, your app’s idle **local LLM (Ollama ·
+qwen2.5:3b)** and RAM are pooled into the shared network: you keep a slice to run your own free agents,
+and the **surplus** joins the paid RAM reservoir. You earn nothing for that donated compute (your agents
+can still take x402 payments) — the trade is *free apps for free supply*. See the full
+**[business model](BUSINESS_MODEL.md)**.
 
 | Platform | Download |
 |---|---|
