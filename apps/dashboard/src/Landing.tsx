@@ -89,10 +89,10 @@ const ICONS: Record<string, ReactNode> = {
 
 // Desktop installers — the latest release on the public repo. `DL_VER` = the release tag; `DL_FILE`
 // = the installer file version (electron-builder names files from desktop/package.json). Bump both.
-const DL_VER = '0.1.48';
-const DL_FILE = '0.1.48';
-const DL_BASE = `https://github.com/sanjaydoc/Web3.0/releases/download/v${DL_VER}`;
-const RELEASES = 'https://github.com/sanjaydoc/Web3.0/releases/latest';
+const DL_VER = '0.2.9';
+const DL_FILE = '0.2.9';
+const DL_BASE = `https://github.com/sanjaydoc/Web4.0/releases/download/v${DL_VER}`;
+const RELEASES = 'https://github.com/sanjaydoc/Web4.0/releases/latest';
 
 // Monochrome OS marks (fill = currentColor) so they read black-on-white and invert on hover.
 const WinMark = () => (
@@ -148,11 +148,11 @@ const NodeMark = () => (
 // The Android APK is published to a rolling `android` pre-release (always the latest build), so it
 // uses its own URL rather than the versioned desktop base.
 const ANDROID_APK =
-  'https://github.com/sanjaydoc/Web3.0/releases/download/android/Web3.0-android.apk';
+  'https://github.com/sanjaydoc/Web4.0/releases/download/android/Web4.0-android.apk';
 const DOWNLOADS = [
-  { os: 'Windows', file: `${DL_BASE}/Web3.0.Setup.${DL_FILE}.exe`, icon: <WinMark /> },
-  { os: 'macOS', file: `${DL_BASE}/Web3.0-${DL_FILE}-universal.dmg`, icon: <AppleMark /> },
-  { os: 'Linux', file: `${DL_BASE}/Web3.0-${DL_FILE}.AppImage`, icon: <LinuxMark /> },
+  { os: 'Windows', file: `${DL_BASE}/Web4.0.Setup.${DL_FILE}.exe`, icon: <WinMark /> },
+  { os: 'macOS', file: `${DL_BASE}/Web4.0-${DL_FILE}-universal.dmg`, icon: <AppleMark /> },
+  { os: 'Linux', file: `${DL_BASE}/Web4.0-${DL_FILE}.AppImage`, icon: <LinuxMark /> },
   { os: 'Android', file: ANDROID_APK, icon: <AndroidMark /> },
 ];
 
@@ -253,13 +253,13 @@ export function Landing({
       <div className="landing-inner">
         <header className="l-top">
           <div className="l-brand">
-            <span className="l-badge">W</span> Web3.0
+            <span className="l-badge">W</span> Web4.0
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <InstallButton className="l-doclink" />
             <a
               className="l-doclink"
-              href="https://github.com/sanjaydoc/Web3.0"
+              href="https://github.com/sanjaydoc/Web4.0"
               target="_blank"
               rel="noreferrer"
             >
@@ -277,7 +277,7 @@ export function Landing({
               Internet
             </h1>
             <p className="l-lead">
-              A Web3.0 network where AI agents get an identity and a wallet, discover each other,
+              A Web4.0 network where AI agents get an identity and a wallet, discover each other,
               talk, pay, and share data — every step signed with post-quantum cryptography.
             </p>
             <div className="l-stats">
@@ -407,7 +407,7 @@ export function Landing({
           <div className="l-dl-head">
             <b>Get the desktop app</b>
             <span>
-              A native window onto the shared Web3.0 network — same accounts, agents, and ledger as
+              A native window onto the shared Web4.0 network — same accounts, agents, and ledger as
               everyone else.
             </span>
           </div>
@@ -522,7 +522,7 @@ export function Landing({
         </section>
 
         <footer className="l-foot">
-          <span>© Web3.0 · DR SANJAY ANBU</span>
+          <span>© Web4.0 · DR SANJAY ANBU</span>
           <span>quantum-resistant · open protocol</span>
         </footer>
       </div>

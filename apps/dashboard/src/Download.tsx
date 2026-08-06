@@ -3,33 +3,33 @@ import { useState } from 'react';
 // The PUBLIC repo — the open console + Python agent SDK + docs. The node's server core (registry,
 // relay, ledger, consensus) is closed-source and runs on the canonical shared-network node; the
 // desktop app below is a native client for it, so this page centers those installers.
-const REPO = 'https://github.com/sanjaydoc/Web3.0';
+const REPO = 'https://github.com/sanjaydoc/Web4.0';
 
-// The packaged desktop app (Electron) — runs a real Web3.0 peer node and opens this console against
+// The packaged desktop app (Electron) — runs a real Web4.0 peer node and opens this console against
 // it. The node joins the ONE shared chain (replicates, relays, forwards signed txs); every install
 // is a first-class participant. Published by the `desktop` workflow on every version tag, to the
 // public repo's releases.
 // DESKTOP_VERSION = the release tag (shown to users + the /releases/download/v… path). DESKTOP_FILE =
 // the installer file version (electron-builder names files from desktop/package.json); can differ.
-const DESKTOP_VERSION = '0.1.48';
-const DESKTOP_FILE = '0.1.48';
+const DESKTOP_VERSION = '0.2.9';
+const DESKTOP_FILE = '0.2.9';
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
-const DESKTOP_EXE = `${DL}/Web3.0.Setup.${DESKTOP_FILE}.exe`;
-const DESKTOP_MSI = `${DL}/Web3.0.${DESKTOP_FILE}.msi`;
-const DESKTOP_DMG = `${DL}/Web3.0-${DESKTOP_FILE}-universal.dmg`;
-const DESKTOP_APPIMAGE = `${DL}/Web3.0-${DESKTOP_FILE}.AppImage`;
+const DESKTOP_EXE = `${DL}/Web4.0.Setup.${DESKTOP_FILE}.exe`;
+const DESKTOP_MSI = `${DL}/Web4.0.${DESKTOP_FILE}.msi`;
+const DESKTOP_DMG = `${DL}/Web4.0-${DESKTOP_FILE}-universal.dmg`;
+const DESKTOP_APPIMAGE = `${DL}/Web4.0-${DESKTOP_FILE}.AppImage`;
 const DESKTOP_DEB = `${DL}/web3_${DESKTOP_FILE}_amd64.deb`;
 
 // The Android app — a REAL peer node on the phone (nodejs-mobile) that joins the same shared chain.
 // Published by the `android` workflow to a rolling `android` pre-release, so this link always points
 // at the latest build. Unsigned debug APK → sideload (enable "Install unknown apps").
-const ANDROID_APK = `${REPO}/releases/download/android/Web3.0-android.apk`;
+const ANDROID_APK = `${REPO}/releases/download/android/Web4.0-android.apk`;
 
 // Commands that actually work against the PUBLIC repo: run the open console, or build an agent with
 // the SDK. (Running the node itself is the desktop app above — its core isn't in this repo.)
 const CLIENT_CMDS = [
-  `git clone ${REPO}.git && cd Web3.0`,
+  `git clone ${REPO}.git && cd Web4.0`,
   'pnpm install',
   'pnpm --filter @web3/dashboard dev', // the console → http://localhost:5173
   'pip install -e packages/web3-sdk-py', // the Python agent SDK
@@ -155,7 +155,7 @@ const W3Logo = () => (
   </svg>
 );
 
-/** The featured one-click desktop app — a native client for the shared Web3.0 network. */
+/** The featured one-click desktop app — a native client for the shared Web4.0 network. */
 function DesktopApp() {
   const btns = [
     {
@@ -228,8 +228,8 @@ function DesktopApp() {
         ))}
       </div>
       <p className="dl-blurb">
-        Installs as <b>Web3.0</b> (W3 icon). Launch it and it opens this console as a native app,
-        connected to the <b>shared Web3.0 network</b> — same accounts, agents, and ledger as
+        Installs as <b>Web4.0</b> (W3 icon). Launch it and it opens this console as a native app,
+        connected to the <b>shared Web4.0 network</b> — same accounts, agents, and ledger as
         everyone else. Nothing to configure, no database to run: sign in and you're on the network.
         The build is unsigned, so the first launch needs one extra click:
       </p>
@@ -243,7 +243,7 @@ function DesktopApp() {
         <div className="dl-note">
           <span className="dl-note-os">macOS</span>
           <span>
-            right-click the app → <b>Open</b> · or <code>xattr -cr /Applications/Web3.0.app</code>
+            right-click the app → <b>Open</b> · or <code>xattr -cr /Applications/Web4.0.app</code>
           </span>
         </div>
         <div className="dl-note">
@@ -396,7 +396,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
       <div className="page-head">
         <h1>Run a node</h1>
         <span className="muted">
-          run a Web3.0 node on your device to join the network and earn USDC for the compute you
+          run a Web4.0 node on your device to join the network and earn USDC for the compute you
           contribute
         </span>
       </div>
@@ -430,7 +430,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
       <DesktopApp />
 
       <p className="hint" style={{ margin: '14px 2px 0' }}>
-        <b>A real peer node — one shared network.</b> The desktop app runs a full Web3.0 node that
+        <b>A real peer node — one shared network.</b> The desktop app runs a full Web4.0 node that
         joins the shared chain: it replicates the whole ledger, relays gossip to other peers, and
         forwards your account-signed transactions to be sealed. Same chain, accounts, and ledger as
         everyone else — you're a first-class participant, not an island. Just install and sign in.
@@ -441,7 +441,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
       <PlatformTable />
 
       <div className="section-title" style={{ margin: '22px 0 10px' }}>
-        Build on Web3.0 <span className="muted">— open source</span>
+        Build on Web4.0 <span className="muted">— open source</span>
       </div>
       <p className="hint" style={{ margin: '0 2px 12px' }}>
         The <b>console</b> and the <b>Python agent SDK</b> are open. Clone the public repo to hack
@@ -453,7 +453,7 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
       <div className="card" style={{ marginTop: 18 }}>
         <div className="section-title">You're running a node on the shared network</div>
         <p className="hint" style={{ margin: '0 0 10px' }}>
-          The app starts a Web3.0 peer node on your machine and opens this console against it. The
+          The app starts a Web4.0 peer node on your machine and opens this console against it. The
           node syncs the full chain from the network's authority, relays gossip, and forwards the
           transactions you sign here — there's nothing to configure and no database to run.
         </p>

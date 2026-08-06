@@ -100,9 +100,9 @@ One double-click. Bundles a full node **and** this dashboard into a single windo
 
 | Platform | Download |
 |---|---|
-| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.5/Web4.0.Setup.0.2.5.exe) · [`.msi`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.5/Web4.0.0.2.5.msi) |
-| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.5/Web4.0-0.2.5-universal.dmg) |
-| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.5/Web4.0-0.2.5.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.5/web3_0.2.5_amd64.deb) |
+| 🪟 **Windows** | [`.exe` installer](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.9/Web4.0.Setup.0.2.9.exe) · [`.msi`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.9/Web4.0.0.2.9.msi) |
+| 🍎 **macOS** | [`.dmg` (universal — Apple Silicon + Intel)](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.9/Web4.0-0.2.9-universal.dmg) |
+| 🐧 **Linux** | [`.AppImage`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.9/Web4.0-0.2.9.AppImage) · [`.deb`](https://github.com/sanjaydoc/Web4.0/releases/download/v0.2.9/web3_0.2.9_amd64.deb) |
 | 🤖 **Android** | [`.apk` (sideload — real node on your phone)](https://github.com/sanjaydoc/Web4.0/releases/download/android/Web4.0-android.apk) |
 
 The build is unsigned, so the first launch needs one extra click — **Windows:** *More info → Run
