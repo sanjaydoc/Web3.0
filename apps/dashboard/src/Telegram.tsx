@@ -107,7 +107,7 @@ export function Telegram() {
           <div className="field">
             <label htmlFor="botlocal">Bridge handle</label>
             <input id="botlocal" value={botLocal} onChange={(e) => setBotLocal(e.target.value)} />
-            <span className="hint">its Web3.0 ID + wallet</span>
+            <span className="hint">its Web4.0 ID + wallet</span>
           </div>
           <div className="field">
             <label htmlFor="skill">Ask skill</label>

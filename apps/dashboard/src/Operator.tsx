@@ -7,9 +7,11 @@ import {
   type NodeLocation,
   type NodeOperator,
   type NodeRole,
+  type Reservoir,
   type StorageInfo,
   api,
   formatAmount,
+  ratePerHourPrecise,
 } from './api.js';
 
 /** The Electron preload bridge (desktop app only) — lets the console start/stop the local node. */
@@ -273,6 +275,143 @@ function RevenueCard() {
       <div className="gen-actions">
         <button type="button" className="btn act" disabled={busy} onClick={save}>
           {busy ? 'Saving…' : 'Save revenue settings'}
+        </button>
+      </div>
+      {msg && (
+        <div className={`note ${msg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{msg.text}</div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * RAM Reservoir (admin) — the pooled RAM every node operator contributes, shown as one growing pool,
+ * plus the single global price the admin sets ($/GB-hour). Agents are allocated from this pool at that
+ * rate (no per-operator pricing); operators keep their share (100 − hosting commission) of each charge.
+ */
+function RamReservoirCard() {
+  const [res, setRes] = useState<Reservoir | null>(null);
+  const [commissionBps, setCommissionBps] = useState(3000);
+  const [price, setPrice] = useState(''); // USDC per GB-hour (display; stored as micro-USDC, 1e6 = $1)
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const load = useCallback(() => {
+    api
+      .reservoir()
+      .then((r) => {
+        setRes(r);
+        // perGbHour is micro-USDC (1e6 = $1/GB-hour) → show as dollars.
+        if (!touched) setPrice(r.price.perGbHour ? String(r.price.perGbHour / 1_000_000) : '');
+      })
+      .catch(() => undefined);
+    api
+      .economics()
+      .then((e) => setCommissionBps(e.hostingCommissionBps))
+      .catch(() => undefined);
+  }, [touched]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.updateEconomics({
+        // Dollars/GB-hour → micro-USDC (1e6 = $1). Micro granularity lets sub-cent rates (a fraction of
+        // cloud RAM) be set precisely instead of rounding to a whole cent.
+        ramPricePerGbHour: Math.max(0, Math.round((Number.parseFloat(price) || 0) * 1_000_000)),
+      });
+      setTouched(false);
+      setMsg({
+        kind: 'ok',
+        text: 'Global RAM price updated — applies to new placements immediately.',
+      });
+      load();
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!res) return null;
+  const { slots, ramGb, operators, ramMbPerAgent } = res;
+  const pct = slots.total > 0 ? Math.round((slots.used / slots.total) * 100) : 0;
+  const operatorKeeps = Math.max(0, 100 - commissionBps / 100);
+  const priced = (Number.parseFloat(price) || 0) > 0;
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="section-title">RAM Reservoir</div>
+      <p className="muted" style={{ margin: '2px 0 12px' }}>
+        The pooled RAM all node operators contribute — it grows as more join. Agents are allocated
+        from this pool at one global price you set (no per-operator pricing). Operators keep{' '}
+        {operatorKeeps}% of every charge; the platform takes the rest.
+      </p>
+
+      <dl className="kv">
+        <dt>Pooled RAM</dt>
+        <dd>
+          {ramGb.toFixed(2)} GB · {slots.total} slots ({ramMbPerAgent} MB/agent)
+        </dd>
+        <dt>In use</dt>
+        <dd>
+          {slots.used} / {slots.total} slots ({pct}%)
+        </dd>
+        <dt>Free</dt>
+        <dd>{slots.free} slots</dd>
+        <dt>Operators contributing</dt>
+        <dd>{operators}</dd>
+      </dl>
+
+      {/* Reservoir capacity meter */}
+      <div
+        style={{
+          height: 8,
+          borderRadius: 4,
+          background: 'var(--line, rgba(128,128,128,0.25))',
+          overflow: 'hidden',
+          margin: '2px 0 14px',
+        }}
+        aria-label={`${pct}% of pooled RAM in use`}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            height: '100%',
+            background: pct > 85 ? 'var(--no, #d9534f)' : 'var(--ok, #2a9d5c)',
+            transition: 'width 0.4s',
+          }}
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="ram-price">Global RAM price (USDC / GB-hour)</label>
+        <input
+          id="ram-price"
+          value={price}
+          inputMode="decimal"
+          placeholder="0 = legacy per-operator pricing"
+          onChange={(e) => {
+            setPrice(e.target.value);
+            setTouched(true);
+          }}
+        />
+        <span className="hint">
+          {priced
+            ? `≈ ${ratePerHourPrecise(res.price.perAgentEpoch, res.price.epochMs)} / agent · operator keeps ${operatorKeeps}%`
+            : 'set one network-wide price — every agent is billed this rate regardless of which operator runs it'}
+        </span>
+      </div>
+      <div className="gen-actions">
+        <button type="button" className="btn act" disabled={busy} onClick={save}>
+          {busy ? 'Saving…' : 'Set global RAM price'}
         </button>
       </div>
       {msg && (
@@ -703,8 +842,8 @@ export function Operator() {
           {ownsNode
             ? node
               ? ROLE_HELP[node.role]
-              : 'what this node earns, carries, and contributes to Web3.0'
-            : 'your wallet and income on the Web3.0 network'}
+              : 'what this node earns, carries, and contributes to Web4.0'
+            : 'your wallet and income on the Web4.0 network'}
         </span>
       </div>
 
@@ -838,6 +977,8 @@ export function Operator() {
               Node-owner cards below (Economics + Storage) stay admin-only. */}
 
           {ownsNode && <AuthorityCard role={node.role} />}
+
+          {isAdmin && <RamReservoirCard />}
 
           {isAdmin && <RevenueCard />}
 

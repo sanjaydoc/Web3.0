@@ -1,7 +1,13 @@
-// Thin typed client for the Web3.0 node's observability endpoints.
+// Thin typed client for the Web4.0 node's observability endpoints.
 
 export const NODE_URL =
-  (import.meta.env.VITE_WEB3_URL as string | undefined) ?? 'http://127.0.0.1:8787';
+  (import.meta.env.VITE_WEB3_URL as string | undefined) ??
+  // Desktop apps tell the dashboard which local node to talk to (the standard app runs on 8787, the
+  // Community "Free Agents" app on 8788 so both can run at once). Falls back to 8787 for local dev.
+  (typeof window !== 'undefined'
+    ? (window as { web3desktop?: { nodeUrl?: string } }).web3desktop?.nodeUrl
+    : undefined) ??
+  'http://127.0.0.1:8787';
 
 export interface AgentCard {
   web3Id: string;
@@ -124,6 +130,8 @@ export interface HostedLaunchConfig {
   webhookUrl?: string;
   createdBy?: string;
   connectors?: string[];
+  /** Built-in office tools to enable (e.g. 'web_search', 'fetch_url'). */
+  tools?: string[];
 }
 
 /** One message in a Genesis-chat conversation. */
@@ -294,6 +302,23 @@ export interface NodeOperator {
     loadAvg1: number;
   };
   limits: NodeLimits;
+  /**
+   * Community ("Free Agents") tier flag + locked budgets. Present + enabled when the connected node
+   * runs the Community desktop installer: the dashboard renders the reduced community experience
+   * (fixed 8-view nav, local-Ollama-only Genesis, preconfigured LLM/RAM contribution) purely from this.
+   */
+  community?: {
+    enabled: boolean;
+    /** Per-owner free-agent cap DERIVED from the live contributed RAM (floor(ramGb)+1). */
+    maxAgents?: number;
+    /** Live contributed hosting RAM (MB) — the "Your Agent RAM" dial's current value. */
+    ramMb?: number;
+    /** Dial floor (MB, 2 GB) and ceiling (MB, 128 GB). */
+    minRamMb?: number;
+    maxRamMb?: number;
+    /** Default LLM RAM tier (MB). */
+    llmRamMb?: number;
+  };
 }
 
 // `operator` (host) and `agent-owner` are the two mutually-exclusive marketplace personas.
@@ -331,6 +356,10 @@ export interface Lease {
   createdAt: string;
   epochsBilled: number;
   paidTotal: number;
+  /** RAM Reservoir: the EXACT per-epoch charge in USDC minor (a fractional float) when this lease bills
+   *  at the global reservoir rate. Present ⇒ use THIS for the rate display, not `pricePerEpoch` (which
+   *  rounds a sub-cent rate to 0). Absent ⇒ a legacy per-operator lease priced in whole minor. */
+  rateExact?: number;
   /** The host operator's advertised public endpoint (host:port / URL), or undefined when the operator
    *  is relay-only or offline. Resolved server-side from the live heartbeat by the lease's host account. */
   endpoint?: string;
@@ -429,6 +458,18 @@ export interface CustomConnector {
   createdAt: string;
 }
 
+/** A vaulted credential as returned by the node — secret VALUES are withheld (only field names). */
+export interface VaultSecret {
+  id: string;
+  kind: string;
+  label: string;
+  public: Record<string, string>;
+  /** Names of the secret fields that are set (values never returned). */
+  secretFields: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ConsensusInfo {
   mode: string;
   enabled: boolean;
@@ -440,7 +481,7 @@ export interface ConsensusInfo {
   peers: string[];
 }
 
-// ── account token (an `web3_…` API token from sign-up), stored in this browser ──
+// ── account token (an `web4_…` API token from sign-up), stored in this browser ──
 const TOKEN_KEY = 'web3.token';
 export function getWeb3Token(): string {
   return localStorage.getItem(TOKEN_KEY) ?? '';
@@ -572,6 +613,31 @@ export interface Economics {
   x402FeeBps: number;
   /** Network ceiling on operator inference price, USDC minor per Mtok. 0 = no cap. */
   maxInferencePriceMTok: number;
+  /** RAM Reservoir: admin-set global price for hosted-agent RAM, in **micro-USDC per GB per HOUR**
+   *  (1_000_000 = $1.00/GB-hour). Micro-dollar granularity so aggressively low rates (a fraction of
+   *  cloud RAM) are expressible, not floored to a whole cent. When > 0 every agent bills this one
+   *  network-wide rate; 0 = legacy per-operator pricing. */
+  ramPricePerGbHour: number;
+}
+
+/** RAM Reservoir snapshot — the pooled compute the coordinator sees + the admin-set global price. */
+export interface Reservoir {
+  /** Distinct node operators contributing RAM right now. */
+  operators: number;
+  /** Pooled hosting slots: total = used + free (used = agents placed, free = advertised free capacity). */
+  slots: { total: number; used: number; free: number };
+  /** Pooled RAM in GB (total slots × RAM-per-agent). */
+  ramGb: number;
+  ramMbPerAgent: number;
+  price: {
+    /** Admin-set global price, **micro-USDC per GB-hour** (1_000_000 = $1.00/GB-hour; 0 = legacy
+     *  per-operator pricing). Format for humans with `formatGbHourPrice`. */
+    perGbHour: number;
+    /** Derived per-agent-per-epoch charge (EXACT USDC minor, possibly fractional/sub-cent). Format a
+     *  per-hour figure with `ratePerHourPrecise`. */
+    perAgentEpoch: number;
+    epochMs: number;
+  };
 }
 
 /** Node persistence settings (config-file backed; restart to apply). */
@@ -728,6 +794,8 @@ export const api = {
   nodeLocations: () => get<{ locations: NodeLocation[] }>('/operator/locations'),
   economics: () => get<Economics>('/operator/economics'),
   updateEconomics: (patch: Partial<Economics>) => post<Economics>('/operator/economics', patch),
+  /** RAM Reservoir: pooled capacity + operators contributing + the admin-set global price. */
+  reservoir: () => get<Reservoir>('/hosting/reservoir'),
   storageInfo: () => get<StorageInfo>('/operator/storage'),
   saveStorage: (input: { mongodbUri?: string; mongodbDb?: string }) =>
     post<{ saved: boolean; restartRequired: boolean; configPath: string }>(
@@ -892,6 +960,35 @@ export const api = {
     headers?: ConnectorHeader[];
     body?: string;
   }) => post<CustomConnector>('/connectors', input),
+  /** Delete a custom connector you created (owner/admin). */
+  deleteConnector: (id: string) =>
+    send<{ removed: boolean }>('DELETE', `/connectors/${encodeURIComponent(id)}`),
+
+  // Credential vault — per-owner app passwords for office tools (e.g. the email send tool). Secret
+  // values are stored server-side and never returned.
+  vault: () =>
+    get<{ secrets: VaultSecret[]; emailProviders: string[]; caldavProviders: string[] }>('/vault'),
+  saveEmailCredential: (input: {
+    provider: string;
+    user: string;
+    pass: string;
+    fromName?: string;
+    fromEmail?: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpSecure?: boolean;
+  }) => post<VaultSecret>('/vault/email', input),
+  saveCalendarCredential: (input: {
+    provider: string;
+    user: string;
+    pass: string;
+    serverUrl?: string;
+  }) => post<VaultSecret>('/vault/calendar', input),
+  deleteVaultSecret: (id: string) =>
+    send<{ removed: boolean }>('DELETE', `/vault/${encodeURIComponent(id)}`),
+  /** Begin an OAuth connect (e.g. 'google') — returns the consent URL to open in a popup. */
+  oauthStart: (provider: string) =>
+    post<{ url: string }>(`/oauth/${encodeURIComponent(provider)}/start`, {}),
   node: () => get<NodeOperator>('/node'),
   nodeLimits: (patch: Partial<NodeLimits>, adminToken?: string) =>
     post<NodeLimits>('/node/limits', patch, adminToken),
@@ -915,6 +1012,10 @@ export const api = {
     ),
   genesisChat: (messages: GenesisTurn[], agents?: GenesisAgentBrief[]) =>
     post<GenesisChatReply>('/genesis/chat', { messages, agents }),
+  /** Public (unauthenticated) Genesis interview turn — powers the landing-page "create your agent"
+   *  widget so a first-time visitor can design an agent before they have an account. Create-only. */
+  genesisPublicChat: (messages: GenesisTurn[]) =>
+    post<GenesisChatReply>('/genesis/public-chat', { messages }),
 
   // Knowledge base (RAG) — attach docs + links to an agent so it answers from the owner's data.
   knowledgeSources: (web3Id: string) =>
@@ -960,4 +1061,41 @@ export function ratePerHour(pricePerEpoch: number, epochMs: number, currency = '
   // /hour — fall back to the honest /epoch label.
   if (!epochMs || epochMs <= 0) return `${formatAmount(pricePerEpoch, currency)} / epoch`;
   return `${formatAmount(pricePerEpoch * epochsPerHour(epochMs), currency)} / hour`;
+}
+
+/**
+ * Format a possibly-fractional USDC-minor amount with adaptive precision. RAM Reservoir rates can be a
+ * small fraction of a cent, which `formatAmount`'s fixed 2 decimals would flatten to "0.00" — so show
+ * more decimals for sub-cent values and the usual 2 for everything ≥ 1¢.
+ */
+export function formatMinorPrecise(minor: number, currency = 'USDC'): string {
+  const usd = minor / 100;
+  if (!Number.isFinite(usd) || usd === 0) return `0.00 ${currency}`;
+  const abs = Math.abs(usd);
+  const decimals = abs >= 0.01 ? 2 : abs >= 0.0001 ? 4 : 6;
+  return `${usd.toFixed(decimals)} ${currency}`;
+}
+
+/**
+ * Like `ratePerHour`, but keeps sub-cent precision — reservoir rates can be a fraction of a cent per
+ * hour, which `formatAmount` would round to 0.00. Use for the reservoir's derived per-agent rate.
+ */
+export function ratePerHourPrecise(
+  pricePerEpoch: number,
+  epochMs: number,
+  currency = 'USDC',
+): string {
+  if (!epochMs || epochMs <= 0) return `${formatMinorPrecise(pricePerEpoch, currency)} / epoch`;
+  return `${formatMinorPrecise(pricePerEpoch * epochsPerHour(epochMs), currency)} / hour`;
+}
+
+/**
+ * Format a **micro-USDC per GB-hour** price (1_000_000 = $1.00) as a dollar string with adaptive
+ * precision, trimming trailing zeros so a $0.0005/GB-hour rate reads cleanly instead of "$0.000500".
+ */
+export function formatGbHourPrice(micro: number, currency = 'USDC'): string {
+  const usd = micro / 1_000_000;
+  if (!Number.isFinite(usd) || usd <= 0) return `0 ${currency}`;
+  const s = usd.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  return `${s} ${currency}`;
 }

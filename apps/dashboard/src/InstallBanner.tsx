@@ -76,10 +76,10 @@ export function InstallBanner() {
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: transient PWA install prompt; native <dialog> semantics/backdrop aren't wanted here
-    <div className="pwa-banner" role="dialog" aria-label="Install Web3.0">
-      <span className="pwa-badge">W3</span>
+    <div className="pwa-banner" role="dialog" aria-label="Install Web4.0">
+      <span className="pwa-badge">W4</span>
       <div className="pwa-text">
-        <b>Install Web3.0</b>
+        <b>Install Web4.0</b>
         <span>
           {ios ? 'Tap Share → “Add to Home Screen”' : 'Add the console to your home screen'}
         </span>

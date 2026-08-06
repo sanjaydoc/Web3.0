@@ -33,15 +33,26 @@ export function uiAlert(message: string, opts: DialogOpts = {}): Promise<void> {
 /** A centered confirm. Resolves true (confirm) / false (cancel or backdrop). */
 export function uiConfirm(message: string, opts: DialogOpts = {}): Promise<boolean> {
   return new Promise((resolve) => {
-    if (enqueue) enqueue({ kind: 'confirm', message, ...opts, resolve: (v) => resolve(Boolean(v)) });
+    if (enqueue)
+      enqueue({ kind: 'confirm', message, ...opts, resolve: (v) => resolve(Boolean(v)) });
     else resolve(false);
   });
 }
 /** A centered prompt. Resolves the entered string, or null on cancel. */
-export function uiPrompt(message: string, defaultValue = '', opts: DialogOpts = {}): Promise<string | null> {
+export function uiPrompt(
+  message: string,
+  defaultValue = '',
+  opts: DialogOpts = {},
+): Promise<string | null> {
   return new Promise((resolve) => {
     if (enqueue)
-      enqueue({ kind: 'prompt', message, defaultValue, ...opts, resolve: (v) => resolve(v as string | null) });
+      enqueue({
+        kind: 'prompt',
+        message,
+        defaultValue,
+        ...opts,
+        resolve: (v) => resolve(v as string | null),
+      });
     else resolve(null);
   });
 }
@@ -80,7 +91,8 @@ export function DialogHost() {
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-dismiss; keyboard handled on the dialog
     <div className="ui-dialog-backdrop" onClick={onCancel}>
-      {/* biome-ignore lint/a11y/useSemanticElements: a portal-less custom modal, not a native <dialog> */}
+      {/* a11y/useSemanticElements is disabled for this file in biome.json — this is a portal-less
+          custom modal, deliberately a <div role="dialog"> rather than a native <dialog>. */}
       <div
         className="ui-dialog"
         role="dialog"
@@ -95,11 +107,7 @@ export function DialogHost() {
         <p className="ui-dialog-msg">{current.message}</p>
         {current.kind === 'prompt' && (
           <div className="field ui-dialog-field">
-            <input
-              ref={inputRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-            />
+            <input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} />
           </div>
         )}
         <div className="ui-dialog-actions">

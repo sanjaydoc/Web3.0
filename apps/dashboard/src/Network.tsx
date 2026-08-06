@@ -283,7 +283,7 @@ export function Network() {
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
         >
-          <title>Web3.0 network map</title>
+          <title>Web4.0 network map</title>
           <g transform={`translate(${view.x} ${view.y}) scale(${view.s})`}>
             <g className="world">
               {WORLD_PATHS.map((d) => (
@@ -312,7 +312,7 @@ export function Network() {
         </svg>
 
         <div className="net-hud net-tl">
-          <div className="net-title">Web3.0 · NETWORK OPS</div>
+          <div className="net-title">Web4.0 · NETWORK OPS</div>
           <div className={`net-status ${stats ? 'ok' : 'bad'}`}>
             <span className="dot" /> {stats ? 'OPERATIONAL' : 'NODE OFFLINE'}
           </div>
@@ -320,7 +320,9 @@ export function Network() {
 
         <div className="net-hud net-tr net-metrics">
           <div>
-            <b>{stats?.nodes ?? online}</b>
+            {/* On a solo node `stats.nodes` is a literal 0 (no heartbeats), which defeats `??` — use ||
+                so a running node still shows itself (1) instead of 0 next to "OPERATIONAL". */}
+            <b>{stats?.nodes || online}</b>
             <span>NODES</span>
           </div>
           <div>
@@ -332,7 +334,9 @@ export function Network() {
             <span>ONLINE</span>
           </div>
           <div>
-            <b>{cons?.height ?? stats?.ledgerEntries ?? '—'}</b>
+            {/* Only show block height when consensus is actually enabled; on a solo node `cons.height`
+                is a literal 0 and the metric is ledger ENTRIES, not BLOCKS. */}
+            <b>{cons?.enabled ? cons.height : (stats?.ledgerEntries ?? '—')}</b>
             <span>{cons?.enabled ? 'BLOCKS' : 'ENTRIES'}</span>
           </div>
         </div>

@@ -26,6 +26,14 @@ const DESKTOP_DEB = `${DL}/web3_${DESKTOP_FILE}_amd64.deb`;
 // at the latest build. Unsigned debug APK → sideload (enable "Install unknown apps").
 const ANDROID_APK = `${REPO}/releases/download/android/Web4.0-android.apk`;
 
+// The Community ("Free Agents") desktop build — the SAME app, preconfigured to run up to 3 free agents
+// and donate the machine's idle 3 GB LLM (Ollama qwen2.5:3b) + 2 GB RAM to the shared network for free.
+// Published by the `desktop (free)` workflow with the community config to a rolling `community` release.
+const COMMUNITY_DL = `${REPO}/releases/download/community`;
+const COMMUNITY_EXE = `${COMMUNITY_DL}/Web4.0-Free-Agents.Setup.exe`;
+const COMMUNITY_DMG = `${COMMUNITY_DL}/Web4.0-Free-Agents-universal.dmg`;
+const COMMUNITY_APPIMAGE = `${COMMUNITY_DL}/Web4.0-Free-Agents.AppImage`;
+
 // Commands that actually work against the PUBLIC repo: run the open console, or build an agent with
 // the SDK. (Running the node itself is the desktop app above — its core isn't in this repo.)
 const CLIENT_CMDS = [
@@ -138,7 +146,7 @@ const LinuxLogo = () => (
     <path d="M10.8 9.2 12 10l1.2-.8-1.2-1z" fill="#e95420" />
   </svg>
 );
-const W3Logo = () => (
+const W4Logo = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <rect x="1.5" y="1.5" width="21" height="21" rx="5" stroke="currentColor" strokeWidth="1.5" />
     <text
@@ -150,7 +158,7 @@ const W3Logo = () => (
       fontFamily="Newsreader, Georgia, serif"
       fill="currentColor"
     >
-      W3
+      W4
     </text>
   </svg>
 );
@@ -197,7 +205,7 @@ function DesktopApp() {
       label: 'All releases',
       sub: 'changelog · checksums',
       accent: '#a0a0a0',
-      icon: <W3Logo />,
+      icon: <W4Logo />,
       href: DESKTOP_RELEASE,
     },
   ];
@@ -228,7 +236,7 @@ function DesktopApp() {
         ))}
       </div>
       <p className="dl-blurb">
-        Installs as <b>Web4.0</b> (W3 icon). Launch it and it opens this console as a native app,
+        Installs as <b>Web4.0</b> (W4 icon). Launch it and it opens this console as a native app,
         connected to the <b>shared Web4.0 network</b> — same accounts, agents, and ledger as
         everyone else. Nothing to configure, no database to run: sign in and you're on the network.
         The build is unsigned, so the first launch needs one extra click:
@@ -265,7 +273,7 @@ function ClientTerminal() {
         <div className="term-dot" style={{ background: '#ff5f57' }} />
         <div className="term-dot" style={{ background: '#ffbd2e' }} />
         <div className="term-dot" style={{ background: '#28c840' }} />
-        <span className="term-name">web3.0 — open client</span>
+        <span className="term-name">web4 — open client</span>
       </div>
       <div className="term-body">
         {CLIENT_CMDS.map((c) => (
@@ -426,6 +434,35 @@ export function Download({ onGetStarted }: { onGetStarted?: () => void }) {
           </button>
         </div>
       )}
+
+      {/* Free community version — the zero-config "Free Agents" build. Run up to 3 agents free; your
+          idle brain + RAM join the network for free. This is the supply that makes hosted brains + RAM
+          available for everyone (it fixes the marketplace's cold-start). */}
+      <div className="card" style={{ marginBottom: 18, borderColor: 'var(--ink)' }}>
+        <div className="section-title">Free community version — “Free Agents”</div>
+        <p className="muted" style={{ margin: '2px 0 10px' }}>
+          The zero-setup way to join. Run up to <b>3 agents for free</b> on your own machine. In
+          exchange, its idle <b>local LLM (Ollama · qwen2.5:3b)</b> and <b>2 GB of RAM</b> are
+          pooled into the shared network for free — so everyone has brains to run agents on and RAM
+          to host them. No node config, no earnings to manage; your agents can still take x402
+          payments.
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a className="btn act" href={COMMUNITY_EXE}>
+            Windows
+          </a>
+          <a className="btn" href={COMMUNITY_DMG}>
+            macOS
+          </a>
+          <a className="btn" href={COMMUNITY_APPIMAGE}>
+            Linux
+          </a>
+        </div>
+        <p className="hint" style={{ margin: '10px 2px 0' }}>
+          Want to run a full earning node instead (sell RAM + inference, no agent cap)? Use the
+          standard desktop app below.
+        </p>
+      </div>
 
       <DesktopApp />
 

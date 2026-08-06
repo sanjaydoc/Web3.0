@@ -1,7 +1,7 @@
 {
-  "name": "Web3.0 Console",
-  "short_name": "Web3.0",
-  "description": "Run and manage a Web3.0 node — the agentic internet console.",
+  "name": "Web4.0 Console",
+  "short_name": "Web4.0",
+  "description": "Run and manage a Web4.0 node — the agentic internet console.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BUILTIN_CONNECTORS } from './Connectors.js';
-import { uiConfirm } from './dialog.js';
+import { AGENT_TEMPLATES, type AgentTemplate } from './agent-templates.js';
 import {
   type CustomConnector,
   type HostedAgent,
@@ -9,6 +9,7 @@ import {
   type SkillDef,
   api,
 } from './api.js';
+import { uiConfirm } from './dialog.js';
 import { SKILL_TEMPLATES, type SkillTemplate, templateSystemFor } from './skill-templates.js';
 
 const ADMIN_KEY = 'web3.adminToken';
@@ -32,7 +33,15 @@ const PROVIDERS: { id: string; label: string; model: string; needsKey: boolean }
 
 const py = (s: string) => JSON.stringify(s); // JSON strings are valid Python string literals
 
-export function Genesis() {
+// Community ("Free Agents") tier: the only brain is the user's own local Ollama (qwen2.5:7b / 3b) —
+// no cloud keys, no paid tunnel. Restricting the dropdown to `local` is the whole gate.
+const COMMUNITY_MODELS = ['qwen2.5:3b', 'qwen2.5:7b'];
+
+export function Genesis({ community = false }: { community?: boolean }) {
+  const providers = community ? PROVIDERS.filter((p) => p.id === 'local') : PROVIDERS;
+  // Community: the free-agent cap scales with the "Your Agent RAM" dial — read it live so this view
+  // shows the current allowance and how many are left.
+  const [commCap, setCommCap] = useState<number | null>(null);
   const [handle, setHandle] = useState('sage');
   const [name, setName] = useState('Sage');
   const [description, setDescription] = useState('Answers questions with an LLM.');
@@ -44,9 +53,13 @@ export function Genesis() {
   const [createdBy, setCreatedBy] = useState('');
   const [copiedId, setCopiedId] = useState(''); // web3Id whose endpoint was just copied (button feedback)
   const [provider, setProvider] = useState('local');
-  const [model, setModel] = useState('qwen2.5:7b');
+  // Community/free tier donates a 3 GB LLM slot → it serves qwen2.5:3b (the network default). Defaulting
+  // to 7b (which the free tier can't host) leaves an agent's tunnel brain with NO provider on the mesh,
+  // so every task times out ("model may still be loading"). Default community to the served 3b; 7b stays
+  // a selectable option for hosts that advertise the RAM for it.
+  const [model, setModel] = useState(community ? 'qwen2.5:3b' : 'qwen2.5:7b');
   const [system, setSystem] = useState(
-    'You are a concise, helpful expert agent on the Web3.0 network.',
+    'You are a concise, helpful expert agent on the Web4.0 network.',
   );
   // Once the owner hand-edits the system prompt we stop auto-filling it from a skill template.
   const [systemEdited, setSystemEdited] = useState(false);
@@ -60,6 +73,10 @@ export function Genesis() {
   // Only admin's generated script embeds the authority's real address; operators get a placeholder.
   const [isAdmin, setIsAdmin] = useState(false);
   const [connectors, setConnectors] = useState<string[]>([]);
+  // Built-in office tools attached (via an agent template) — sent to the node so the agent runs the
+  // tool-calling loop with these tools. There's no per-tool UI yet; templates set the whole list.
+  const [tools, setTools] = useState<string[]>([]);
+  const [activeTpl, setActiveTpl] = useState<AgentTemplate | null>(null);
   const [customConns, setCustomConns] = useState<CustomConnector[]>([]);
   // Federated hosted models an agent can use as a 'tunnel' brain (from the network marketplace).
   const [tunnelModels, setTunnelModels] = useState<LlmMarketOffer[]>([]);
@@ -176,6 +193,20 @@ export function Genesis() {
       .catch(() => setIsAdmin(false));
   }, []);
 
+  // Community: poll the live free-agent cap (derived from the RAM dial) so the allowance shown here
+  // updates when the user moves the "Your Agent RAM" dial.
+  useEffect(() => {
+    if (!community) return;
+    const load = () =>
+      api
+        .node()
+        .then((n) => setCommCap(n.community?.enabled ? (n.community.maxAgents ?? null) : null))
+        .catch(() => undefined);
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [community]);
+
   useEffect(() => {
     refreshHosted();
     const t = setInterval(refreshHosted, 5000);
@@ -193,6 +224,33 @@ export function Genesis() {
     setAdmin(value);
     localStorage.setItem(ADMIN_KEY, value);
   };
+
+  // One-click: fill the whole form from an agent template (name, skill, prompt, provider, price) and
+  // attach its office tools. In the Community tier only the local brain is allowed, so coerce there.
+  function applyAgentTemplate(tpl: AgentTemplate) {
+    const a = tpl.agent;
+    setHandle(a.handle);
+    setName(a.name);
+    setDescription(a.description);
+    setSkillId(a.skillId);
+    setSkillName(a.skillName);
+    setSkillDesc(a.skillDesc);
+    setSystem(a.system);
+    setSystemEdited(true); // keep the template's prompt verbatim — don't auto-overwrite from a skill
+    if (community) {
+      setProvider('local');
+      // Match the free tier's served model (3 GB → qwen2.5:3b); 7b has no provider on the free mesh.
+      setModel('qwen2.5:3b');
+    } else {
+      setProvider(a.provider);
+      setModel(a.model);
+    }
+    setPriced(a.priceUsd > 0);
+    setPrice(a.priceUsd.toFixed(2));
+    setTools(a.tools);
+    setActiveTpl(tpl);
+    setLaunchMsg(null);
+  }
 
   async function launch() {
     setLaunching(true);
@@ -217,6 +275,7 @@ export function Genesis() {
           system,
           createdBy: createdBy.trim() || undefined,
           connectors,
+          ...(tools.length ? { tools } : {}),
         },
         admin,
       );
@@ -234,6 +293,15 @@ export function Genesis() {
   async function stopHosted(h: string) {
     try {
       await api.hostedStop(h, admin);
+      refreshHosted();
+    } catch (err) {
+      setLaunchMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  async function startHosted(h: string) {
+    try {
+      await api.hostedStart(h, admin);
       refreshHosted();
     } catch (err) {
       setLaunchMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
@@ -259,7 +327,7 @@ export function Genesis() {
 
   const script = useMemo(() => {
     const minorUnits = priced ? Math.max(0, Math.round(Number.parseFloat(price || '0') * 100)) : 0;
-    return `"""Web3.0 agent generated by Genesis. Bring your own key — it stays on your machine.
+    return `"""Web4.0 agent generated by Genesis. Bring your own key — it stays on your machine.
 
 Run it:
   ${current.needsKey ? '1. Put your provider key in .env:  LLM_API_KEY=your-key\\n  ' : ''}${current.needsKey ? '2' : '1'}. python ${handle}_agent.py
@@ -299,7 +367,7 @@ def on_task(a, message):
 
 agent.on_task(on_task)
 agent.connect()
-print(f"{agent.web3_id} is live on Web3.0 (brain: {brain.provider_name}/{brain.model}). Ctrl+C to stop.")
+print(f"{agent.web3_id} is live on Web4.0 (brain: {brain.provider_name}/{brain.model}). Ctrl+C to stop.")
 while True:
     time.sleep(1)
 `;
@@ -322,7 +390,8 @@ while True:
   function onProviderChange(id: string) {
     setProvider(id);
     const preset = PROVIDERS.find((p) => p.id === id);
-    if (preset) setModel(preset.model);
+    // In the community app the only served local model is qwen2.5:3b (3 GB tier) — never prefill 7b.
+    if (preset) setModel(community && id === 'local' ? 'qwen2.5:3b' : preset.model);
   }
 
   async function copy() {
@@ -340,6 +409,56 @@ while True:
       <div className="page-head">
         <h1>Genesis</h1>
         <span className="muted">spin up an agent — pick a brain, keep your own key</span>
+      </div>
+
+      {community && commCap !== null && (
+        <div className="card" style={{ marginBottom: 18, borderLeft: '3px solid var(--ok)' }}>
+          <div className="section-title">Free agents</div>
+          <p className="muted" style={{ margin: '2px 0 0' }}>
+            You have <b>{Math.max(0, commCap - hosted.length)}</b> of <b>{commCap}</b> free agent
+            {commCap === 1 ? '' : 's'} left ({hosted.length} created). Your allowance scales with
+            your RAM contribution — raise the dial in <b>Your Agent RAM</b> to unlock more, or
+            delete an agent to free a slot.
+          </p>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div className="section-title">Start from a template</div>
+        <p className="muted" style={{ margin: '0 0 12px' }}>
+          One click fills everything below — a ready-to-run agent with the right office tools
+          attached.
+        </p>
+        <div className="chip-pick">
+          {AGENT_TEMPLATES.map((t) => (
+            <button
+              type="button"
+              key={t.id}
+              className={`chip-toggle ${activeTpl?.id === t.id ? 'on' : ''}`}
+              onClick={() => applyAgentTemplate(t)}
+              title={t.tagline}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {activeTpl && (
+          <div className="note note-ok" style={{ marginTop: 12 }}>
+            <b>{activeTpl.label}</b> loaded — {activeTpl.tagline}.
+            <div style={{ marginTop: 6 }}>
+              Tools attached: <code>{activeTpl.agent.tools.join(', ')}</code>
+            </div>
+            <div style={{ marginTop: 6 }}>To make it fully functional, connect:</div>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+              {activeTpl.requires.map((r) => (
+                <li key={r.label}>
+                  {r.label}
+                  {r.optional ? ' (optional)' : ''} — <span className="hint">{r.where}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
@@ -369,9 +488,9 @@ while True:
 
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="g-handle">Web3.0 ID</label>
+            <label htmlFor="g-handle">Web4.0 ID</label>
             <input id="g-handle" value={handle} onChange={(e) => setHandle(e.target.value)} />
-            <span className="hint">{handle || '…'}@web3.0</span>
+            <span className="hint">{handle || '…'}@web4</span>
           </div>
           <div className="field">
             <label htmlFor="g-name">Display name</label>
@@ -393,19 +512,33 @@ while True:
               value={provider}
               onChange={(e) => onProviderChange(e.target.value)}
             >
-              {PROVIDERS.map((p) => (
+              {providers.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
                 </option>
               ))}
             </select>
             <span className="hint">
-              {current.needsKey
-                ? 'needs your API key in .env (LLM_API_KEY)'
-                : 'runs locally, no key'}
+              {community
+                ? 'your own local Ollama brain — free, private, no key'
+                : current.needsKey
+                  ? 'needs your API key in .env (LLM_API_KEY)'
+                  : 'runs locally, no key'}
             </span>
           </div>
-          {provider === 'tunnel' ? (
+          {community ? (
+            <div className="field">
+              <label htmlFor="g-model">Model (local Ollama)</label>
+              <select id="g-model" value={model} onChange={(e) => setModel(e.target.value)}>
+                {COMMUNITY_MODELS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <span className="hint">runs on your machine — free, private, no key</span>
+            </div>
+          ) : provider === 'tunnel' ? (
             <div className="field">
               <label htmlFor="g-model-tunnel">Hosted model</label>
               <select id="g-model-tunnel" value={model} onChange={(e) => setModel(e.target.value)}>
@@ -666,13 +799,21 @@ while True:
                         ? 'Copy paid endpoint'
                         : 'Copy endpoint'}
                   </button>
-                  {h.running && (
+                  {h.running ? (
                     <button
                       type="button"
                       className="btn ghost btn-sm"
                       onClick={() => stopHosted(h.handle)}
                     >
                       Stop
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn act btn-sm"
+                      onClick={() => startHosted(h.handle)}
+                    >
+                      Start
                     </button>
                   )}
                   <button
@@ -720,7 +861,7 @@ while True:
           <li>Your agent registers, connects, and appears live in Agents & Live traffic.</li>
         </ol>
         <p className="hint" style={{ marginTop: 10 }}>
-          Your provider key stays on your machine — it is never sent to the Web3.0 node or the
+          Your provider key stays on your machine — it is never sent to the Web4.0 node or the
           network.
         </p>
       </div>

@@ -4,8 +4,10 @@ import {
   type CustomConnector,
   type SettlementInfo,
   type TelegramStatus,
+  type VaultSecret,
   api,
 } from './api.js';
+import { uiConfirm } from './dialog.js';
 
 interface Rail {
   name: string;
@@ -255,6 +257,31 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
   const [cons, setCons] = useState<ConsensusInfo | null>(null);
   const [custom, setCustom] = useState<CustomConnector[]>([]);
 
+  // Office tools · Email credential (vault). Lets an agent's send_email tool send from this mailbox.
+  const [emailCred, setEmailCred] = useState<VaultSecret | null>(null);
+  const [emailProviders, setEmailProviders] = useState<string[]>([]);
+  const [emProvider, setEmProvider] = useState('gmail');
+  const [emUser, setEmUser] = useState('');
+  const [emPass, setEmPass] = useState('');
+  const [emFrom, setEmFrom] = useState('');
+  const [emMsg, setEmMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [emBusy, setEmBusy] = useState(false);
+
+  // Office tools · Google (OAuth) — one connect grants Gmail + Calendar. Preferred over app passwords,
+  // and the ONLY way to use Google Calendar. Populated from the vault ('google' credential).
+  const [googleCred, setGoogleCred] = useState<VaultSecret | null>(null);
+  const [gMsg, setGMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  // Office tools · Calendar credential (CalDAV app password) — powers create_event / list_events.
+  const [calCred, setCalCred] = useState<VaultSecret | null>(null);
+  const [caldavProviders, setCaldavProviders] = useState<string[]>([]);
+  const [calProvider, setCalProvider] = useState('icloud');
+  const [calUser, setCalUser] = useState('');
+  const [calPass, setCalPass] = useState('');
+  const [calServer, setCalServer] = useState('');
+  const [calMsg, setCalMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [calBusy, setCalBusy] = useState(false);
+
   const [id, setId] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -304,6 +331,50 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
       .catch(() => setCustom([]));
   }, []);
 
+  const loadVault = useCallback(() => {
+    api
+      .vault()
+      .then((r) => {
+        // Only offer preset providers in the dropdown; 'custom' SMTP needs host fields (API-only for now).
+        setEmailProviders(r.emailProviders.filter((p) => p !== 'custom'));
+        setEmailCred(r.secrets.find((s) => s.id === 'email') ?? null);
+        setCaldavProviders(r.caldavProviders);
+        setCalCred(r.secrets.find((s) => s.id === 'calendar') ?? null);
+        setGoogleCred(r.secrets.find((s) => s.id === 'google') ?? null);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function connectGoogle() {
+    setGMsg(null);
+    try {
+      const { url } = await api.oauthStart('google');
+      // Open the consent flow in a popup; loadVault polls, so the connected state appears on return.
+      window.open(url, 'web4-oauth-google', 'width=520,height=680');
+      setGMsg({ kind: 'ok', text: 'Opening Google sign-in… approve access, then return here.' });
+    } catch (err) {
+      setGMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  async function disconnectGoogle() {
+    if (
+      !(await uiConfirm('Disconnect Google? Agents will fall back to any app passwords you set.', {
+        title: 'Disconnect Google',
+        confirmLabel: 'Disconnect',
+        danger: true,
+      }))
+    )
+      return;
+    try {
+      await api.deleteVaultSecret('google');
+      setGMsg({ kind: 'ok', text: 'Google disconnected.' });
+      loadVault();
+    } catch (err) {
+      setGMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   useEffect(() => {
     const load = () => {
       api
@@ -319,11 +390,94 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
         .then(setCons)
         .catch(() => undefined);
       loadCustom();
+      loadVault();
     };
     load();
     const t = setInterval(load, 4000);
     return () => clearInterval(t);
-  }, [loadCustom]);
+  }, [loadCustom, loadVault]);
+
+  async function saveEmail() {
+    setEmBusy(true);
+    setEmMsg(null);
+    try {
+      await api.saveEmailCredential({
+        provider: emProvider,
+        user: emUser.trim(),
+        pass: emPass,
+        fromName: emFrom.trim() || undefined,
+      });
+      setEmMsg({
+        kind: 'ok',
+        text: 'Email connected. Agents with the send_email tool can now send from this address.',
+      });
+      setEmPass('');
+      loadVault();
+    } catch (err) {
+      setEmMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setEmBusy(false);
+    }
+  }
+
+  async function removeEmail() {
+    if (
+      !(await uiConfirm('Disconnect email? Agents will no longer be able to send from it.', {
+        title: 'Disconnect email',
+        confirmLabel: 'Disconnect',
+        danger: true,
+      }))
+    )
+      return;
+    try {
+      await api.deleteVaultSecret('email');
+      setEmMsg({ kind: 'ok', text: 'Email disconnected.' });
+      loadVault();
+    } catch (err) {
+      setEmMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  async function saveCalendar() {
+    setCalBusy(true);
+    setCalMsg(null);
+    try {
+      await api.saveCalendarCredential({
+        provider: calProvider,
+        user: calUser.trim(),
+        pass: calPass,
+        serverUrl: calProvider === 'custom' ? calServer.trim() || undefined : undefined,
+      });
+      setCalMsg({
+        kind: 'ok',
+        text: 'Calendar connected. Agents with create_event / list_events can now use it.',
+      });
+      setCalPass('');
+      loadVault();
+    } catch (err) {
+      setCalMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setCalBusy(false);
+    }
+  }
+
+  async function removeCalendar() {
+    if (
+      !(await uiConfirm('Disconnect calendar? Agents will no longer be able to use it.', {
+        title: 'Disconnect calendar',
+        confirmLabel: 'Disconnect',
+        danger: true,
+      }))
+    )
+      return;
+    try {
+      await api.deleteVaultSecret('calendar');
+      setCalMsg({ kind: 'ok', text: 'Calendar disconnected.' });
+      loadVault();
+    } catch (err) {
+      setCalMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
+    }
+  }
 
   async function addConnector() {
     setBusy(true);
@@ -353,6 +507,24 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
       setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function removeConnector(c: CustomConnector) {
+    if (
+      !(await uiConfirm(`Delete connector "${c.name}"? This can’t be undone.`, {
+        title: 'Delete connector',
+        confirmLabel: 'Delete',
+        danger: true,
+      }))
+    )
+      return;
+    try {
+      await api.deleteConnector(c.id);
+      setMsg({ kind: 'ok', text: `Connector "${c.name}" deleted.` });
+      loadCustom();
+    } catch (err) {
+      setMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -421,6 +593,232 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
             {c.view && go && <div className="conn-cta">Configure →</div>}
           </button>
         ))}
+      </div>
+
+      <div className="card" style={{ margin: '18px 0' }}>
+        <div className="section-title">Office tools · Google (recommended)</div>
+        <p className="muted" style={{ margin: '0 0 12px' }}>
+          Connect your Google account once for <strong>Gmail + Calendar</strong> — no app password
+          needed, and it's the only way to use Google Calendar. Agents prefer this over app
+          passwords when it's connected.
+        </p>
+        {googleCred ? (
+          <div
+            className="note note-ok"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <span>
+              Connected: <strong>{googleCred.public.email ?? 'Google account'}</strong>
+            </span>
+            <button type="button" className="btn-delete" onClick={disconnectGoogle}>
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <div className="gen-actions">
+            <button type="button" className="btn act" onClick={connectGoogle}>
+              Connect Google
+            </button>
+          </div>
+        )}
+        {gMsg && (
+          <div className={`note ${gMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>{gMsg.text}</div>
+        )}
+      </div>
+
+      <div className="card" style={{ margin: '18px 0' }}>
+        <div className="section-title">Office tools · Email (app password)</div>
+        <p className="muted" style={{ margin: '0 0 12px' }}>
+          Connect a mailbox so agents with the <code>send_email</code> / <code>read_email</code>
+          tools can send and read mail on your behalf. Paste an <strong>app password</strong> (not
+          your normal login password) — for Gmail, create one at myaccount.google.com → Security →
+          App passwords. It's stored on your node and never shown again.
+        </p>
+        {emailCred && (
+          <div
+            className="note note-ok"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
+            <span>
+              Connected: <strong>{emailCred.public.user}</strong> ({emailCred.public.provider})
+            </span>
+            <button type="button" className="btn-delete" onClick={removeEmail}>
+              Disconnect
+            </button>
+          </div>
+        )}
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="em-provider">Provider</label>
+            <select
+              id="em-provider"
+              value={emProvider}
+              onChange={(e) => setEmProvider(e.target.value)}
+            >
+              {(emailProviders.length
+                ? emailProviders
+                : ['gmail', 'outlook', 'office365', 'yahoo', 'zoho', 'icloud']
+              ).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="em-user">Email address</label>
+            <input
+              id="em-user"
+              value={emUser}
+              onChange={(e) => setEmUser(e.target.value)}
+              placeholder="you@gmail.com"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="em-pass">App password</label>
+            <input
+              id="em-pass"
+              type="password"
+              value={emPass}
+              onChange={(e) => setEmPass(e.target.value)}
+              placeholder="16-character app password"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="em-from">From name (optional)</label>
+            <input
+              id="em-from"
+              value={emFrom}
+              onChange={(e) => setEmFrom(e.target.value)}
+              placeholder="Your name or company"
+            />
+          </div>
+        </div>
+        <div className="gen-actions">
+          <button
+            type="button"
+            className="btn act"
+            disabled={emBusy || !emUser.trim() || !emPass}
+            onClick={saveEmail}
+          >
+            {emBusy ? 'Saving…' : emailCred ? 'Update email' : 'Connect email'}
+          </button>
+        </div>
+        {emMsg && (
+          <div className={`note ${emMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+            {emMsg.text}
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ margin: '18px 0' }}>
+        <div className="section-title">Office tools · Calendar</div>
+        <p className="muted" style={{ margin: '0 0 12px' }}>
+          Connect a calendar (CalDAV) so agents with <code>create_event</code> /{' '}
+          <code>list_events</code>
+          can book and read your schedule. Works with iCloud, Yahoo, Fastmail and any CalDAV server
+          via an <strong>app-specific password</strong>. (Google and Outlook calendars need OAuth —
+          coming with the sign-in-with-Google layer.)
+        </p>
+        {calCred && (
+          <div
+            className="note note-ok"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
+            <span>
+              Connected: <strong>{calCred.public.user}</strong> ({calCred.public.provider})
+            </span>
+            <button type="button" className="btn-delete" onClick={removeCalendar}>
+              Disconnect
+            </button>
+          </div>
+        )}
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="cal-provider">Provider</label>
+            <select
+              id="cal-provider"
+              value={calProvider}
+              onChange={(e) => setCalProvider(e.target.value)}
+            >
+              {(caldavProviders.length
+                ? caldavProviders
+                : ['icloud', 'yahoo', 'fastmail', 'custom']
+              ).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="cal-user">Account email</label>
+            <input
+              id="cal-user"
+              value={calUser}
+              onChange={(e) => setCalUser(e.target.value)}
+              placeholder="you@icloud.com"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="cal-pass">App password</label>
+            <input
+              id="cal-pass"
+              type="password"
+              value={calPass}
+              onChange={(e) => setCalPass(e.target.value)}
+              placeholder="app-specific password"
+            />
+          </div>
+          {calProvider === 'custom' && (
+            <div className="field">
+              <label htmlFor="cal-server">CalDAV server URL</label>
+              <input
+                id="cal-server"
+                value={calServer}
+                onChange={(e) => setCalServer(e.target.value)}
+                placeholder="https://cloud.example.com/remote.php/dav"
+              />
+            </div>
+          )}
+        </div>
+        <div className="gen-actions">
+          <button
+            type="button"
+            className="btn act"
+            disabled={
+              calBusy ||
+              !calUser.trim() ||
+              !calPass ||
+              (calProvider === 'custom' && !calServer.trim())
+            }
+            onClick={saveCalendar}
+          >
+            {calBusy ? 'Saving…' : calCred ? 'Update calendar' : 'Connect calendar'}
+          </button>
+        </div>
+        {calMsg && (
+          <div className={`note ${calMsg.kind === 'err' ? 'note-err' : 'note-ok'}`}>
+            {calMsg.text}
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ margin: '18px 0' }}>
@@ -582,10 +980,28 @@ export function Connectors({ go }: { go?: (view: string) => void }) {
                 )}
                 {c.headers && c.headers.length > 0 && (
                   <div className="hint" style={{ marginTop: 4 }}>
-                    auth: {c.headers.map((h) => h.key).join(', ')} 
+                    auth: {c.headers.map((h) => h.key).join(', ')}
                   </div>
                 )}
-                <div className="hint">added by {c.createdBy}</div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 8,
+                  }}
+                >
+                  <span className="hint">added by {c.createdBy}</span>
+                  <button
+                    type="button"
+                    className="btn-delete"
+                    onClick={() => removeConnector(c)}
+                    title="Delete this connector"
+                    aria-label={`Delete ${c.name}`}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

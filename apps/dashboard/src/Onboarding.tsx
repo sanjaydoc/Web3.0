@@ -61,7 +61,7 @@ function StepCard({
   );
 }
 
-/** Step 1 — pick a handle; creates the account (name@web3.0) + signing key and signs in. The account's
+/** Step 1 — pick a handle; creates the account (name@web4) + signing key and signs in. The account's
  *  role is the persona chosen on the fork step: `operator` (host) or `agent-owner`. */
 function NameStep({
   persona,
@@ -112,11 +112,11 @@ function NameStep({
             // biome-ignore lint/a11y/noAutofocus: first field of a focused wizard step
             autoFocus
           />
-          <span className="onboard-suffix">@web3.0</span>
+          <span className="onboard-suffix">@web4</span>
         </div>
         {handle && (
           <span className="hint">
-            You'll be <b>{handle}@web3.0</b>
+            You'll be <b>{handle}@web4</b>
           </span>
         )}
       </div>
@@ -368,7 +368,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
   const download = () => {
     const key = addr ? loadAccountKey(addr) : null;
     const body = [
-      'Web3.0 — account backup',
+      'Web4.0 — account backup',
       'KEEP THIS FILE SECRET. Anyone with it can control your account.',
       '',
       `Address:            ${addr}`,
@@ -424,7 +424,7 @@ function TokenStep({ address, onDone }: { address: string; onDone: () => void })
       <div className="term" style={{ marginBottom: 8 }}>
         <div className="term-body">
           <div className="term-cmd">
-            <code>{revealed ? token : `web3_${'•'.repeat(28)}`}</code>
+            <code>{revealed ? token : `web4_${'•'.repeat(28)}`}</code>
             <button type="button" className="copy" onClick={() => setRevealed((r) => !r)}>
               {revealed ? 'Hide' : 'Reveal'}
             </button>
@@ -542,7 +542,7 @@ function QuickStartFlow({
       <div className="onboard">
         <div className="onboard-inner">
           <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
-            <span className="badge">W</span> Web3.0
+            <span className="badge">W</span> Web4.0
           </div>
           <h1 className="onboard-title">Your agent is live</h1>
           {proof ? (
@@ -598,7 +598,7 @@ function QuickStartFlow({
     <div className="onboard">
       <div className="onboard-inner">
         <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
-          <span className="badge">W</span> Web3.0
+          <span className="badge">W</span> Web4.0
         </div>
         <h1 className="onboard-title">Launch a paid agent</h1>
         <p className="muted onboard-sub">
@@ -840,9 +840,9 @@ export function Onboarding({
       <div className="onboard">
         <div className="onboard-inner">
           <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
-            <span className="badge">W</span> Web3.0
+            <span className="badge">W</span> Web4.0
           </div>
-          <h1 className="onboard-title">Welcome to Web3.0</h1>
+          <h1 className="onboard-title">Welcome to Web4.0</h1>
           <p className="muted onboard-sub">Choose how you'll join the network.</p>
           <PersonaStep
             onPick={setPersona}
@@ -861,7 +861,7 @@ export function Onboarding({
       <div className="onboard">
         <div className="onboard-inner">
           <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
-            <span className="badge">W</span> Web3.0
+            <span className="badge">W</span> Web4.0
           </div>
           <h1 className="onboard-title">Own an agent — quick setup</h1>
           <p className="muted onboard-sub">
@@ -896,7 +896,7 @@ export function Onboarding({
     <div className="onboard">
       <div className="onboard-inner">
         <div className="brand" style={{ justifyContent: 'center', marginBottom: 6 }}>
-          <span className="badge">W</span> Web3.0
+          <span className="badge">W</span> Web4.0
         </div>
         <h1 className="onboard-title">Run a node — quick setup</h1>
         <p className="muted onboard-sub">A few quick steps and you're earning on the network.</p>

@@ -27,7 +27,23 @@ const IS_NATIVE_HOST =
  * each offer is tunnel-served so an agent owner can pick it as a hosted brain from the Marketplace.
  * The table shows every model this node hosts, its live traffic (tokens served) and earnings.
  */
-export function LlmTunnel() {
+// Community ("Free Agents") tier: the DEFAULT served brain (3 GB tier). Auto-published at price 0 when
+// the user hasn't chosen one yet. The user can dial a bigger local model to download & host (below).
+const COMMUNITY_LLM_MODEL = 'qwen2.5:3b';
+
+// The LLM dial's ladder — bigger RAM = bigger local model to download & host (all served free). The
+// dial in "Your Agent LLM" is independent of the hosting-RAM dial in "Your Agent RAM".
+const COMMUNITY_LLM_TIERS: { model: string; ramMb: number; label: string }[] = [
+  { model: 'gemma2:2b', ramMb: 2048, label: 'Gemma 2 · 2B (~2 GB)' },
+  { model: 'qwen2.5:3b', ramMb: 3072, label: 'Qwen2.5 · 3B (~3 GB · default)' },
+  { model: 'mistral:7b', ramMb: 5120, label: 'Mistral · 7B (~5 GB)' },
+  { model: 'qwen2.5:7b', ramMb: 5632, label: 'Qwen2.5 · 7B (~5.5 GB)' },
+  { model: 'llama3.1:8b', ramMb: 6144, label: 'Llama 3.1 · 8B (~6 GB)' },
+  { model: 'qwen2.5:14b', ramMb: 11264, label: 'Qwen2.5 · 14B (~11 GB)' },
+  { model: 'llama3.1:70b', ramMb: 43008, label: 'Llama 3.1 · 70B (~42 GB)' },
+];
+
+export function LlmTunnel({ community = false }: { community?: boolean } = {}) {
   const [offers, setOffers] = useState<LlmOffer[]>([]);
   const [revenue, setRevenue] = useState(0);
   const [usage, setUsage] = useState<HostServedRow[]>([]);
@@ -43,6 +59,8 @@ export function LlmTunnel() {
   const [chatModel, setChatModel] = useState<string | null>(null);
   // Network inference price ceiling (admin monetary policy), USDC minor per Mtok. 0/null = no cap.
   const [priceCap, setPriceCap] = useState<number | null>(null);
+  // Community LLM dial: index into COMMUNITY_LLM_TIERS (default = qwen2.5:3b).
+  const [llmTier, setLlmTier] = useState(1);
 
   const load = useCallback(async () => {
     try {
@@ -67,6 +85,61 @@ export function LlmTunnel() {
     return () => clearInterval(t);
   }, [load]);
 
+  // Community ("Free Agents") tier: the LLM brain is preconfigured, not user-chosen. Auto-publish the
+  // local Ollama model to the network at price 0 (FREE inference — the deal is that idle compute serves
+  // everyone) so it's discoverable by Genesis / the landing widget with no action from the user. If the
+  // model isn't pulled yet the publish 400s and simply retries on the next offers refresh (every 5s).
+  useEffect(() => {
+    if (!community || !IS_NATIVE_HOST) return;
+    if (offers.length > 0) return; // the user already has a brain published (default or dial-chosen)
+    let cancelled = false;
+    api
+      .setLlmOffer({ model: COMMUNITY_LLM_MODEL, pricePerMTok: 0, ramMb: 3072 })
+      .then(() => {
+        if (!cancelled) load();
+      })
+      .catch(() => {}); // model not pulled yet / offline — retry on the next offers refresh
+    return () => {
+      cancelled = true;
+    };
+  }, [community, offers, load]);
+
+  // Sync the LLM dial to whatever brain is currently published, so it reflects the live choice.
+  useEffect(() => {
+    if (!community) return;
+    const idx = COMMUNITY_LLM_TIERS.findIndex((t) => offers.some((o) => o.model === t.model));
+    if (idx >= 0) setLlmTier(idx);
+  }, [community, offers]);
+
+  // Community: switch the shared brain to the dialed tier — publish it free (replacing any prior
+  // community brain) and mirror it into the manual form. Weights are pulled via Ollama afterwards.
+  const setCommunityBrain = async () => {
+    const tier = COMMUNITY_LLM_TIERS[llmTier];
+    if (!tier) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      // Drop other community brains so exactly one is served (the dialed one).
+      for (const o of offers) {
+        if (o.model !== tier.model) await api.removeLlmOffer(o.model).catch(() => {});
+      }
+      await api.setLlmOffer({ model: tier.model, pricePerMTok: 0, ramMb: tier.ramMb });
+      setModel(tier.model);
+      setMsg({
+        kind: 'ok',
+        text: `Now sharing ${tier.model}. Pull the weights with: ollama pull ${tier.model}`,
+      });
+      await load();
+      (window as unknown as { web3desktop?: { ensureModel?: () => Promise<unknown> } }).web3desktop
+        ?.ensureModel?.()
+        .catch(() => undefined);
+    } catch (e) {
+      setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const add = async () => {
     const m = model.trim();
     if (!m) {
@@ -76,11 +149,14 @@ export function LlmTunnel() {
     setBusy(true);
     setMsg(null);
     try {
+      // Community ("Free Agents"): the brain is donated free and preconfigured — force price 0 and the
+      // 3 GB tier regardless of the (disabled) inputs, so no community node can accidentally publish a
+      // priced or over-sized offer. The standard operator path is unchanged.
       await api.setLlmOffer({
         model: m,
-        pricePerMTok: price ? Math.round(Number(price)) : undefined,
-        ramMb: ram ? Math.round(Number(ram) * 1024) : undefined,
-        maxContext: ctx ? Math.round(Number(ctx)) : undefined,
+        pricePerMTok: community ? 0 : price ? Math.round(Number(price)) : undefined,
+        ramMb: community ? 3072 : ram ? Math.round(Number(ram) * 1024) : undefined,
+        maxContext: community ? undefined : ctx ? Math.round(Number(ctx)) : undefined,
       });
       setModel('');
       setPrice('');
@@ -142,24 +218,25 @@ export function LlmTunnel() {
   return (
     <>
       <div className="page-head">
-        <h1>Host LLM tunnel</h1>
-        <span className="muted">host local models and sell inference over the network</span>
+        <h1>{community ? 'Your Agent LLM' : 'Host LLM tunnel'}</h1>
+        <span className="muted">
+          {community
+            ? 'your local brain, shared with the network for free'
+            : 'host local models and sell inference over the network'}
+        </span>
       </div>
 
       {!IS_NATIVE_HOST && (
-        <div
-          className="card"
-          style={{ marginBottom: 18, borderLeft: '3px solid var(--no)' }}
-        >
+        <div className="card" style={{ marginBottom: 18, borderLeft: '3px solid var(--no)' }}>
           <div className="section-title">Available in the desktop &amp; mobile app</div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
             Hosting a model runs on <b>your own machine's</b> local models (Ollama). The website is
             connected to a shared network node, so hosting is disabled here — it can't reach your
-            computer. Open the Web3.0 <b>desktop</b> (or mobile) app to host a model and earn.
+            computer. Open the Web4.0 <b>desktop</b> (or mobile) app to host a model and earn.
           </p>
           <a
             className="btn act"
-            href="https://github.com/sanjaydoc/Web3.0/releases/latest"
+            href="https://github.com/sanjaydoc/Web4.0/releases/latest"
             target="_blank"
             rel="noreferrer"
           >
@@ -177,21 +254,108 @@ export function LlmTunnel() {
         aria-disabled={!IS_NATIVE_HOST}
       >
         <div className="card" style={{ marginBottom: 18 }}>
-          <div className="section-title">Sell inference</div>
+          <div className="section-title">{community ? 'Share your brain' : 'Sell inference'}</div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
-            Host local models on this machine and sell inference over the relay. Each model you
-            publish appears in the agent-owner Marketplace as a hosted brain. Runs your node's local
-            model client (Ollama) — pull the tag first, then publish it here.
+            {community ? (
+              <>
+                Your machine runs a small local model (Ollama) and shares it with the network{' '}
+                <b>for free</b> — that's the deal for running free agents. It's published
+                automatically as a hosted brain so any agent can use it; you earn nothing for
+                serving it, and nothing is charged. Just keep Ollama installed and the app running.
+              </>
+            ) : (
+              <>
+                Host local models on this machine and sell inference over the relay. Each model you
+                publish appears in the agent-owner Marketplace as a hosted brain. Runs your node's
+                local model client (Ollama) — pull the tag first, then publish it here.
+              </>
+            )}
           </p>
           <dl className="kv">
-            <dt>Inference revenue (accrued)</dt>
-            <dd>{formatAmount(revenue)}</dd>
-            <dt>Models hosted</dt>
-            <dd>{offers.length}</dd>
+            {community ? (
+              <>
+                <dt>Contributing</dt>
+                <dd>{offers.length > 0 ? 'yes — live' : 'starting…'}</dd>
+                <dt>Brain shared</dt>
+                <dd>{offers[0]?.model ?? COMMUNITY_LLM_MODEL}</dd>
+              </>
+            ) : (
+              <>
+                <dt>Inference revenue (accrued)</dt>
+                <dd>{formatAmount(revenue)}</dd>
+                <dt>Models hosted</dt>
+                <dd>{offers.length}</dd>
+              </>
+            )}
           </dl>
+
+          {/* Community LLM dial: pick a bigger local model to download & host — all served free. It's
+              separate from the hosting-RAM dial in "Your Agent RAM"; this one just sizes your brain. */}
+          {community && (
+            <div className="card" style={{ margin: '4px 0 14px', padding: '12px 14px' }}>
+              <div className="section-title" style={{ marginBottom: 6 }}>
+                Model to host
+              </div>
+              <div
+                style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '2px 0 8px' }}
+              >
+                <span style={{ fontSize: 20, fontWeight: 700 }}>
+                  {COMMUNITY_LLM_TIERS[llmTier]?.model}
+                </span>
+                <span className="muted">{COMMUNITY_LLM_TIERS[llmTier]?.label}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={COMMUNITY_LLM_TIERS.length - 1}
+                step={1}
+                value={llmTier}
+                onChange={(e) => setLlmTier(Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+              <div
+                className="muted"
+                style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}
+              >
+                <span>{COMMUNITY_LLM_TIERS[0]?.model}</span>
+                <span>{COMMUNITY_LLM_TIERS[COMMUNITY_LLM_TIERS.length - 1]?.model}</span>
+              </div>
+              <p className="hint" style={{ marginTop: 8 }}>
+                Bigger models need more RAM + disk and download on demand via Ollama. Pick a tier
+                your machine can run, then host it free for the network.
+              </p>
+              <div className="gen-actions" style={{ marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn act"
+                  disabled={busy}
+                  onClick={setCommunityBrain}
+                >
+                  {busy ? 'Applying…' : 'Host this model'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* One-click helpers: size a model to free RAM, or reuse a model already pulled locally. */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '4px 0 12px' }}>
+            {community && (
+              // Community "Your Agent LLM": one-click install of Ollama (weights are pulled on demand
+              // afterwards). Opens the download page via the desktop bridge; a no-op on the web console.
+              <button
+                type="button"
+                className="btn act"
+                onClick={() =>
+                  (
+                    window as unknown as {
+                      web3desktop?: { installOllama?: () => Promise<unknown> };
+                    }
+                  ).web3desktop?.installOllama?.()
+                }
+              >
+                Download &amp; install Ollama
+              </button>
+            )}
             <button type="button" className="btn" disabled={scanBusy !== null} onClick={detectRam}>
               {scanBusy === 'ram' ? 'Detecting…' : 'Detect free RAM → suggest model'}
             </button>
@@ -202,60 +366,63 @@ export function LlmTunnel() {
 
           {/* Pricing reference — the price field is in USDC MINOR units per million tokens
               (100 minor = 1.00 USDC). This chart maps what you enter to the real per-Mtok rate,
-              and shows the network ceiling an offer can't exceed. */}
-          <div className="card" style={{ margin: '4px 0 14px', padding: '12px 14px' }}>
-            <div className="section-title" style={{ marginBottom: 6 }}>
-              Pricing guide · USDC minor per Mtok
+              and shows the network ceiling an offer can't exceed. Community brains are donated free,
+              so there's no price to set — hide the whole guide there. */}
+          {!community && (
+            <div className="card" style={{ margin: '4px 0 14px', padding: '12px 14px' }}>
+              <div className="section-title" style={{ marginBottom: 6 }}>
+                Pricing guide · USDC minor per Mtok
+              </div>
+              <div className="hscroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>You enter</th>
+                      <th>Shows as</th>
+                      <th>Per 1M tokens</th>
+                      <th>Feel</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { minor: 0, feel: 'Free — reputation / adoption play' },
+                      { minor: 10, feel: 'Budget small model' },
+                      { minor: 50, feel: 'Typical small model' },
+                      { minor: 100, feel: 'Premium small / mid model' },
+                      { minor: 500, feel: 'Large / high-demand model' },
+                    ].map((r) => {
+                      const overCap = priceCap !== null && priceCap > 0 && r.minor > priceCap;
+                      return (
+                        <tr key={r.minor} style={overCap ? { opacity: 0.45 } : undefined}>
+                          <td>
+                            <strong>{r.minor}</strong>
+                          </td>
+                          <td>{r.minor === 0 ? 'free' : `${formatAmount(r.minor)} USDC`}</td>
+                          <td>{r.minor === 0 ? '$0.00' : `$${(r.minor / 100).toFixed(2)}`}</td>
+                          <td className="muted">
+                            {r.feel}
+                            {overCap ? ' · over cap' : ''}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="hint" style={{ marginTop: 8 }}>
+                {priceCap !== null && priceCap > 0 ? (
+                  <>
+                    Network cap: <b>{priceCap}</b> ({formatAmount(priceCap)} USDC/Mtok). Offers
+                    above this are rejected — set by the network admin in Revenue.
+                  </>
+                ) : (
+                  <>No network price cap is set — you may price freely.</>
+                )}{' '}
+                You keep the operator share; the platform commission comes off the top per the
+                current Revenue split.
+              </p>
             </div>
-            <div className="hscroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>You enter</th>
-                    <th>Shows as</th>
-                    <th>Per 1M tokens</th>
-                    <th>Feel</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { minor: 0, feel: 'Free — reputation / adoption play' },
-                    { minor: 10, feel: 'Budget small model' },
-                    { minor: 50, feel: 'Typical small model' },
-                    { minor: 100, feel: 'Premium small / mid model' },
-                    { minor: 500, feel: 'Large / high-demand model' },
-                  ].map((r) => {
-                    const overCap = priceCap !== null && priceCap > 0 && r.minor > priceCap;
-                    return (
-                      <tr key={r.minor} style={overCap ? { opacity: 0.45 } : undefined}>
-                        <td>
-                          <strong>{r.minor}</strong>
-                        </td>
-                        <td>{r.minor === 0 ? 'free' : `${formatAmount(r.minor)} USDC`}</td>
-                        <td>{r.minor === 0 ? '$0.00' : `$${(r.minor / 100).toFixed(2)}`}</td>
-                        <td className="muted">
-                          {r.feel}
-                          {overCap ? ' · over cap' : ''}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <p className="hint" style={{ marginTop: 8 }}>
-              {priceCap !== null && priceCap > 0 ? (
-                <>
-                  Network cap: <b>{priceCap}</b> ({formatAmount(priceCap)} USDC/Mtok). Offers above
-                  this are rejected — set by the network admin in Revenue.
-                </>
-              ) : (
-                <>No network price cap is set — you may price freely.</>
-              )}{' '}
-              You keep the operator share; the platform commission comes off the top per the current
-              Revenue split.
-            </p>
-          </div>
+          )}
 
           {detect && (
             <div className="note note-ok" style={{ marginBottom: 12 }}>
@@ -338,16 +505,22 @@ export function LlmTunnel() {
                 <code>ollama pull &lt;tag&gt;</code>
               </span>
             </div>
+            {/* Community ("Free Agents"): the brain is DONATED FREE and auto-sized, so price / RAM /
+                context are fixed — only the model tag (chosen for the machine's RAM) is editable. */}
             <div className="field">
               <label htmlFor="llm-price">Price / Mtok (USDC minor)</label>
               <input
                 id="llm-price"
                 type="number"
                 min={0}
-                value={price}
+                value={community ? '0' : price}
                 placeholder="0"
+                disabled={community}
                 onChange={(e) => setPrice(e.target.value)}
               />
+              {community && (
+                <span className="hint">Free — your brain is donated to the network.</span>
+              )}
             </div>
             <div className="field">
               <label htmlFor="llm-ram">RAM (GB)</label>
@@ -355,8 +528,9 @@ export function LlmTunnel() {
                 id="llm-ram"
                 type="number"
                 min={0}
-                value={ram}
+                value={community ? '3' : ram}
                 placeholder="8"
+                disabled={community}
                 onChange={(e) => setRam(e.target.value)}
               />
             </div>
@@ -366,8 +540,9 @@ export function LlmTunnel() {
                 id="llm-ctx"
                 type="number"
                 min={0}
-                value={ctx}
+                value={community ? '4096' : ctx}
                 placeholder="4096"
+                disabled={community}
                 onChange={(e) => setCtx(e.target.value)}
               />
             </div>
@@ -383,14 +558,28 @@ export function LlmTunnel() {
         </div>
 
         <div className="card">
-          <div className="section-title">Your hosted models</div>
+          <div className="section-title">
+            {community ? 'Your shared brain' : 'Your hosted models'}
+          </div>
           <p className="muted" style={{ margin: '2px 0 12px' }}>
-            Tokens your machine has served over the tunnel and what you've earned — a usage meter
-            that fills in as agents (on this or any other node) run on your models. Earnings accrue
-            at your offered price the moment you serve (0.00 for a free model); the agent owner's
-            node settles the charge, and your wallet balance reflects what has actually paid out.
+            {community ? (
+              <>
+                The local model your machine shares with the network, and a live meter of the tokens
+                it has served as agents (on this or any other node) run on it. It's donated{' '}
+                <b>free</b> — you earn nothing for serving it and nothing is charged; this is just a
+                usage meter of your contribution.
+              </>
+            ) : (
+              <>
+                Tokens your machine has served over the tunnel and what you've earned — a usage
+                meter that fills in as agents (on this or any other node) run on your models.
+                Earnings accrue at your offered price the moment you serve (0.00 for a free model);
+                the agent owner's node settles the charge, and your wallet balance reflects what has
+                actually paid out.
+              </>
+            )}
           </p>
-          {offers.length === 0 ? (
+          {offers.length === 0 && usage.length === 0 ? (
             <div className="empty">
               You're not hosting any models yet. Pull a light one with{' '}
               <code>ollama pull qwen2.5:3b</code>, then publish it above.
@@ -401,10 +590,12 @@ export function LlmTunnel() {
                 <thead>
                   <tr>
                     <th>Model</th>
-                    <th>Price / Mtok</th>
+                    {/* Community brains are free — the price + earnings columns are always 0, so drop
+                        them and keep just the contribution meter (RAM + tokens served). */}
+                    {!community && <th>Price / Mtok</th>}
                     <th>RAM</th>
                     <th>Tokens served</th>
-                    <th>Earned (accrued)</th>
+                    {!community && <th>Earned (accrued)</th>}
                     <th />
                   </tr>
                 </thead>
@@ -418,10 +609,12 @@ export function LlmTunnel() {
                         <td>
                           <strong>{o.model}</strong>
                         </td>
-                        <td>{o.pricePerMTok > 0 ? formatAmount(o.pricePerMTok) : 'free'}</td>
+                        {!community && (
+                          <td>{o.pricePerMTok > 0 ? formatAmount(o.pricePerMTok) : 'free'}</td>
+                        )}
                         <td>{o.ramMb > 0 ? `${(o.ramMb / 1024).toFixed(1)} GB` : '—'}</td>
                         <td>{tokens.toLocaleString()}</td>
-                        <td>{formatAmount(earned)}</td>
+                        {!community && <td>{formatAmount(earned)}</td>}
                         <td>
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button
@@ -444,6 +637,28 @@ export function LlmTunnel() {
                       </tr>
                     );
                   })}
+                  {/* Served history for models whose offer was removed still counts toward the
+                      "revenue (accrued)" headline; surface it as one row so the table always
+                      reconciles with the headline total instead of appearing to under-count. */}
+                  {(() => {
+                    const offerModels = new Set(offers.map((o) => o.model));
+                    const retired = usage.filter((u) => !offerModels.has(u.model));
+                    const tokens = retired.reduce((s, u) => s + u.servedTokens, 0);
+                    const earned = retired.reduce((s, u) => s + u.accruedEarnings, 0);
+                    if (tokens === 0 && earned === 0) return null;
+                    return (
+                      <tr>
+                        <td>
+                          <span className="muted">retired / other models</span>
+                        </td>
+                        {!community && <td>—</td>}
+                        <td>—</td>
+                        <td>{tokens.toLocaleString()}</td>
+                        {!community && <td>{formatAmount(earned)}</td>}
+                        <td />
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>

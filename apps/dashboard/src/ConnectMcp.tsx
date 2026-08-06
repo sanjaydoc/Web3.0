@@ -67,8 +67,13 @@ export function ConnectMcp() {
       });
       const body = (await res.json()) as { result?: { tools?: { name: string }[] } };
       const names = body.result?.tools?.map((t) => t.name) ?? [];
-      if (names.length) setStatus({ kind: 'ok', text: `Connected — ${names.length} tools: ${names.join(', ')}` });
-      else setStatus({ kind: 'err', text: 'Reached the node, but no tools returned (is the mcp module loaded?)' });
+      if (names.length)
+        setStatus({ kind: 'ok', text: `Connected — ${names.length} tools: ${names.join(', ')}` });
+      else
+        setStatus({
+          kind: 'err',
+          text: 'Reached the node, but no tools returned (is the mcp module loaded?)',
+        });
     } catch (err) {
       setStatus({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
     } finally {
@@ -82,8 +87,9 @@ export function ConnectMcp() {
         <h2 className="section-title">Connect via MCP</h2>
         <p className="muted">
           <strong>Oxygen</strong> is this node’s Model Context Protocol server. Point any MCP client
-          (Claude Desktop, Claude Code, another agent) at it to <strong>build & manage agents</strong>{' '}
-          and use a <strong>per-account x402 wallet</strong> — one endpoint, JSON-RPC 2.0.
+          (Claude Desktop, Claude Code, another agent) at it to{' '}
+          <strong>build & manage agents</strong> and use a <strong>per-account x402 wallet</strong>{' '}
+          — one endpoint, JSON-RPC 2.0.
         </p>
       </div>
 
@@ -100,7 +106,7 @@ export function ConnectMcp() {
           {status && <span className={`hint ${status.kind}`}>{status.text}</span>}
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
-          Auth: send your Web3.0 account token as the <code>x-web3-token</code> header. Each account
+          Auth: send your Web4.0 account token as the <code>x-web3-token</code> header. Each account
           gets its own isolated wallet. Your token is on the <strong>Account</strong> page.
         </p>
       </div>
@@ -108,8 +114,8 @@ export function ConnectMcp() {
       <div className="card">
         <h3 className="field-lbl">Claude Desktop / Code — full server (agents + wallet)</h3>
         <p className="hint">
-          Bridges Claude’s local MCP config to this HTTP endpoint via <code>mcp-remote</code>. The copy
-          button inserts your token (kept off-screen).
+          Bridges Claude’s local MCP config to this HTTP endpoint via <code>mcp-remote</code>. The
+          copy button inserts your token (kept off-screen).
         </p>
         <pre className="mcp-code">{CLAUDE_HTTP_CONFIG(ENDPOINT, '<YOUR_TOKEN>')}</pre>
         <Copy
@@ -136,9 +142,9 @@ export function ConnectMcp() {
           ))}
         </ul>
         <p className="hint" style={{ marginTop: 8 }}>
-          <strong>Resources:</strong> <code>web3://agents</code>, <code>web3://agent/&lt;handle&gt;</code>,{' '}
-          <code>web3://knowledge/&lt;handle&gt;</code> · <strong>Prompts:</strong> create-agent,
-          edit-agent, test-agent, agent-faq.
+          <strong>Resources:</strong> <code>web3://agents</code>,{' '}
+          <code>web3://agent/&lt;handle&gt;</code>, <code>web3://knowledge/&lt;handle&gt;</code> ·{' '}
+          <strong>Prompts:</strong> create-agent, edit-agent, test-agent, agent-faq.
         </p>
       </div>
 

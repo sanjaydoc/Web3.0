@@ -120,7 +120,7 @@ function PaymentsSection({
                 id="p-to"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                placeholder="karthik@web3.0"
+                placeholder="karthik@web4"
               />
             </div>
             <div className="field">
@@ -191,7 +191,7 @@ function PaymentsSection({
 }
 
 /**
- * Account — sign up (mint an address + one-time Web3.0 token) or sign in (paste a token). The token is
+ * Account — sign up (mint an address + one-time Web4.0 token) or sign in (paste a token). The token is
  * stored in this browser and sent as `x-web3-token` on every request, so the node scopes what you see
  * and can do by your role. This is the GUI front for the accounts/auth backend.
  */
@@ -308,7 +308,7 @@ export function Account() {
     <>
       <div className="page-head">
         <h1>Account</h1>
-        <span className="muted">your Web3.0 identity — an address + a token, with a role</span>
+        <span className="muted">your Web4.0 identity — an address + a token, with a role</span>
       </div>
 
       {me ? (
@@ -340,7 +340,7 @@ export function Account() {
               <div className="term" style={{ marginBottom: 8 }}>
                 <div className="term-body">
                   <div className="term-cmd">
-                    <code>{revealed ? token : `web3_${'•'.repeat(28)}`}</code>
+                    <code>{revealed ? token : `web4_${'•'.repeat(28)}`}</code>
                     <button type="button" className="copy" onClick={() => setRevealed((r) => !r)}>
                       {revealed ? 'Hide' : 'Reveal'}
                     </button>
@@ -418,7 +418,7 @@ export function Account() {
                     onChange={(e) => setLocal(e.target.value)}
                     placeholder="sanjay"
                   />
-                  <span className="hint">{local || '…'}@web3.0</span>
+                  <span className="hint">{local || '…'}@web4</span>
                 </div>
                 <div className="field">
                   <label htmlFor="a-role">Role</label>
@@ -443,13 +443,13 @@ export function Account() {
             <div className="card">
               <div className="section-title">Sign in</div>
               <div className="field wide">
-                <label htmlFor="a-token">Web3.0 token</label>
+                <label htmlFor="a-token">Web4.0 token</label>
                 <input
                   id="a-token"
                   type="password"
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="web3_…"
+                  placeholder="web4_…"
                 />
                 <span className="hint">paste a token you saved earlier</span>
               </div>

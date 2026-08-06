@@ -58,7 +58,6 @@ export function Developers() {
   const [skillId, setSkillId] = useState('ask');
   const [price, setPrice] = useState('1.00');
   const [endpoint, setEndpoint] = useState('https://your-service.example/web3');
-  const [createdBy, setCreatedBy] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -112,7 +111,7 @@ export function Developers() {
         {
           handle,
           name,
-          description: `${name} — a dApp on Web3.0`,
+          description: `${name} — a dApp on Web4.0`,
           skillId,
           skillName: skillId,
           skillDesc: `${name} endpoint`,
@@ -120,14 +119,14 @@ export function Developers() {
           provider: 'http',
           model: 'webhook',
           webhookUrl: endpoint,
-          createdBy: createdBy.trim() || undefined,
+          // Ownership is set authoritatively server-side to the publishing account's address; a
+          // free-text "created by" would be ignored, so we don't send (or store) one.
         },
         admin,
       );
-      if (createdBy.trim()) localStorage.setItem('web3.creatorName', createdBy.trim());
       setMsg({
         kind: 'ok',
-        text: `Published ${handle}@web3.0 — tasks now forward to your endpoint.`,
+        text: `Published ${handle}@web4 — tasks now forward to your endpoint.`,
       });
       refresh();
     } catch (err) {
@@ -153,7 +152,7 @@ def handle(agent, msg):
     q = msg["body"]["input"]["question"]
     agent.reply_result(msg["from"], msg["body"]["taskId"], {"answer": f"you said: {q}"})
 
-app.register(); app.connect()   # now live on Web3.0`;
+app.register(); app.connect()   # now live on Web4.0`;
 
   const webhookSnippet = `// Your dApp is just an HTTP endpoint. The node forwards each task as:
 //   POST ${endpoint}
@@ -175,7 +174,7 @@ curl ${nodeUrlForSnippets}/settlement`;
       <div className="page-head">
         <h1>Developers</h1>
         <span className="muted">
-          build on Web3.0 — publish an agent or a dApp, pay-per-call in USDC
+          build on Web4.0 — publish an agent or a dApp, pay-per-call in USDC
         </span>
       </div>
 
@@ -220,7 +219,7 @@ curl ${nodeUrlForSnippets}/settlement`;
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="section-title">Publish a dApp</div>
         <p className="muted" style={{ margin: '2px 0 12px' }}>
-          Turn any HTTP endpoint into an agent on Web3.0. The node registers it, gives it a wallet,
+          Turn any HTTP endpoint into an agent on Web4.0. The node registers it, gives it a wallet,
           and forwards paid tasks to your URL — no agent code to run.
         </p>
         {adminRequired && (
@@ -237,9 +236,9 @@ curl ${nodeUrlForSnippets}/settlement`;
         )}
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="d-handle">Web3.0 ID</label>
+            <label htmlFor="d-handle">Web4.0 ID</label>
             <input id="d-handle" value={handle} onChange={(e) => setHandle(e.target.value)} />
-            <span className="hint">{handle || '…'}@web3.0</span>
+            <span className="hint">{handle || '…'}@web4</span>
           </div>
           <div className="field">
             <label htmlFor="d-name">Name</label>
@@ -252,15 +251,6 @@ curl ${nodeUrlForSnippets}/settlement`;
           <div className="field">
             <label htmlFor="d-price">Price / task (USDC)</label>
             <input id="d-price" value={price} onChange={(e) => setPrice(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="d-creator">Created by (your name / team)</label>
-            <input
-              id="d-creator"
-              value={createdBy}
-              onChange={(e) => setCreatedBy(e.target.value)}
-              placeholder="e.g. Dr. Sanjay Anbu"
-            />
           </div>
           <div className="field wide">
             <label htmlFor="d-endpoint">Endpoint URL (receives POST with the task input)</label>

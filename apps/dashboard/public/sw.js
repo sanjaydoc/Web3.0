@@ -1,4 +1,4 @@
-// Web3.0 Console service worker — offline app shell + installability.
+// Web4.0 Console service worker — offline app shell + installability.
 // Strategy: precache the shell, then serve same-origin GETs stale-while-revalidate. API traffic
 // (the node, a different origin) is never intercepted — it must always hit the live node.
 //

@@ -102,7 +102,7 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
           <table className="rows-click">
             <thead>
               <tr>
-                <th>Web3.0 ID</th>
+                <th>Web4.0 ID</th>
                 <th>Kind</th>
                 <th>Created by</th>
                 <th>Skill</th>
@@ -162,7 +162,7 @@ export function HostedDapps({ admin = false }: { admin?: boolean }) {
             </span>
           </div>
           <dl className="kv">
-            <dt>Web3.0 ID</dt>
+            <dt>Web4.0 ID</dt>
             <dd className="mono-hash">{active.web3Id}</dd>
             <dt>Kind</dt>
             <dd>{active.kind === 'webhook' ? 'dApp (external webhook)' : 'agent (LLM brain)'}</dd>

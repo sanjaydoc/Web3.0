@@ -1,4 +1,4 @@
-/* Web3.0 console shell — sidebar + views, built on the theme tokens. */
+/* Web4.0 console shell — sidebar + views, built on the theme tokens. */
 
 /* Type scale — every font-size in the console snaps to one of these steps so text reads as one
    system (fine print < labels < body < lead < card title < section title < page title). */
@@ -426,6 +426,13 @@ body {
   border-radius: var(--radius-sm);
   padding: 0.5rem 0.65rem;
   outline: none;
+  /* Fill the field and, crucially, be allowed to shrink below the intrinsic content width — without
+     min-width:0 a grid/flex item keeps its content width and pushes the whole page past the viewport
+     on mobile (clipped by body overflow-x:hidden → inputs looked cut off on the right edge). */
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   /* Soft inset — the field reads as pressed into the surface. */
   box-shadow: inset 0 1px 2px rgba(16, 16, 20, 0.06);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
@@ -1272,6 +1279,251 @@ button.connector:not(:disabled):hover {
   color: #fff;
   text-decoration: none;
 }
+/* --- landing · Genesis "create your agent" widget (the self-building-internet centrepiece) ------ */
+.l-genesis {
+  position: relative;
+  z-index: 1;
+  margin: clamp(20px, 5vh, 52px) auto 8px;
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.lg-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.lg-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.7rem, 4.2vw, 2.7rem);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 2px 0 0;
+}
+.lg-sub {
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  max-width: 40rem;
+  margin: 0;
+}
+/* The widget card: edge-to-edge so the chat thread fills it; a thin ink hairline + soft shadow to
+   read as the page's primary surface. Padding lives on the inner sections, not the card. */
+.lg-card {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+}
+.lg-card .gchat-thread {
+  min-height: 420px;
+  max-height: 62vh;
+}
+/* Send button: override .l-go's full-width so it sits inline in the composer. */
+.lg-send,
+.gchat-composer .l-go {
+  width: auto;
+  margin-top: 0;
+  flex: 0 0 auto;
+  padding: 0.55rem 1.1rem;
+}
+.lg-createbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--hair);
+}
+.lg-createbar .lg-key,
+.lg-createbar .lg-price {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.lg-createbar .lg-key:focus,
+.lg-createbar .lg-price:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(13, 13, 15, 0.08);
+}
+.lg-note {
+  margin: 0;
+  padding: 10px 16px 14px;
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.lg-note.ok {
+  color: var(--ok);
+}
+.lg-note.err {
+  color: var(--no);
+}
+/* --- reveal: created agent + brand-new login, canvas mono styling ------------------------------- */
+.lg-reveal {
+  border-top: 1px solid var(--hair);
+  padding: 18px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ok) 5%, transparent),
+    transparent 60%
+  );
+}
+.lg-reveal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-md);
+  color: var(--ink);
+}
+.lg-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.lg-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lg-row-lbl {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.lg-row-val {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lg-row-val code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0.45rem 0.6rem;
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  color: var(--ink);
+}
+.lg-copy {
+  flex: 0 0 auto;
+  border: 1px solid var(--hair);
+  background: var(--paper);
+  color: var(--ink-2);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.7rem;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.lg-copy:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.lg-login {
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lg-login-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lg-login-head b {
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+.lg-login-head span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.lg-fund-note {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.lg-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.lg-ghost {
+  flex: 0 0 auto;
+  border: 1.5px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.lg-ghost:hover {
+  background: var(--ink);
+  color: #fff;
+}
+.lg-enter {
+  flex: 1 1 auto;
+  width: auto;
+  margin-top: 0;
+}
+@media (max-width: 560px) {
+  .lg-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lg-enter,
+  .lg-ghost {
+    width: 100%;
+  }
+}
+
 .l-hero {
   flex: 1;
   min-height: calc(100vh - 130px);
@@ -1494,14 +1746,29 @@ button.connector:not(:disabled):hover {
 .l-foot {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: var(--muted);
   font-size: var(--fs-sm);
   max-width: 1120px;
   margin: 0 auto;
   padding: 22px clamp(18px, 4vw, 40px) 44px;
   border-top: 1.5px solid var(--rule);
-  gap: 12px;
+  gap: 12px 20px;
   flex-wrap: wrap;
+}
+.l-social {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.l-social a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.l-social a:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 /* sections below the hero */
@@ -1659,8 +1926,8 @@ button.connector:not(:disabled):hover {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(16, 16, 20, 0.05);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease,
-    background 0.12s ease, color 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, background 0.12s
+    ease, color 0.12s ease;
 }
 .chip-toggle:hover {
   border-color: var(--ink);
@@ -1814,8 +2081,8 @@ button.connector:not(:disabled):hover {
   padding: 0.36rem 0.95rem;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(16, 16, 20, 0.06), 0 3px 8px rgba(16, 16, 20, 0.05);
-  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease,
-    box-shadow 0.14s ease, transform 0.14s ease;
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s
+    ease, transform 0.14s ease;
 }
 .btn-delete:hover {
   color: #fff;
@@ -1943,12 +2210,7 @@ button.connector:not(:disabled):hover {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(13, 13, 15, 0.07),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(13, 13, 15, 0.07), transparent);
   transform: translateX(-100%);
   animation: gchat-shimmer 1.15s ease-in-out infinite;
 }
@@ -2118,6 +2380,10 @@ button.connector:not(:disabled):hover {
   border-top: 1px solid var(--hair);
   border-bottom: 1px solid var(--hair);
   background: var(--paper);
+}
+/* Free community band sits just above the standard desktop band — a soft tint sets it apart. */
+.l-download.l-community {
+  background: var(--paper-2);
 }
 .l-dl-inner {
   max-width: 1120px;
@@ -2602,8 +2868,11 @@ button.connector:not(:disabled):hover {
   padding: 12px 16px;
   border-top: 1px solid var(--hair);
 }
-.gchat-composer input[type='text'] {
+.gchat-composer input[type="text"] {
   flex: 1 1 auto;
+  /* Let the input shrink so the Send button always stays on-row (min-width:auto was pushing Send off
+     the right edge on narrow phones). */
+  min-width: 0;
   padding: 0.55rem 0.8rem;
   border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
@@ -2790,4 +3059,149 @@ button.connector:not(:disabled):hover {
   border: 1px dashed var(--hair);
   border-radius: var(--radius-sm);
   background: var(--paper-2);
+}
+
+/* --- Marketplace · fund-wallet CTA (hosting rent paused on an empty wallet) --------------------- */
+.fund-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.fund-cta > div {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.fund-cta strong {
+  display: block;
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+.fund-cta p {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+}
+.fund-cta .btn {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile safety net — catch-all responsive guards so every view fits a phone.
+   These target whole CLASSES of overflow (button rows, code blocks, long mono
+   tokens, tables) rather than one-off pages, so new views inherit them too.
+   --------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  /* Single-column forms; grid/flex children must be allowed to shrink. */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-grid > .field,
+  .field {
+    min-width: 0;
+  }
+  /* Action button rows wrap instead of pushing the last button off-screen. */
+  .gen-actions,
+  .row-actions,
+  .btn-row {
+    flex-wrap: wrap;
+  }
+  /* Terminal / copyable code blocks: scroll their own long lines, never the page. */
+  .copy-block,
+  .copy-pre,
+  pre {
+    max-width: 100%;
+  }
+  .copy-pre,
+  pre {
+    overflow-x: auto;
+  }
+  /* On a phone the copyable command is long and scrolls; drop the floating Copy button onto its own
+     line above the command so it never overlaps the code text. */
+  .copy-block .copy-btn {
+    top: 6px;
+    right: 6px;
+    padding: 3px 9px;
+    font-size: var(--fs-xs);
+  }
+  .copy-block .copy-pre {
+    padding-top: 38px;
+  }
+  /* Long unbreakable strings in KEY-VALUE lists (wallet addresses, DIDs, node keys) wrap inside their
+     value cell instead of forcing the row. NOTE: deliberately NOT applied to table cells — breaking
+     table text char-by-char shatters columns (e.g. "agentman@web4" → "ag en tm an @w eb 4"); tables
+     get horizontal scroll with readable columns instead (below). */
+  .kv dd,
+  .mono {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  /* Any wide table lives in an .hscroll wrapper; make sure it actually scrolls
+     (and momentum-scrolls on iOS) rather than clipping under body overflow-x. */
+  .hscroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Fallback for tables NOT wrapped in .hscroll: make the table itself a scroll box, and keep cells
+     on a single line so columns stay readable and the whole table scrolls sideways (the clean mobile
+     data-table pattern) instead of every word wrapping to fit. */
+  .main table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .main table th,
+  .main table td {
+    white-space: nowrap;
+  }
+  /* Range dials (Your Agent RAM / LLM) already span full width — keep them there. */
+  input[type="range"] {
+    width: 100%;
+  }
+  /* Small pill/action button labels must never wrap (a squeezed button was rendering "D E L E T E"
+     vertically). Scope this to real pill buttons — NOT bare `button`, which also matches large
+     card-style buttons (e.g. the sign-up persona cards) whose multi-line descriptions must wrap. */
+  .btn,
+  .btn-delete,
+  .btn-sm,
+  .l-doclink {
+    white-space: nowrap;
+  }
+  /* .kv-list rows (e.g. Genesis "your agents": id on the left, action buttons on the right) wrap the
+     action group onto its own line instead of crushing the last button when the row can't fit. */
+  .kv-list li {
+    flex-wrap: wrap;
+  }
+  .kv-list li > span {
+    min-width: 0;
+  }
+  .kv-list li > span:last-child {
+    flex-wrap: wrap;
+  }
+}
+
+/* Landing hero top bar: on phones the brand + nav (Downloads / Install / GitHub) can't share one row,
+   so the nav group drops to its own full-width line under the brand and wraps within it — instead of
+   the last item (GitHub) getting clipped off the right edge. */
+@media (max-width: 560px) {
+  .l-top {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  /* Keep the nav buttons (Downloads / Install app) RIGHT-aligned: on the brand's row if they fit,
+     otherwise pushed to the right on their own line under the brand. */
+  .l-top > div:last-child {
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .l-doclink {
+    padding: 0.3rem 0.75rem;
+  }
 }

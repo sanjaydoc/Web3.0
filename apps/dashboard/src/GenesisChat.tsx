@@ -67,10 +67,11 @@ function toBrief(a: HostedAgent, full?: HostedFullConfig): GenesisAgentBrief {
 
 // Files we can stage into a new agent's RAG: text-like ones read as text client-side; PDF/Word sent
 // as base64 bytes for the node to extract (see docparse on the server).
-const KB_TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
+// .rtf is excluded: read as UTF-8 it yields raw RTF control words, and the node has no RTF parser.
+const KB_TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml)$/i;
 const KB_DOC_EXT = /\.(pdf|docx|xlsx)$/i;
 const KB_ACCEPT =
-  '.pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf';
+  '.pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml';
 
 /** Best-effort human text from a hosted agent's ask output (shape varies by skill). */
 function formatTestOutput(output: Record<string, unknown>): string {
@@ -88,7 +89,7 @@ function formatTestOutput(output: Record<string, unknown>): string {
  * Genesis form uses, so a chat-made agent is identical to a hand-made one: it shows up in Agents with
  * Start/Stop/Test/Copy-endpoint, rides the billing cycle, and gets x402 (priced skills) + ERC-8004
  * identity/reputation automatically. Scope is locked to create/edit/test/FAQ about agents. The brain
- * itself is set only by the admin (sanjay@web3.0).
+ * itself is set only by the admin (sanjay@web4).
  */
 // localStorage key for the persisted chat transcript. Bump the suffix if GenesisTurn's shape changes.
 // Transcript is stored PER ACCOUNT so a shared browser never leaks one user's chat to the next.
@@ -116,7 +117,8 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
   });
   const [config, setConfig] = useState<GenesisConfig>({});
   const [ask, setAsk] = useState<GenesisAsk | null>(null);
-  const [done, setDone] = useState(false);
+  // Only the setter is used (the brain's per-turn `done` drives auto-create); the value isn't read.
+  const [, setDone] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [multiPick, setMultiPick] = useState<string[]>([]);
@@ -344,6 +346,19 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
         cfg.priceUsd !== undefined
           ? Math.max(0, Math.round(cfg.priceUsd * 100))
           : (base?.price ?? 0);
+      // The chat's small brain often names the brain in prose ("tunnel / qwen2.5:3b") but emits EMPTY
+      // provider/model fields in the config JSON. `??` only fills null/undefined — an empty string
+      // slips through — so an agent could launch with no provider/model (→ "model is required" at run
+      // time). Treat blank as missing, default the provider to the recommended `tunnel`, and fill the
+      // model from the provider's known default (BRAINS). For `tunnel` the node coerces an empty model
+      // to the network default (qwen2.5:3b), so leaving it '' here is correct + self-healing.
+      const clean = (s?: string) => (typeof s === 'string' && s.trim() ? s.trim() : undefined);
+      const provider = clean(cfg.provider) ?? clean(base?.provider) ?? 'tunnel';
+      const model =
+        clean(cfg.model) ??
+        clean(base?.model) ??
+        BRAINS.find((b) => b.id === provider)?.model ??
+        '';
       const agent = await api.hostedLaunch({
         handle: cfg.handle ?? '',
         name: cfg.name ?? base?.name ?? cfg.handle ?? 'Agent',
@@ -352,17 +367,19 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
         skillName: cfg.skillName ?? base?.skillName ?? 'Ask',
         skillDesc: cfg.skillDesc ?? base?.skillDesc ?? 'Answer a question',
         price,
-        provider: cfg.provider ?? base?.provider ?? 'local',
-        model: cfg.model ?? base?.model ?? 'qwen2.5:7b',
+        provider,
+        model,
         apiKey: agentKey.trim() || undefined,
         system: cfg.system ?? base?.system,
         connectors: cfg.connectors ?? base?.connectors,
       });
-      setCreated(agent);
       setAgentKey('');
-      // Flush any files attached during the interview into the new agent's RAG knowledge base.
+      // Flush any files attached during the interview into the new agent's RAG knowledge base BEFORE
+      // revealing the KnowledgePanel — so its initial load already shows the indexed sources (no race)
+      // and any files that fail to index are reported instead of silently dropped.
       if (pendingFiles.length) {
         let ok = 0;
+        let failed = 0;
         for (const f of pendingFiles) {
           try {
             await api.addKnowledge(agent.web3Id, {
@@ -373,16 +390,18 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
             });
             ok++;
           } catch {
-            /* skip a file that fails to index; keep going with the rest */
+            failed++; // keep going with the rest, but count + surface the failure below
           }
         }
         setPendingFiles([]);
+        const total = ok + failed;
         setKbNote(
-          ok
-            ? `Indexed ${ok} document${ok === 1 ? '' : 's'} into ${agent.name}'s knowledge base.`
-            : '',
+          failed
+            ? `Indexed ${ok} of ${total} document${total === 1 ? '' : 's'} — ${failed} couldn’t be read (empty, scanned/image-only, or too large). Re-add ${failed === 1 ? 'it' : 'them'} in the Knowledge base panel below.`
+            : `Indexed ${ok} document${ok === 1 ? '' : 's'} into ${agent.name}'s knowledge base.`,
         );
       }
+      setCreated(agent); // reveal the created state + KnowledgePanel only after the flush completes
       loadAgents(); // so a follow-up edit/test sees the new (or just-updated) agent
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -457,8 +476,8 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
       ) : !brainReady ? (
         <div className="card">
           <p className="muted">
-            Genesis chat isn’t switched on yet. An admin (<code>sanjay@web3.0</code>) needs to
-            choose the brain that powers it{isAdmin ? ' — use the panel above.' : '.'}
+            Genesis chat isn’t switched on yet. An admin (<code>sanjay@web4</code>) needs to choose
+            the brain that powers it{isAdmin ? ' — use the panel above.' : '.'}
           </p>
         </div>
       ) : (
@@ -609,7 +628,17 @@ export function GenesisChat({ isAdmin, account }: { isAdmin: boolean; account: s
 
           <div className="card gchat-config">
             <h3 className="field-lbl">Agent so far</h3>
-            <ConfigView config={config} />
+            {/* Reflect the price actually used at launch: the editable field wins over the brain's
+                value, so the summary matches what Create/Save will submit (not a stale $ from chat). */}
+            <ConfigView
+              config={{
+                ...config,
+                priceUsd:
+                  priceInput.trim() === ''
+                    ? config.priceUsd
+                    : Math.max(0, Number(priceInput.trim()) || 0),
+              }}
+            />
             {created ? (
               <div className="gchat-created">
                 <p className="hint ok">
@@ -799,7 +828,7 @@ function BrainSettings({ brain, onSaved }: { brain: GenesisBrain | null; onSaved
       </summary>
       <p className="hint">
         Choose the LLM that powers Genesis chat for every agent owner. The API key is stored on the
-        node and never returned to any browser. Only <code>sanjay@web3.0</code> can change this.
+        node and never returned to any browser. Only <code>sanjay@web4</code> can change this.
       </p>
       <div className="form-grid">
         <div className="field">

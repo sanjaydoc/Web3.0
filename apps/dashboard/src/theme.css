@@ -1,4 +1,4 @@
-/* Web3.0 design system — light, monochrome, editorial.
+/* Web4.0 design system — light, monochrome, editorial.
    Elegant serif display + humanist sans body, thin dark full-width rules,
    black pill buttons, white cards with soft shadow and hairline dividers,
    generous whitespace. Token structure and mechanics adapted from the
@@ -151,7 +151,8 @@ p {
   cursor: pointer;
   /* Soft neumorphic lift — extruded at rest, presses in on click (see :active). */
   box-shadow: 0 1px 2px rgba(16, 16, 20, 0.08), 0 3px 8px rgba(16, 16, 20, 0.06);
-  transition: transform .12s ease, opacity .12s ease, background .12s ease, color .12s ease, box-shadow .12s ease;
+  transition: transform .12s ease, opacity .12s ease, background .12s ease, color .12s ease,
+    box-shadow .12s ease;
 }
 .btn:hover {
   opacity: 0.9;

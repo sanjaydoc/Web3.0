@@ -26,15 +26,16 @@ import {
   type HostedAgent,
   type LedgerEntry,
   NODE_URL,
+  type Reservoir,
   type Stats,
   type Wallet,
   type Web3Event,
   api,
   formatAmount,
   getWeb3Token,
+  ratePerHourPrecise,
 } from './api.js';
-import { uiAlert, uiConfirm, uiPrompt } from './dialog.js';
-import { loadAccountKey, mandateNonce, signLeaseMandate } from './txsign.js';
+import { uiConfirm } from './dialog.js';
 
 type View =
   | 'overview'
@@ -156,6 +157,27 @@ const AGENT_OWNER_NAV = new Set<View>([
   // mynode/llmtunnel — belongs to an operator account they'd run alongside it.)
   'download',
 ]);
+/**
+ * The Community ("Free Agents") tier's FIXED nav — exactly the 8 views the free desktop app shows. It
+ * reuses the LLM-tunnel and hosting views (relabelled "Your Agent LLM" / "Your Agent RAM"), drops every
+ * marketplace-selling + earnings view (community compute is donated free), and — unlike the personas
+ * above — overrides even the admin's full console, since a single-user community desktop bootstraps its
+ * owner as admin. Order here is the sidebar order (rendered flat, no groups).
+ */
+const COMMUNITY_NAV: View[] = [
+  'overview',
+  'account',
+  'agentweb4',
+  'genesis',
+  'agents',
+  // Office agents need to connect their Email / Calendar / Google account — the Connectors page hosts
+  // those credential cards, so it must be reachable in the Free-Agents nav too (the office template
+  // points here). Without it, a community user is told to open a page their nav doesn't show.
+  'connectors',
+  'llmtunnel',
+  'hosting',
+  'ledger',
+];
 
 /**
  * How the agent-owner sidebar is laid out: a few top-level items, then two titled groups, then
@@ -299,6 +321,10 @@ export function App() {
   // can learn it even as a guest. When true and the viewer isn't admin, we steer them to run their
   // own node instead of operating against the main node (hosting there is refused server-side).
   const [adminOnly, setAdminOnly] = useState(false);
+  // Community ("Free Agents") tier: true when the connected node runs the Community desktop installer.
+  // Drives the reduced nav + the local-Ollama-only Genesis + the preconfigured LLM/RAM contribution
+  // views — sourced entirely from the node's own config (GET /node → community), no separate build.
+  const [community, setCommunity] = useState(false);
   // The node's treasury address (fees + block rewards). It's node infrastructure, not a user agent,
   // and the treasury concept is admin-only — so a non-admin never sees it listed among the agents.
   const [treasuryId, setTreasuryId] = useState<string | null>(null);
@@ -310,6 +336,7 @@ export function App() {
         .then((n) => {
           if (!active) return;
           setAdminOnly(Boolean(n.auth?.adminOnly));
+          setCommunity(Boolean(n.community?.enabled));
           setTreasuryId(n.treasuryId ?? null);
           setNodeOnline(true);
         })
@@ -376,7 +403,13 @@ export function App() {
   // Where each persona lands (and falls back to). An agent-owner's home is Genesis (create an agent);
   // on the reserved main node, where hosting is locked, they fall back to their Account until a host
   // (the marketplace) is available.
-  const personaHome: View = isAgentOwner ? (mainNodeLocked ? 'account' : 'genesis') : operatorHome;
+  const personaHome: View = community
+    ? 'overview'
+    : isAgentOwner
+      ? mainNodeLocked
+        ? 'account'
+        : 'genesis'
+      : operatorHome;
 
   // You get the FULL node console (network, ledger, connectors, skills, telegram, …) whenever you
   // run THIS node: an admin on any node, OR any operator on a node that isn't the reserved main node
@@ -385,16 +418,21 @@ export function App() {
   const ownsNode = !mainNodeLocked;
 
   const personaNav = isAgentOwner ? AGENT_OWNER_NAV : OPERATOR_NAV;
-  const visibleNav = NAV.filter((n) => {
-    // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
-    if (isAdmin) return true;
-    // Otherwise, exactly the signed-in persona's views.
-    if (!personaNav.has(n.id)) return false;
-    // Compute/hosting views stay reserved for the admin on the main node; and on the main node a
-    // non-admin is limited to their personal (operator-safe) items — participation is on their own node.
-    if (mainNodeLocked && (LOCKED_ON_MAIN.has(n.id) || !n.operator)) return false;
-    return true;
-  });
+  // Community ("Free Agents") tier: a FIXED reduced nav in its own sidebar order, overriding even the
+  // admin's full console (a community desktop bootstraps its single user as admin). Otherwise, filter
+  // to the signed-in persona's views (admin sees everything).
+  const visibleNav: typeof NAV = community
+    ? (COMMUNITY_NAV.map((id) => NAV.find((n) => n.id === id)).filter(Boolean) as typeof NAV)
+    : NAV.filter((n) => {
+        // Admin sees the whole console; the Operator/Admin toggle only changes which data is previewed.
+        if (isAdmin) return true;
+        // Otherwise, exactly the signed-in persona's views.
+        if (!personaNav.has(n.id)) return false;
+        // Compute/hosting views stay reserved for the admin on the main node; and on the main node a
+        // non-admin is limited to their personal (operator-safe) items — participation is on their own node.
+        if (mainNodeLocked && (LOCKED_ON_MAIN.has(n.id) || !n.operator)) return false;
+        return true;
+      });
 
   // Navigating from the sidebar also closes the mobile drawer so the page is visible.
   const navigate = (v: View) => {
@@ -412,7 +450,13 @@ export function App() {
     });
 
   // The grouped sidebar layout for this persona (agent-owner or admin); operators stay flat.
-  const navGroups = isAgentOwner ? AGENT_OWNER_GROUPS : isAdmin ? ADMIN_GROUPS : null;
+  const navGroups = community
+    ? null
+    : isAgentOwner
+      ? AGENT_OWNER_GROUPS
+      : isAdmin
+        ? ADMIN_GROUPS
+        : null;
   // The titled group that holds the current view (so we can keep it open while it's active).
   const activeGroupTitle = navGroups?.find((g) => g.title && g.items.includes(view))?.title;
   // Auto-open the group of whatever view is active, so the current page's nav item is always visible.
@@ -428,8 +472,17 @@ export function App() {
     <NavItem
       key={n.id}
       id={n.id}
-      // For the agent-owner it's their own Telegram-fronted agent, not the node's bot config.
-      label={isAgentOwner && n.id === 'telegram' ? 'Telegram agent' : n.label}
+      // Community relabels: the tunnel + hosting views are the user's OWN donated brain/RAM here.
+      // For the agent-owner, telegram is their own Telegram-fronted agent, not the node's bot config.
+      label={
+        community && n.id === 'llmtunnel'
+          ? 'Your Agent LLM'
+          : community && n.id === 'hosting'
+            ? 'Your Agent RAM'
+            : isAgentOwner && n.id === 'telegram'
+              ? 'Telegram agent'
+              : n.label
+      }
       view={view}
       set={navigate}
       count={
@@ -455,9 +508,10 @@ export function App() {
   const visibleKey = visibleNav.map((n) => n.id).join(',');
   // biome-ignore lint/correctness/useExhaustiveDependencies: visibleKey is the stable signature of visibleNav
   useEffect(() => {
-    if (isAdmin) return;
+    // Community mode enforces its fixed nav even for the (bootstrapped-admin) community user.
+    if (isAdmin && !community) return;
     if (!visibleNav.some((n) => n.id === view)) setView(personaHome);
-  }, [visibleKey, view, personaHome, isAdmin]);
+  }, [visibleKey, view, personaHome, isAdmin, community]);
 
   useEffect(() => {
     // The console's network/ledger views need this feed. Fetch it whenever the viewer owns this node
@@ -509,7 +563,10 @@ export function App() {
   // until they finish it or sign in. We never force an admin through it (they sign in and manage the
   // network), and only show it once the node is reachable. On the main node the RAM step is an
   // informational earnings preview (canHost=false) since you host on your OWN node via the desktop app.
-  if ((nodeOnline && !onboarded && !isAdmin) || forceOnboard) {
+  // Community ("Free Agents") nodes SKIP this wizard entirely: the contribution is preconfigured (no RAM
+  // step to set) and ANY account type may run one, so an unauthed user drops straight to the sign-in
+  // (Landing) and an authed one into the community console.
+  if (!community && ((nodeOnline && !onboarded && !isAdmin) || forceOnboard)) {
     return (
       <>
         <InstallBanner />
@@ -562,7 +619,7 @@ export function App() {
           <span />
         </button>
         <div className="brand">
-          <span className="badge">W</span> Web3.0
+          <span className="badge">W</span> Web4.0
         </div>
       </header>
       {menuOpen && (
@@ -579,10 +636,10 @@ export function App() {
       )}
       <aside className={`side ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
-          <span className="badge">W</span> Web3.0
+          <span className="badge">W</span> Web4.0
         </div>
         <p className="tagline">the agentic internet · console</p>
-        {isAdmin && (
+        {isAdmin && !community && (
           // biome-ignore lint/a11y/useSemanticElements: styled segmented toggle; <fieldset> would break the flex layout
           <div className="role-toggle" role="group" aria-label="View mode">
             <button
@@ -606,7 +663,7 @@ export function App() {
           // collapsible. Each group only shows ids that survived visibleNav. A trailing fallback
           // renders any visible item not placed in a group, so nothing is ever hidden.
           <>
-            {navGroups.map((group, gi) => {
+            {navGroups.map((group) => {
               const items = group.items
                 .map((id) => visibleNav.find((n) => n.id === id))
                 .filter((n): n is (typeof NAV)[number] => n !== undefined);
@@ -665,7 +722,7 @@ export function App() {
             // ANY non-admin (node operator OR agent owner) gets an Overview scoped to THEIR OWN
             // agents + ledger — never the network-wide aggregates (Nodes online, Value in network,
             // Total agents) or other owners' activity, which are admin/node data. Only the admin
-            // (sanjay@web3.0) sees the network view. Regression: a plain operator was getting
+            // (sanjay@web4) sees the network view. Regression: a plain operator was getting
             // scope=undefined → the full-network Overview leaked to them (29 agents, network value,
             // other owners' erc8004 registrations). Numbers come from the same owner-scoped sources
             // the rest of their console uses: `hosted` (server-scoped to createdBy), its `.running`
@@ -685,8 +742,8 @@ export function App() {
           />
         )}
         {view === 'mynode' && <Operator />}
-        {view === 'llmtunnel' && <LlmTunnel />}
-        {view === 'hosting' && <Hosting />}
+        {view === 'llmtunnel' && <LlmTunnel community={community} />}
+        {view === 'hosting' && <Hosting community={community} />}
         {view === 'agents' && (
           <Agents
             agents={agentsForView}
@@ -712,7 +769,7 @@ export function App() {
           <LedgerView snap={snap} admin={isAdmin} me={account?.address ?? null} />
         )}
         {view === 'guardrails' && <GuardrailsView snap={snap} />}
-        {view === 'genesis' && <Genesis />}
+        {view === 'genesis' && <Genesis community={community} />}
         {view === 'genesischat' && (
           // key + account scope the chat transcript to the signed-in account so a shared browser
           // doesn't leak one user's history to the next; key remounts it cleanly on account switch.
@@ -879,6 +936,22 @@ function Agents({
   const [busy, setBusy] = useState<string | null>(null);
   const [chatWith, setChatWith] = useState<HostedAgent | null>(null);
   const [copiedId, setCopiedId] = useState(''); // web3Id whose endpoint was just copied (button feedback)
+  // RAM Reservoir: the global rate a placed agent is billed at, shown live next to its host.
+  const [reservoir, setReservoir] = useState<Reservoir | null>(null);
+  useEffect(() => {
+    let on = true;
+    const pull = () =>
+      api
+        .reservoir()
+        .then((r) => on && setReservoir(r))
+        .catch(() => {});
+    pull();
+    const t = setInterval(pull, 10_000);
+    return () => {
+      on = false;
+      clearInterval(t);
+    };
+  }, []);
   const hostedById = new Map(hosted.map((h) => [h.web3Id, h]));
   // An agent owner sees only THEIR OWN agents here (the ones this node reports as hosted-by-them);
   // admins see the whole registry. Stops other owners' agents leaking into a personal Agents view.
@@ -896,53 +969,10 @@ function Agents({
     }
   };
 
-  // R2 hardening: sign a host-agnostic lease mandate authorizing recurring rent for a placed agent, so
-  // each epoch's debit is individually owner-authorized (ML-DSA), capped at a max the owner picks.
-  const authorizeRent = async (h: HostedAgent) => {
-    const key = loadAccountKey(h.createdBy);
-    if (!key) {
-      await uiAlert(
-        `Your signing key for ${h.createdBy} isn't on this device — import it in Account.`,
-        {
-          title: 'Signing key needed',
-        },
-      );
-      return;
-    }
-    const input = await uiPrompt(
-      'Max rent to authorize per epoch to keep this agent hosted (USDC minor units · 100 = 1.00 USDC):',
-      '1000',
-      { title: 'Authorize rent', confirmLabel: 'Authorize' },
-    );
-    if (input === null) return;
-    const maxPerEpoch = Math.max(0, Math.round(Number(input)));
-    if (!Number.isFinite(maxPerEpoch) || maxPerEpoch <= 0) {
-      await uiAlert('Enter a positive number.', { title: 'Authorize rent' });
-      return;
-    }
-    try {
-      const mandate = signLeaseMandate(key, {
-        owner: h.createdBy,
-        host: '*', // wildcard — whatever operator the network placed it on
-        agentId: h.web3Id,
-        maxPerEpoch,
-        maxEpochs: 0,
-        expiry: '',
-        nonce: mandateNonce(),
-      });
-      await api.hostingMandate(h.web3Id, mandate);
-      await uiAlert(
-        `Rent authorized: up to ${(maxPerEpoch / 100).toFixed(2)} USDC/epoch for ${h.handle}.`,
-        {
-          title: 'Rent authorized',
-        },
-      );
-    } catch (e) {
-      await uiAlert(`Could not authorize: ${e instanceof Error ? e.message : String(e)}`, {
-        title: 'Authorization failed',
-      });
-    }
-  };
+  // Rent is authorized automatically: a placed agent's per-epoch rent bills straight from the owner's
+  // balance (billEpoch settles un-mandated leases), so agent owners don't set up or sign anything to
+  // keep their agents hosted. (The optional signed lease-mandate flow was removed — it added setup
+  // friction with no benefit under the admin-priced RAM Reservoir, where the global rate is the cap.)
 
   const remove = async (h: HostedAgent) => {
     if (
@@ -983,7 +1013,7 @@ function Agents({
             <table>
               <thead>
                 <tr>
-                  <th>Web3.0 ID</th>
+                  <th>Web4.0 ID</th>
                   <th>Control</th>
                   <th>Runs on</th>
                   <th>Kind</th>
@@ -1065,14 +1095,28 @@ function Agents({
                       </td>
                       <td>
                         {/* RAM economy: where this agent's body actually runs. */}
-                        {!h?.placement || h.placement === 'local' ? (
+                        {!h ? (
+                          <span
+                            className="muted"
+                            title="Runs off this node — an external agent connected from its owner's own machine via the SDK/script"
+                          >
+                            external
+                          </span>
+                        ) : !h.placement || h.placement === 'local' ? (
                           <span className="muted">this node</span>
                         ) : h.placement === 'pending' ? (
                           <span
                             className="chip"
-                            title="No operator has free capacity yet — the network keeps retrying"
+                            title="No node operator is selling RAM right now — the network keeps searching and places it the moment one comes online"
                           >
-                            pending · waiting for a host
+                            waiting for a node operator
+                          </span>
+                        ) : h.placement === 'stopped' ? (
+                          <span
+                            className="muted"
+                            title="You stopped this agent — start it to place it again"
+                          >
+                            stopped
                           </span>
                         ) : (
                           <div
@@ -1092,16 +1136,17 @@ function Agents({
                                 ? `${h.placement.slice(0, 8)}…`
                                 : h.placement}
                             </span>
-                            {h && (
-                              <button
-                                type="button"
-                                className="btn"
-                                style={{ padding: '3px 8px', fontSize: 12 }}
-                                onClick={() => authorizeRent(h)}
-                                title="Sign a mandate authorizing recurring rent for this agent"
+                            {reservoir && reservoir.price.perGbHour > 0 && (
+                              <span
+                                className="muted"
+                                style={{ fontSize: 11 }}
+                                title="Network RAM rate this agent is billed"
                               >
-                                Authorize rent
-                              </button>
+                                {ratePerHourPrecise(
+                                  reservoir.price.perAgentEpoch,
+                                  reservoir.price.epochMs,
+                                )}
+                              </span>
                             )}
                           </div>
                         )}
@@ -1285,8 +1330,8 @@ function Feed({ events }: { events: Web3Event[] }) {
 /**
  * Decode a ledger entry into a readable From → To · Amount · label, straight from `entry.data`
  * (no server change needed — payments already carry from/to/amount). This is what turns the
- * opaque "payment / <hash>" rows into an auditable payments table: a transfer to sanjay@web3.0
- * reads as `you → sanjay@web3.0 · 5.00 USDC`, a faucet/reward as a `mint`.
+ * opaque "payment / <hash>" rows into an auditable payments table: a transfer to sanjay@web4
+ * reads as `you → sanjay@web4 · 5.00 USDC`, a faucet/reward as a `mint`.
  */
 function describeEntry(e: LedgerEntry): {
   label: string;

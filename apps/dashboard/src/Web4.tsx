@@ -151,7 +151,7 @@ function OxygenPanel() {
   const [platform, setPlatform] = useState<'unix' | 'windows'>(() =>
     typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'unix',
   );
-  const cwd = platform === 'windows' ? 'C:\\path\\to\\Web3.0' : '/path/to/Web3.0';
+  const cwd = platform === 'windows' ? 'C:\\path\\to\\Web4.0' : '/path/to/Web4.0';
   const server =
     platform === 'windows'
       ? {
@@ -174,7 +174,7 @@ function OxygenPanel() {
   // No-Claude-Code path: the bundled `pay.ts` pays any x402 URL directly (same signed payment as
   // Oxygen's x402_fetch, no MCP client needed). The URL is a quoted argument, so the command is the
   // same on Windows and Unix. Run `pnpm install` once first; add KEY=0x… to pay from your own wallet.
-  const payExampleUrl = `${NODE_URL}/x402/call/AGENT@web3.0/SKILL?q=hello`;
+  const payExampleUrl = `${NODE_URL}/x402/call/AGENT@web4/SKILL?q=hello`;
   // Complete, copy-paste-runnable block (same on Windows cmd and macOS/Linux): install once, then
   // pay. `pnpm install` is included because skipping it is the #1 "Cannot find package" pitfall.
   const payCmd = `pnpm install\npnpm --filter @web3/oxygen-mcp exec tsx pay.ts "${payExampleUrl}"`;
@@ -196,7 +196,7 @@ function OxygenPanel() {
         Your Oxygen wallet · Claude Code
       </div>
       <p className="muted" style={{ marginTop: 0 }}>
-        Oxygen is Web3.0’s x402 wallet for Claude Code. Connect it, then just ask Claude to{' '}
+        Oxygen is Web4.0’s x402 wallet for Claude Code. Connect it, then just ask Claude to{' '}
         <i>“check my wallet”</i> or <i>“fetch &lt;url&gt; and pay if it asks”</i>. Save this as{' '}
         <code>.mcp.json</code> in your project (it points Claude at the local Oxygen MCP server).
       </p>
@@ -375,7 +375,7 @@ export function Web4({
         {scope === 'agent' ? 'x402 · ERC-8004' : 'x402 & ERC-8004'}
       </div>
       <p className="muted" style={{ marginTop: -6, marginBottom: 20 }}>
-        The two Web 4.0 standards Web3.0 speaks: <b>x402</b> for money (agents pay per request in
+        The two Web 4.0 standards Web4.0 speaks: <b>x402</b> for money (agents pay per request in
         USDC) and <b>ERC-8004</b> for identity &amp; reputation (agents are discoverable and
         trustable).{' '}
         {scope === 'agent'
@@ -384,10 +384,7 @@ export function Web4({
       </p>
 
       {error && (
-        <div
-          className="card"
-          style={{ borderLeft: '3px solid var(--no)', marginBottom: 18 }}
-        >
+        <div className="card" style={{ borderLeft: '3px solid var(--no)', marginBottom: 18 }}>
           <b>Couldn’t reach the node.</b> <span className="muted">{error}</span>
         </div>
       )}

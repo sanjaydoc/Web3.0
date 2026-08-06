@@ -147,7 +147,7 @@ const main = async () => {
   );
 
   // Owner rents with a signed ML-DSA lease mandate.
-  const agentId = `shopbot${SUFFIX}@web3.0`;
+  const agentId = `shopbot${SUFFIX}@web4`;
   const nonce = toB64u(ml_dsa65.keygen().publicKey.slice(0, 12));
   const mandate = signMandate(ownerKey, {
     owner: owner.address,
@@ -180,7 +180,7 @@ const main = async () => {
   const forged = signMandate(ownerKey, {
     owner: owner.address,
     host: host.address,
-    agentId: `evil${SUFFIX}@web3.0`,
+    agentId: `evil${SUFFIX}@web4`,
     maxPerEpoch: 1,
     maxEpochs: 0,
     expiry: '',
@@ -190,7 +190,7 @@ const main = async () => {
   const badRent = await call('/hosting/rent', {
     method: 'POST',
     token: owner.token,
-    body: { agentId: `evil${SUFFIX}@web3.0`, mandate: forged },
+    body: { agentId: `evil${SUFFIX}@web4`, mandate: forged },
   });
   check(
     'forged signature rejected',

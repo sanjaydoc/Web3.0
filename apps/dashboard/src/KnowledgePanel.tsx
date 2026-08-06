@@ -3,7 +3,9 @@ import { type KnowledgeHit, type KnowledgeSource, api, fileToBase64 } from './ap
 
 // Text-like files we read client-side and post as text; PDF/Word are sent as base64 bytes and the
 // node extracts their text (see docparse on the server).
-const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml|rtf)$/i;
+// .rtf is intentionally excluded: read as UTF-8 it yields raw RTF control words ({\rtf1…}) that
+// pollute retrieval, and there is no server-side RTF parser — so it's rejected as unsupported.
+const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|yaml|yml)$/i;
 const DOC_EXT = /\.(pdf|docx|xlsx)$/i;
 
 /**
@@ -167,7 +169,7 @@ export function KnowledgePanel({ web3Id, title }: { web3Id: string; title: strin
         <div className="field">
           <input
             type="file"
-            accept=".pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml,.rtf"
+            accept=".pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html,.htm,.xml,.yaml,.yml"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void onFile(f);

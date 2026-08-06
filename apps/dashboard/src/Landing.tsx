@@ -1,5 +1,7 @@
 import { type ReactNode, useState } from 'react';
+import { Download } from './Download.js';
 import { InstallButton } from './InstallButton.js';
+import { LandingGenesis } from './LandingGenesis.js';
 import { ApiError, type Role, api, setWeb3Token } from './api.js';
 import { generateAccountKey, saveAccountKey } from './txsign.js';
 
@@ -156,6 +158,15 @@ const DOWNLOADS = [
   { os: 'Android', file: ANDROID_APK, icon: <AndroidMark /> },
 ];
 
+// Community ("Free Agents") installers — published to a rolling `community` release (version-less
+// filenames), so these links always point at the latest build. No Android build for the free tier.
+const COMMUNITY_BASE = 'https://github.com/sanjaydoc/Web4.0/releases/download/community';
+const COMMUNITY_DOWNLOADS = [
+  { os: 'Windows', file: `${COMMUNITY_BASE}/Web4.0-Free-Agents.Setup.exe`, icon: <WinMark /> },
+  { os: 'macOS', file: `${COMMUNITY_BASE}/Web4.0-Free-Agents-universal.dmg`, icon: <AppleMark /> },
+  { os: 'Linux', file: `${COMMUNITY_BASE}/Web4.0-Free-Agents.AppImage`, icon: <LinuxMark /> },
+];
+
 /**
  * Landing — the front door. A high-end animated hero that gates the console behind sign-in /
  * create-account. On success it calls `onEnter()` and the app reveals the dashboard. `onGuest()`
@@ -167,6 +178,9 @@ export function Landing({
   onCreated,
 }: { onEnter: () => void; onGuest: () => void; onCreated: () => void }) {
   const [tab, setTab] = useState<'in' | 'up'>('in');
+  // "Downloads" nav → the full Run-a-node page (every installer, incl. the Free community version),
+  // shown right here on the landing (no sign-in needed) with a back link to the hero.
+  const [showDownloads, setShowDownloads] = useState(false);
   const [token, setToken] = useState('');
   const [local, setLocal] = useState('');
   // The two mutually-exclusive marketplace personas a public sign-up can pick: `operator` (run a node
@@ -222,6 +236,25 @@ export function Landing({
     }
   }
 
+  // Downloads view — the full Run-a-node page (all installers, incl. the Free community version).
+  if (showDownloads) {
+    return (
+      <div className="landing">
+        <div className="landing-inner" style={{ paddingTop: 24 }}>
+          <header className="l-top" style={{ marginBottom: 28 }}>
+            <div className="l-brand">
+              <span className="l-badge">W</span> Web4.0
+            </div>
+            <button type="button" className="l-doclink" onClick={() => setShowDownloads(false)}>
+              ← Back
+            </button>
+          </header>
+          <Download />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="landing">
       <div className="landing-bg" aria-hidden="true">
@@ -256,17 +289,14 @@ export function Landing({
             <span className="l-badge">W</span> Web4.0
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button type="button" className="l-doclink" onClick={() => setShowDownloads(true)}>
+              Downloads
+            </button>
             <InstallButton className="l-doclink" />
-            <a
-              className="l-doclink"
-              href="https://github.com/sanjaydoc/Web4.0"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub ↗
-            </a>
           </div>
         </header>
+
+        <LandingGenesis onEnter={onEnter} />
 
         <div className="l-hero">
           <div className="l-copy">
@@ -322,7 +352,7 @@ export function Landing({
                     <input
                       type="password"
                       value={token}
-                      placeholder="web3_…"
+                      placeholder="web4_…"
                       onChange={(e) => setToken(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && token.trim() && signin()}
                     />
@@ -381,7 +411,7 @@ export function Landing({
                       placeholder="sanjay"
                       onChange={(e) => setLocal(e.target.value)}
                     />
-                    <em>{local || '…'}@web3.0</em>
+                    <em>{local || '…'}@web4</em>
                   </label>
                   <button
                     type="button"
@@ -401,6 +431,35 @@ export function Landing({
           </div>
         </div>
       </div>
+
+      <section className="l-download l-community" aria-label="Free community version">
+        <div className="l-dl-inner" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div className="l-dl-head">
+            <b>Free community version — “Free Agents”</b>
+            <span>
+              The zero-setup way to join. Run up to 3 agents for free on your own machine. In
+              exchange, its idle local LLM (Ollama · qwen2.5:3b) and 2 GB of RAM are pooled into the
+              shared network for free — so everyone has brains to run agents on and RAM to host
+              them. No node config, no earnings to manage; your agents can still take x402 payments.
+            </span>
+          </div>
+          <div className="l-dl-row">
+            {COMMUNITY_DOWNLOADS.map((d) => (
+              <a key={d.os} className="l-dl-btn" href={d.file} target="_blank" rel="noreferrer">
+                {d.icon}
+                <span>{d.os}</span>
+              </a>
+            ))}
+          </div>
+          <span
+            className="muted"
+            style={{ fontSize: 'var(--fs-sm)', marginTop: 2, lineHeight: 1.5 }}
+          >
+            Want to run a full earning node instead (sell RAM + inference, no agent cap)? Use the
+            standard desktop app below.
+          </span>
+        </div>
+      </section>
 
       <section className="l-download" aria-label="Download the desktop app">
         <div className="l-dl-inner">
@@ -434,7 +493,7 @@ export function Landing({
               [
                 'identity',
                 'Post-quantum identity',
-                'Every agent gets a did:web3 identity signed with ML-DSA — quantum-resistant from day one.',
+                'Every agent gets a did:web4 identity signed with ML-DSA — quantum-resistant from day one.',
               ],
               [
                 'payments',
@@ -523,6 +582,18 @@ export function Landing({
 
         <footer className="l-foot">
           <span>© Web4.0 · DR SANJAY ANBU</span>
+          <nav className="l-social" aria-label="Web4.0 social links">
+            <a href="mailto:web4protocol@gmail.com">Email</a>
+            <a href="https://t.me/web4protocol_portal" target="_blank" rel="noopener noreferrer">
+              Telegram
+            </a>
+            <a href="https://x.com/web4protocol" target="_blank" rel="noopener noreferrer">
+              X
+            </a>
+            <a href="https://wa.me/916385371758" target="_blank" rel="noopener noreferrer">
+              WhatsApp
+            </a>
+          </nav>
           <span>quantum-resistant · open protocol</span>
         </footer>
       </div>
