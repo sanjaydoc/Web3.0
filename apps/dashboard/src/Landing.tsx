@@ -4,6 +4,7 @@ import { InstallButton } from './InstallButton.js';
 import { LandingGenesis } from './LandingGenesis.js';
 import { ApiError, type Role, api, setWeb3Token } from './api.js';
 import { generateAccountKey, saveAccountKey } from './txsign.js';
+import { APP_VERSION } from './version.js';
 
 // Background node-graph coordinates (viewBox 1200×800) — evokes an agent network.
 const NODES: [number, number][] = [
@@ -90,9 +91,10 @@ const ICONS: Record<string, ReactNode> = {
 };
 
 // Desktop installers — the latest release on the public repo. `DL_VER` = the release tag; `DL_FILE`
-// = the installer file version (electron-builder names files from desktop/package.json). Bump both.
-const DL_VER = '0.2.9';
-const DL_FILE = '0.2.9';
+// = the installer file version (electron-builder names files from desktop/package.json). Both track the
+// single source of truth in version.ts (APP_VERSION), which the update-nudge banner also reads.
+const DL_VER = APP_VERSION;
+const DL_FILE = APP_VERSION;
 const DL_BASE = `https://github.com/sanjaydoc/Web4.0/releases/download/v${DL_VER}`;
 const RELEASES = 'https://github.com/sanjaydoc/Web4.0/releases/latest';
 

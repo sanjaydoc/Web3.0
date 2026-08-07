@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { APP_VERSION } from './version.js';
 
 // The PUBLIC repo — the open console + Python agent SDK + docs. The node's server core (registry,
 // relay, ledger, consensus) is closed-source and runs on the canonical shared-network node; the
@@ -10,9 +11,10 @@ const REPO = 'https://github.com/sanjaydoc/Web4.0';
 // is a first-class participant. Published by the `desktop` workflow on every version tag, to the
 // public repo's releases.
 // DESKTOP_VERSION = the release tag (shown to users + the /releases/download/v… path). DESKTOP_FILE =
-// the installer file version (electron-builder names files from desktop/package.json); can differ.
-const DESKTOP_VERSION = '0.2.9';
-const DESKTOP_FILE = '0.2.9';
+// the installer file version (electron-builder names files from desktop/package.json); can differ. Both
+// track version.ts (APP_VERSION) — the single source of truth the update-nudge banner also reads.
+const DESKTOP_VERSION = APP_VERSION;
+const DESKTOP_FILE = APP_VERSION;
 const DESKTOP_RELEASE = `${REPO}/releases/latest`;
 const DL = `${REPO}/releases/download/v${DESKTOP_VERSION}`;
 const DESKTOP_EXE = `${DL}/Web4.0.Setup.${DESKTOP_FILE}.exe`;

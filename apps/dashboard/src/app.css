@@ -2320,6 +2320,15 @@ button.connector:not(:disabled):hover {
   font-size: 0.95rem;
   letter-spacing: -0.02em;
 }
+/* Update nudge reuses the install-banner shell with a distinct accent badge so it reads as "update",
+   not "install". Install + update banners are mutually exclusive in practice (install shows only in a
+   browser; update shows only in an installed app), so they never stack. */
+.update-badge {
+  background: var(--ok, #2a9d5c);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
 .pwa-text {
   display: flex;
   flex-direction: column;

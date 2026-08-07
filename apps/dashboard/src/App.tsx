@@ -18,6 +18,7 @@ import { Onboarding } from './Onboarding.js';
 import { Operator } from './Operator.js';
 import { Skills } from './Skills.js';
 import { Telegram } from './Telegram.js';
+import { UpdateBanner } from './UpdateBanner.js';
 import { Web4 } from './Web4.js';
 import {
   type Account as Acct,
@@ -570,6 +571,7 @@ export function App() {
     return (
       <>
         <InstallBanner />
+        <UpdateBanner />
         <Onboarding
           authed={Boolean(authed)}
           canHost={!adminOnly}
@@ -588,6 +590,7 @@ export function App() {
     return (
       <>
         <InstallBanner />
+        <UpdateBanner />
         <Landing
           onEnter={() => checkAuth()}
           onGuest={() => setGuest(true)}
@@ -606,6 +609,7 @@ export function App() {
   return (
     <div className={`app ${menuOpen ? 'menu-open' : ''}`}>
       <InstallBanner />
+      <UpdateBanner />
       <header className="topbar">
         <button
           type="button"
